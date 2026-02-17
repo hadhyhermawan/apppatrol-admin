@@ -52,18 +52,40 @@ export default function ProfilePage() {
     const fetchProfile = async () => {
         setLoading(true);
         try {
-            // Get current user from localStorage
-            const userStr = localStorage.getItem('user');
+            // Get current user from localStorage (correct key is 'patrol_user')
+            const userStr = localStorage.getItem('patrol_user');
             if (userStr) {
                 const user = JSON.parse(userStr);
-                setProfile(user);
+
+                // Create profile object with safe defaults
+                const profileData: UserProfile = {
+                    id: user.id || 0,
+                    username: user.username || 'unknown',
+                    name: user.name || 'User',
+                    email: user.email || null,
+                    phone: user.phone || null,
+                    address: user.address || null,
+                    photo: user.photo || null,
+                    roles: user.roles || [],
+                    permissions: user.permissions || [],
+                    created_at: user.created_at || new Date().toISOString()
+                };
+
+                setProfile(profileData);
                 setFormData({
-                    name: user.name || '',
-                    email: user.email || '',
-                    phone: user.phone || '',
-                    address: user.address || '',
+                    name: profileData.name,
+                    email: profileData.email || '',
+                    phone: profileData.phone || '',
+                    address: profileData.address || '',
                     photo: null
                 });
+            } else {
+                // No user in localStorage - shouldn't happen if logged in
+                console.error('No user data in localStorage');
+                Swal.fire('Error', 'Sesi login tidak ditemukan. Silakan login kembali.', 'error')
+                    .then(() => {
+                        window.location.href = '/';
+                    });
             }
         } catch (error) {
             console.error('Failed to fetch profile', error);
