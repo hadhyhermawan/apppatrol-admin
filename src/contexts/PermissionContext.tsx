@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import apiClient from '../lib/api';
 
 interface Permission {
     id: number;
@@ -34,31 +35,21 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
             setLoading(true);
 
             // Get current user's permissions from backend
-            const response = await fetch('/api-py/auth/me', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('patrol_token')}`
-                }
-            });
+            const data: any = await apiClient.get('/auth/me');
 
-            if (response.ok) {
-                const data = await response.json();
+            // Check if super admin (role id = 1 or role name = 'super admin')
+            const isSuperAdminUser = data.roles?.some((role: any) =>
+                role.id === 1 || role.name === 'super admin'
+            );
+            setIsSuperAdmin(isSuperAdminUser);
 
-                // Check if super admin (role id = 1)
-                const isSuperAdminUser = data.roles?.some((role: any) => role.id === 1);
-                setIsSuperAdmin(isSuperAdminUser);
-
-                // If super admin, grant all permissions
-                if (isSuperAdminUser) {
-                    setPermissions(['*']); // Wildcard for all permissions
-                } else {
-                    // Set user's actual permissions
-                    const permissionNames = data.permissions?.map((p: Permission) => p.name) || [];
-                    setPermissions(permissionNames);
-                }
+            // If super admin, grant all permissions
+            if (isSuperAdminUser) {
+                setPermissions(['*']); // Wildcard for all permissions
             } else {
-                // If not authenticated, clear permissions
-                setPermissions([]);
-                setIsSuperAdmin(false);
+                // Set user's actual permissions
+                const permissionNames = data.permissions?.map((p: Permission) => p.name) || [];
+                setPermissions(permissionNames);
             }
         } catch (error) {
             console.error('Error fetching permissions:', error);
