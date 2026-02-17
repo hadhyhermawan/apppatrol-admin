@@ -24,22 +24,55 @@ export default function UserDropdown() {
   });
 
   useEffect(() => {
-    // Fetch user data from localStorage
-    const userStr = localStorage.getItem('patrol_user');
-    if (userStr) {
+    // Fetch user data from API to ensure fresh data
+    const fetchUserData = async () => {
       try {
-        const user = JSON.parse(userStr);
-        setUserData({
-          id: user.id || 0,
-          username: user.username || 'user',
-          name: user.name || 'User',
-          email: user.email || null,
-          photo: user.photo || null
+        const response = await fetch('/api/auth/profile', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('patrol_token')}`
+          }
         });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.status && result.data) {
+            const user = result.data;
+            const userData = {
+              id: user.id || 0,
+              username: user.username || 'user',
+              name: user.name || 'User',
+              email: user.email || null,
+              photo: user.photo || null
+            };
+            setUserData(userData);
+            // Update localStorage with fresh data
+            localStorage.setItem('patrol_user', JSON.stringify(user));
+            return;
+          }
+        }
       } catch (error) {
-        console.error('Failed to parse user data', error);
+        console.error('Failed to fetch user data from API', error);
       }
-    }
+
+      // Fallback to localStorage if API fails
+      const userStr = localStorage.getItem('patrol_user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          setUserData({
+            id: user.id || 0,
+            username: user.username || 'user',
+            name: user.name || 'User',
+            email: user.email || null,
+            photo: user.photo || null
+          });
+        } catch (error) {
+          console.error('Failed to parse user data', error);
+        }
+      }
+    };
+
+    fetchUserData();
   }, []);
 
   function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
