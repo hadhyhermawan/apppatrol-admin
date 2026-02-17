@@ -1,12 +1,46 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 
+type UserData = {
+  id: number;
+  username: string;
+  name: string;
+  email: string | null;
+  photo: string | null;
+};
+
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [userData, setUserData] = useState<UserData>({
+    id: 0,
+    username: 'user',
+    name: 'User',
+    email: null,
+    photo: null
+  });
+
+  useEffect(() => {
+    // Fetch user data from localStorage
+    const userStr = localStorage.getItem('patrol_user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserData({
+          id: user.id || 0,
+          username: user.username || 'user',
+          name: user.name || 'User',
+          email: user.email || null,
+          photo: user.photo || null
+        });
+      } catch (error) {
+        console.error('Failed to parse user data', error);
+      }
+    }
+  }, []);
 
   function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     e.stopPropagation();
@@ -16,6 +50,22 @@ export default function UserDropdown() {
   function closeDropdown() {
     setIsOpen(false);
   }
+
+  // Get initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  // Get first name only for header
+  const getFirstName = (name: string) => {
+    return name.split(' ')[0];
+  };
+
   return (
     <div className="relative">
       <button
@@ -23,15 +73,23 @@ export default function UserDropdown() {
         className="flex items-center text-gray-700 dark:text-gray-400 dropdown-toggle"
       >
         <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
-          <Image
-            width={44}
-            height={44}
-            src="/images/user/owner.jpg"
-            alt="User"
-          />
+          {userData.photo ? (
+            <Image
+              width={44}
+              height={44}
+              src={userData.photo}
+              alt={userData.name}
+              className="object-cover w-full h-full"
+              unoptimized
+            />
+          ) : (
+            <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-brand-500 to-brand-600 text-white font-bold text-sm">
+              {getInitials(userData.name)}
+            </div>
+          )}
         </span>
 
-        <span className="block mr-1 font-medium text-theme-sm">Musharof</span>
+        <span className="block mr-1 font-medium text-theme-sm">{getFirstName(userData.name)}</span>
 
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""
@@ -59,10 +117,10 @@ export default function UserDropdown() {
       >
         <div>
           <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-            Musharof Chowdhury
+            {userData.name}
           </span>
           <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
-            randomuser@pimjo.com
+            {userData.email || `@${userData.username}`}
           </span>
         </div>
 
