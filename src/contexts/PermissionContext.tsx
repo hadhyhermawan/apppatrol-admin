@@ -36,7 +36,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
             // Get current user's permissions from backend
             const response = await fetch('/api-py/auth/me', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('patrol_token')}`
                 }
             });
 
