@@ -52,12 +52,42 @@ export default function ProfilePage() {
     const fetchProfile = async () => {
         setLoading(true);
         try {
-            // Get current user from localStorage (correct key is 'patrol_user')
+            // Fetch from API endpoint
+            const response: any = await apiClient.get('/auth/profile');
+            
+            if (response.status && response.data) {
+                const profileData: UserProfile = {
+                    id: response.data.id || 0,
+                    username: response.data.username || 'unknown',
+                    name: response.data.name || 'User',
+                    email: response.data.email || null,
+                    phone: response.data.phone || null,
+                    address: response.data.address || null,
+                    photo: response.data.photo || null,
+                    roles: response.data.roles || [],
+                    permissions: response.data.permissions || [],
+                    created_at: response.data.created_at || new Date().toISOString()
+                };
+                
+                setProfile(profileData);
+                setFormData({
+                    name: profileData.name,
+                    email: profileData.email || '',
+                    phone: profileData.phone || '',
+                    address: profileData.address || '',
+                    photo: null
+                });
+                
+                // Also update localStorage for consistency
+                localStorage.setItem('patrol_user', JSON.stringify(profileData));
+            }
+        } catch (error: any) {
+            console.error('Failed to fetch profile', error);
+            
+            // Fallback to localStorage if API fails
             const userStr = localStorage.getItem('patrol_user');
             if (userStr) {
                 const user = JSON.parse(userStr);
-
-                // Create profile object with safe defaults
                 const profileData: UserProfile = {
                     id: user.id || 0,
                     username: user.username || 'unknown',
@@ -70,7 +100,6 @@ export default function ProfilePage() {
                     permissions: user.permissions || [],
                     created_at: user.created_at || new Date().toISOString()
                 };
-
                 setProfile(profileData);
                 setFormData({
                     name: profileData.name,
@@ -80,16 +109,8 @@ export default function ProfilePage() {
                     photo: null
                 });
             } else {
-                // No user in localStorage - shouldn't happen if logged in
-                console.error('No user data in localStorage');
-                Swal.fire('Error', 'Sesi login tidak ditemukan. Silakan login kembali.', 'error')
-                    .then(() => {
-                        window.location.href = '/';
-                    });
+                Swal.fire('Error', 'Gagal memuat profil', 'error');
             }
-        } catch (error) {
-            console.error('Failed to fetch profile', error);
-            Swal.fire('Error', 'Gagal memuat profil', 'error');
         } finally {
             setLoading(false);
         }
@@ -108,24 +129,21 @@ export default function ProfilePage() {
         setIsSaving(true);
 
         try {
-            // For now, update localStorage only (backend endpoints not yet implemented)
-            const userStr = localStorage.getItem('patrol_user');
-            if (userStr) {
-                const user = JSON.parse(userStr);
+            const data = new FormData();
+            data.append('name', formData.name);
+            if (formData.email) data.append('email', formData.email);
+            if (formData.phone) data.append('phone', formData.phone);
+            if (formData.address) data.append('address', formData.address);
+            if (formData.photo) data.append('photo', formData.photo);
 
-                // Update user object
-                const updatedUser = {
-                    ...user,
-                    name: formData.name,
-                    email: formData.email || null,
-                    phone: formData.phone || null,
-                    address: formData.address || null,
-                    // Note: Photo upload would need backend endpoint
-                };
+            const response: any = await apiClient.put('/auth/profile', data, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
 
-                // Save back to localStorage
-                localStorage.setItem('patrol_user', JSON.stringify(updatedUser));
-
+            if (response.status && response.data) {
+                // Update localStorage
+                localStorage.setItem('patrol_user', JSON.stringify(response.data));
+                
                 Swal.fire({
                     title: 'Berhasil!',
                     text: 'Profil berhasil diperbarui',
@@ -138,17 +156,6 @@ export default function ProfilePage() {
                 setPreviewImage(null);
                 fetchProfile();
             }
-
-            // TODO: Implement backend API call when endpoints are ready
-            // const data = new FormData();
-            // data.append('name', formData.name);
-            // if (formData.email) data.append('email', formData.email);
-            // if (formData.phone) data.append('phone', formData.phone);
-            // if (formData.address) data.append('address', formData.address);
-            // if (formData.photo) data.append('photo', formData.photo);
-            // await apiClient.put('/auth/profile', data, {
-            //     headers: { 'Content-Type': 'multipart/form-data' }
-            // });
         } catch (error: any) {
             console.error(error);
             Swal.fire('Gagal!', error.response?.data?.detail || 'Gagal memperbarui profil', 'error');
@@ -172,10 +179,11 @@ export default function ProfilePage() {
 
         setIsSaving(true);
         try {
-            await apiClient.post('/auth/change-password', {
-                current_password: passwordData.current_password,
-                new_password: passwordData.new_password
-            });
+            const data = new FormData();
+            data.append('current_password', passwordData.current_password);
+            data.append('new_password', passwordData.new_password);
+
+            await apiClient.post('/auth/change-password', data);
 
             Swal.fire({
                 title: 'Berhasil!',
@@ -312,7 +320,6 @@ export default function ProfilePage() {
                                             <Edit2 className="h-4 w-4" />
                                             Edit Profil
                                         </button>
-                                        {/* Change Password button hidden until backend endpoint is ready
                                         <button
                                             onClick={() => setIsChangingPassword(true)}
                                             className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-stroke bg-white px-4 py-2.5 text-sm font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition"
@@ -320,7 +327,6 @@ export default function ProfilePage() {
                                             <Key className="h-4 w-4" />
                                             Ubah Password
                                         </button>
-                                        */}
                                     </>
                                 )}
                             </div>
