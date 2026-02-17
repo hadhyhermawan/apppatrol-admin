@@ -14,16 +14,21 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'frontend.k3guard.com-py'
+        hostname: 'backend.k3guard.com'
       },
       {
-        protocol: 'http',
-        hostname: 'localhost'
+        protocol: 'https',
+        hostname: 'frontend.k3guard.com'
       },
       {
         protocol: 'https',
         hostname: 'ui-avatars.com'
-      }
+      },
+      // Only allow localhost in development
+      ...(process.env.NODE_ENV === 'development' ? [{
+        protocol: 'http' as const,
+        hostname: 'localhost'
+      }] : [])
     ]
   },
   // Optimize CSS loading to prevent preload warnings
