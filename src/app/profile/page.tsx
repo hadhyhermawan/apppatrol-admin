@@ -108,28 +108,47 @@ export default function ProfilePage() {
         setIsSaving(true);
 
         try {
-            const data = new FormData();
-            data.append('name', formData.name);
-            if (formData.email) data.append('email', formData.email);
-            if (formData.phone) data.append('phone', formData.phone);
-            if (formData.address) data.append('address', formData.address);
-            if (formData.photo) data.append('photo', formData.photo);
+            // For now, update localStorage only (backend endpoints not yet implemented)
+            const userStr = localStorage.getItem('patrol_user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
 
-            // Note: You'll need to create this endpoint in backend
-            await apiClient.put('/auth/profile', data, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+                // Update user object
+                const updatedUser = {
+                    ...user,
+                    name: formData.name,
+                    email: formData.email || null,
+                    phone: formData.phone || null,
+                    address: formData.address || null,
+                    // Note: Photo upload would need backend endpoint
+                };
 
-            Swal.fire({
-                title: 'Berhasil!',
-                text: 'Profil berhasil diperbarui',
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false
-            });
+                // Save back to localStorage
+                localStorage.setItem('patrol_user', JSON.stringify(updatedUser));
 
-            setIsEditing(false);
-            fetchProfile();
+                Swal.fire({
+                    title: 'Berhasil!',
+                    text: 'Profil berhasil diperbarui',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+
+                setIsEditing(false);
+                setPreviewImage(null);
+                fetchProfile();
+            }
+
+            // TODO: Implement backend API call when endpoints are ready
+            // const data = new FormData();
+            // data.append('name', formData.name);
+            // if (formData.email) data.append('email', formData.email);
+            // if (formData.phone) data.append('phone', formData.phone);
+            // if (formData.address) data.append('address', formData.address);
+            // if (formData.photo) data.append('photo', formData.photo);
+            // await apiClient.put('/auth/profile', data, {
+            //     headers: { 'Content-Type': 'multipart/form-data' }
+            // });
         } catch (error: any) {
             console.error(error);
             Swal.fire('Gagal!', error.response?.data?.detail || 'Gagal memperbarui profil', 'error');
@@ -293,6 +312,7 @@ export default function ProfilePage() {
                                             <Edit2 className="h-4 w-4" />
                                             Edit Profil
                                         </button>
+                                        {/* Change Password button hidden until backend endpoint is ready
                                         <button
                                             onClick={() => setIsChangingPassword(true)}
                                             className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-stroke bg-white px-4 py-2.5 text-sm font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition"
@@ -300,6 +320,7 @@ export default function ProfilePage() {
                                             <Key className="h-4 w-4" />
                                             Ubah Password
                                         </button>
+                                        */}
                                     </>
                                 )}
                             </div>
