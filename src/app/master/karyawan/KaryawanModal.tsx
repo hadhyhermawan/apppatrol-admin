@@ -83,7 +83,7 @@ export default function KaryawanModal({ isOpen, onClose, mode, initialData, opti
                 });
 
                 // Set previews for existing images
-                const getUrl = (path: string) => path ? `http://localhost:8000/storage/karyawan/${path}` : null;
+                const getUrl = (path: string) => path ? path : null;
                 setFilePreview({
                     foto: getUrl(initialData.foto),
                     foto_ktp: getUrl(initialData.foto_ktp),

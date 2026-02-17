@@ -217,8 +217,8 @@ function MasterKaryawanPage() {
     // Helper URLs
     const getPhotoUrl = (folder: string, filename: string | null) => {
         if (!filename) return null;
-        // Use local backend URL for images since we mounted storage in FastAPI
-        return `http://localhost:8000/storage/karyawan/${folder ? folder + '/' : ''}${filename}`;
+        // Backend now returns full URLs, so just return as-is
+        return filename;
     };
 
     // Helper Date
