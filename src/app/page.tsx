@@ -18,8 +18,17 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    // Check if user is already logged in
+    const token = localStorage.getItem('patrol_token');
+    if (token) {
+      // User already logged in, redirect to dashboard
+      router.push('/dashboard');
+      return;
+    }
+
+    // Generate captcha for login form
     generateCaptcha();
-  }, []);
+  }, [router]);
 
   const generateCaptcha = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
