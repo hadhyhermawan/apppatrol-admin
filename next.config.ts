@@ -25,6 +25,16 @@ const nextConfig: NextConfig = {
         hostname: 'ui-avatars.com'
       }
     ]
+  },
+  // Optimize CSS loading to prevent preload warnings
+  experimental: {
+    optimizeCss: true,
+  },
+  // Disable CSS preloading if not needed immediately
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn']
+    } : false,
   }
 };
 
