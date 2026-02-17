@@ -54,7 +54,7 @@ export default function ProfilePage() {
         try {
             // Fetch from API endpoint
             const response: any = await apiClient.get('/auth/profile');
-            
+
             if (response.status && response.data) {
                 const profileData: UserProfile = {
                     id: response.data.id || 0,
@@ -68,7 +68,7 @@ export default function ProfilePage() {
                     permissions: response.data.permissions || [],
                     created_at: response.data.created_at || new Date().toISOString()
                 };
-                
+
                 setProfile(profileData);
                 setFormData({
                     name: profileData.name,
@@ -77,13 +77,13 @@ export default function ProfilePage() {
                     address: profileData.address || '',
                     photo: null
                 });
-                
+
                 // Also update localStorage for consistency
                 localStorage.setItem('patrol_user', JSON.stringify(profileData));
             }
         } catch (error: any) {
             console.error('Failed to fetch profile', error);
-            
+
             // Fallback to localStorage if API fails
             const userStr = localStorage.getItem('patrol_user');
             if (userStr) {
@@ -143,7 +143,7 @@ export default function ProfilePage() {
             if (response.status && response.data) {
                 // Update localStorage
                 localStorage.setItem('patrol_user', JSON.stringify(response.data));
-                
+
                 Swal.fire({
                     title: 'Berhasil!',
                     text: 'Profil berhasil diperbarui',
@@ -183,7 +183,9 @@ export default function ProfilePage() {
             data.append('current_password', passwordData.current_password);
             data.append('new_password', passwordData.new_password);
 
-            await apiClient.post('/auth/change-password', data);
+            await apiClient.post('/auth/change-password', data, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
 
             Swal.fire({
                 title: 'Berhasil!',
