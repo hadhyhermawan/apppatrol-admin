@@ -7,6 +7,8 @@ import { RefreshCw, Plus, Edit, Trash2, Search, Activity } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import flatpickr from "flatpickr";
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 import "flatpickr/dist/flatpickr.min.css";
 
 type BpjsKesehatanItem = {
@@ -25,7 +27,8 @@ type EmployeeOption = {
     nama_karyawan: string;
 };
 
-export default function PayrollBpjsKesehatanPage() {
+function PayrollBpjsKesehatanPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<BpjsKesehatanItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [employees, setEmployees] = useState<EmployeeOption[]>([]);
@@ -221,10 +224,12 @@ export default function PayrollBpjsKesehatanPage() {
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
-                        <button onClick={handleCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
+                        {canCreate('bpjskesehatan') && (
+                            <button onClick={handleCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
                             <Plus className="h-4 w-4" />
                             <span>Tambah Data</span>
                         </button>
+                        )}
                     </div>
                 </div>
 
@@ -312,9 +317,11 @@ export default function PayrollBpjsKesehatanPage() {
                                                 <button onClick={() => handleEdit(item)} className="hover:text-brand-500 text-gray-500 transition-colors" title="Edit">
                                                     <Edit className="h-4 w-4" />
                                                 </button>
-                                                <button onClick={() => handleDelete(item.kode_bpjs_kesehatan)} className="hover:text-red-500 text-gray-500 transition-colors" title="Hapus">
+                                                {canDelete('bpjskesehatan') && (
+                                                    <button onClick={() => handleDelete(item.kode_bpjs_kesehatan)} className="hover:text-red-500 text-gray-500 transition-colors" title="Hapus">
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -330,3 +337,8 @@ export default function PayrollBpjsKesehatanPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(PayrollBpjsKesehatanPage, {
+    permissions: ['bpjskesehatan.index']
+});

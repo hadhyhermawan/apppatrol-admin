@@ -5,6 +5,8 @@ import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
 import { RefreshCw, Search, Users } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 type UserItem = {
     id: number;
@@ -15,7 +17,8 @@ type UserItem = {
     created_at: string;
 };
 
-export default function UtilitiesUsersPage() {
+function UtilitiesUsersPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<UserItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -131,3 +134,8 @@ export default function UtilitiesUsersPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(UtilitiesUsersPage, {
+    permissions: ['users.index']
+});

@@ -8,6 +8,7 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
+import { withPermission } from '@/hoc/withPermission';
 
 type ThreadItem = {
     room: string;
@@ -26,7 +27,7 @@ type SummaryStats = {
     total_senders: number;
 };
 
-export default function ChatManagementPage() {
+function ChatManagementPage() {
     const router = useRouter();
     const [data, setData] = useState<ThreadItem[]>([]);
     const [summary, setSummary] = useState<SummaryStats | null>(null);
@@ -240,3 +241,8 @@ export default function ChatManagementPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(ChatManagementPage, {
+    permissions: ['chat.index']
+});

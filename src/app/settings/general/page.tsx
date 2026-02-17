@@ -9,8 +9,11 @@ import { Save } from 'lucide-react';
 import Input from '@/components/form/input/InputField';
 import TextArea from '@/components/form/input/TextArea';
 import Switch from '@/components/form/switch/Switch';
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 
-export default function GeneralSettingPage() {
+function GeneralSettingPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [loading, setLoading] = useState(true);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -418,3 +421,8 @@ export default function GeneralSettingPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(GeneralSettingPage, {
+    permissions: ['generalsetting.index']
+});

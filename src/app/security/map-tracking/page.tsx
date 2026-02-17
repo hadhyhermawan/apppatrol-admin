@@ -6,6 +6,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { Search, Map as MapIcon, RefreshCw, Calendar, User } from 'lucide-react';
+import { withPermission } from '@/hoc/withPermission';
 import 'leaflet/dist/leaflet.css';
 
 // Dynamically import Leaflet components to avoid SSR issues
@@ -40,7 +41,7 @@ type PatrolTrack = {
     point_name?: string;
 };
 
-export default function MapTrackingPage() {
+function MapTrackingPage() {
     const [data, setData] = useState<PatrolTrack[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState('');
@@ -232,3 +233,8 @@ export default function MapTrackingPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(MapTrackingPage, {
+    permissions: ['tracking.index']
+});

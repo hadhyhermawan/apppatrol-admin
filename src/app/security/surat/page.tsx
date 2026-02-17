@@ -6,6 +6,8 @@ import apiClient from '@/lib/api';
 import { RefreshCw, Search, X, Save, Eye, Mail, ArrowUpRight, ArrowDownLeft, FileText } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 type SuratItem = {
     id: number;
@@ -24,7 +26,8 @@ type SuratItem = {
     tanggal_diterima?: string;
 };
 
-export default function SecuritySuratPage() {
+function SecuritySuratPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [activeTab, setActiveTab] = useState<'masuk' | 'keluar'>('masuk');
     const [data, setData] = useState<SuratItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -304,3 +307,8 @@ export default function SecuritySuratPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(SecuritySuratPage, {
+    permissions: ['surat.index']
+});

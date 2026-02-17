@@ -11,6 +11,8 @@ import Image from 'next/image';
 import Swal from 'sweetalert2';
 import KaryawanModal from './KaryawanModal';
 import SetJamKerjaModal from './SetJamKerjaModal';
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 type KaryawanItem = {
     nik: string;
@@ -58,7 +60,8 @@ type MasterOptions = {
 
 // ... (keep types)
 
-export default function MasterKaryawanPage() {
+function MasterKaryawanPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<KaryawanItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -238,13 +241,15 @@ export default function MasterKaryawanPage() {
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
-                        <Link
-                            href="/master/karyawan/create"
-                            className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm"
-                        >
-                            <UserPlus className="h-4 w-4" />
-                            <span>Tambah Data</span>
-                        </Link>
+                        {canCreate('karyawan') && (
+                            <Link
+                                href="/master/karyawan/create"
+                                className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm"
+                            >
+                                <UserPlus className="h-4 w-4" />
+                                <span>Tambah Data</span>
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -421,52 +426,62 @@ export default function MasterKaryawanPage() {
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
                                                 {/* Set Jam Kerja */}
-                                                <button
-                                                    onClick={() => openJamKerjaModal(item.nik)}
-                                                    className="hover:text-blue-500 text-gray-500 dark:text-gray-400"
-                                                    title="Set Jam Kerja"
-                                                >
-                                                    <Clock className="h-4 w-4" />
-                                                </button>
+                                                {canUpdate('karyawan') && (
+                                                    <button
+                                                        onClick={() => openJamKerjaModal(item.nik)}
+                                                        className="hover:text-blue-500 text-gray-500 dark:text-gray-400"
+                                                        title="Set Jam Kerja"
+                                                    >
+                                                        <Clock className="h-4 w-4" />
+                                                    </button>
+                                                )}
 
                                                 {/* Edit */}
-                                                <Link
-                                                    href={`/master/karyawan/edit/${item.nik}`}
-                                                    className="hover:text-brand-500 text-gray-500 dark:text-gray-400"
-                                                    title="Edit Data"
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </Link>
+                                                {canUpdate('karyawan') && (
+                                                    <Link
+                                                        href={`/master/karyawan/edit/${item.nik}`}
+                                                        className="hover:text-brand-500 text-gray-500 dark:text-gray-400"
+                                                        title="Edit Data"
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Link>
+                                                )}
 
                                                 {/* Lock/Unlock Device */}
-                                                <button
-                                                    onClick={() => handleToggle(item.nik, 'device')}
-                                                    className="hover:opacity-80 text-gray-500 dark:text-gray-400"
-                                                    title="Lock/Unlock Device Login"
-                                                >
-                                                    {item.lock_device_login === '1' ?
-                                                        <Lock className="h-4 w-4 text-green-500" /> :
-                                                        <Unlock className="h-4 w-4 text-red-500" />
-                                                    }
-                                                </button>
+                                                {canUpdate('karyawan') && (
+                                                    <button
+                                                        onClick={() => handleToggle(item.nik, 'device')}
+                                                        className="hover:opacity-80 text-gray-500 dark:text-gray-400"
+                                                        title="Lock/Unlock Device Login"
+                                                    >
+                                                        {item.lock_device_login === '1' ?
+                                                            <Lock className="h-4 w-4 text-green-500" /> :
+                                                            <Unlock className="h-4 w-4 text-red-500" />
+                                                        }
+                                                    </button>
+                                                )}
 
                                                 {/* Reset Session */}
-                                                <button
-                                                    onClick={() => handleResetSession(item.nik, item.nama_karyawan)}
-                                                    className="hover:text-orange-500 text-gray-500 dark:text-gray-400"
-                                                    title="Reset Session (Force Logout)"
-                                                >
-                                                    <RefreshCw className="h-4 w-4" />
-                                                </button>
+                                                {canUpdate('karyawan') && (
+                                                    <button
+                                                        onClick={() => handleResetSession(item.nik, item.nama_karyawan)}
+                                                        className="hover:text-orange-500 text-gray-500 dark:text-gray-400"
+                                                        title="Reset Session (Force Logout)"
+                                                    >
+                                                        <RefreshCw className="h-4 w-4" />
+                                                    </button>
+                                                )}
 
                                                 {/* Hapus */}
-                                                <button
-                                                    onClick={() => handleDelete(item.nik, item.nama_karyawan)}
-                                                    className="hover:text-red-500 text-gray-500 dark:text-gray-400"
-                                                    title="Hapus Data"
-                                                >
-                                                    <Trash className="h-4 w-4" />
-                                                </button>
+                                                {canDelete('karyawan') && (
+                                                    <button
+                                                        onClick={() => handleDelete(item.nik, item.nama_karyawan)}
+                                                        className="hover:text-red-500 text-gray-500 dark:text-gray-400"
+                                                        title="Hapus Data"
+                                                    >
+                                                        <Trash className="h-4 w-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -510,3 +525,8 @@ export default function MasterKaryawanPage() {
         </MainLayout >
     );
 }
+
+// Protect page with permission
+export default withPermission(MasterKaryawanPage, {
+    permissions: ['karyawan.index']
+});

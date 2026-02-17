@@ -6,6 +6,7 @@ import apiClient from '@/lib/api';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { Plus, Search, Trash2, Edit, RefreshCw, FileText, ArrowLeft, ArrowRight, Eye, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { withPermission } from '@/hoc/withPermission';
 
 type IzinData = {
     kode: string;
@@ -38,7 +39,7 @@ type DeptOption = {
     nama_dept: string;
 };
 
-export default function PengajuanIzinPage() {
+function PengajuanIzinPage() {
     const [activeTab, setActiveTab] = useState<'absen' | 'sakit' | 'cuti' | 'dinas'>('absen');
     const [data, setData] = useState<IzinData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -729,3 +730,8 @@ export default function PengajuanIzinPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(PengajuanIzinPage, {
+    permissions: ['izinabsen.index', 'izincuti.index', 'izinsakit.index', 'izindinas.index']
+});

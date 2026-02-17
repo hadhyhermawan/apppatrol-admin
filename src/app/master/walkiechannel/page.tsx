@@ -6,6 +6,8 @@ import apiClient from '@/lib/api';
 import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 type WalkieChannel = {
     id: number;
@@ -25,7 +27,8 @@ type Option = {
     label: string;
 };
 
-export default function WalkieChannelPage() {
+function WalkieChannelPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<WalkieChannel[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -173,13 +176,15 @@ export default function WalkieChannelPage() {
                             />
                         </div>
                     </div>
-                    <button
+                    {canCreate('walkiechannel') && (
+                            <button
                         onClick={handleCreate}
                         className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-primary px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition lg:px-8 xl:px-10"
                     >
                         <Plus className="h-4 w-4" />
                         Tambah Channel
                     </button>
+                        )}
                 </div>
 
                 <div className="max-w-full overflow-x-auto">
@@ -223,9 +228,11 @@ export default function WalkieChannelPage() {
                                                 <button onClick={() => handleEdit(item)} className="text-primary hover:text-primary/80 transition" title="Edit">
                                                     <Edit2 className="h-4 w-4" />
                                                 </button>
-                                                <button onClick={() => handleDelete(item.id)} className="text-danger hover:text-danger/80 transition" title="Hapus">
+                                                {canDelete('walkiechannel') && (
+                                                    <button onClick={() => handleDelete(item.id)} className="text-danger hover:text-danger/80 transition" title="Hapus">
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -370,3 +377,8 @@ export default function WalkieChannelPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(WalkieChannelPage, {
+    permissions: ['walkiechannel.index']
+});

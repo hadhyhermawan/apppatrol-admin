@@ -7,6 +7,8 @@ import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, M
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import clsx from 'clsx';
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 type JabatanItem = {
     kode_jabatan: string;
@@ -15,7 +17,8 @@ type JabatanItem = {
     updated_at?: string;
 };
 
-export default function MasterJabatanPage() {
+function MasterJabatanPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<JabatanItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -167,10 +170,12 @@ export default function MasterJabatanPage() {
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
-                        <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
+                        {canCreate('jabatan') && (
+                            <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
                             <Plus className="h-4 w-4" />
                             <span>Tambah Data</span>
                         </button>
+                        )}
                     </div>
                 </div>
 
@@ -221,12 +226,16 @@ export default function MasterJabatanPage() {
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => handleOpenEdit(item)} className="hover:text-brand-500 text-gray-500 dark:text-gray-400">
+                                                {canUpdate('jabatan') && (
+                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-brand-500 text-gray-500 dark:text-gray-400">
                                                     <Edit className="h-4 w-4" />
                                                 </button>
-                                                <button onClick={() => handleDelete(item.kode_jabatan)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
+                                                )}
+                                                {canDelete('jabatan') && (
+                                                    <button onClick={() => handleDelete(item.kode_jabatan)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
                                                     <Trash className="h-4 w-4" />
                                                 </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -339,3 +348,8 @@ export default function MasterJabatanPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(MasterJabatanPage, {
+    permissions: ['jabatan.index']
+});

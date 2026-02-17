@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import MainLayout from '@/components/layout/MainLayout';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import React from 'react';
+import { withPermission } from '@/hoc/withPermission';
 
 // Import TrackingView dynamically to ensure Leaflet (window) is only accessed on client
 const TrackingView = dynamic(
@@ -21,7 +22,7 @@ const TrackingView = dynamic(
     }
 );
 
-export default function TrackingPage() {
+function TrackingPage() {
     return (
         <MainLayout>
             <PageBreadcrumb pageTitle="Employee Tracking" />
@@ -29,3 +30,8 @@ export default function TrackingPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(TrackingPage, {
+    permissions: ['tracking.index']
+});

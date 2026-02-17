@@ -7,6 +7,8 @@ import { RefreshCw, Smartphone, Search, AlertTriangle, Monitor, Calendar } from 
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import flatpickr from "flatpickr";
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 import "flatpickr/dist/flatpickr.min.css";
 
 type MultiDeviceItem = {
@@ -21,7 +23,8 @@ type MultiDeviceItem = {
     last_login: string;
 };
 
-export default function UtilitiesMultiDevicePage() {
+function UtilitiesMultiDevicePage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<MultiDeviceItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [fromDate, setFromDate] = useState('');
@@ -211,3 +214,8 @@ export default function UtilitiesMultiDevicePage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(UtilitiesMultiDevicePage, {
+    permissions: ['multidevice.index']
+});

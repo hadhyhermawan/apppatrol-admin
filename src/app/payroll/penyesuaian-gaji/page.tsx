@@ -8,6 +8,8 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import Link from 'next/link';
 import { Modal } from "@/components/ui/modal";
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 type PenyesuaianGajiItem = {
     kode_penyesuaian_gaji: string;
@@ -17,7 +19,8 @@ type PenyesuaianGajiItem = {
     updated_at: string;
 };
 
-export default function PayrollPenyesuaianGajiPage() {
+function PayrollPenyesuaianGajiPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<PenyesuaianGajiItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [year, setYear] = useState(new Date().getFullYear());
@@ -222,9 +225,11 @@ export default function PayrollPenyesuaianGajiPage() {
                                                 <button onClick={() => openEditModal(item)} className="hover:text-brand-500 text-gray-500 transition-colors" title="Edit">
                                                     <Edit className="h-4 w-4" />
                                                 </button>
-                                                <button onClick={() => handleDelete(item.kode_penyesuaian_gaji)} className="hover:text-red-500 text-gray-500 transition-colors" title="Hapus">
+                                                {canDelete('penyesuaiangaji') && (
+                                                    <button onClick={() => handleDelete(item.kode_penyesuaian_gaji)} className="hover:text-red-500 text-gray-500 transition-colors" title="Hapus">
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -334,3 +339,8 @@ export default function PayrollPenyesuaianGajiPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(PayrollPenyesuaianGajiPage, {
+    permissions: ['penyesuaiangaji.index']
+});

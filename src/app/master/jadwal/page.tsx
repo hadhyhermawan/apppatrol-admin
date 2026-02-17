@@ -6,6 +6,8 @@ import apiClient from '@/lib/api';
 import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, Clock, ToggleLeft, ToggleRight } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 type PatrolScheduleItem = {
     id: number;
@@ -24,7 +26,8 @@ type OptionItem = { code: string; name: string };
 // Let's assume master/options returns basic lists.
 // Or we can fetch jamkerja list separately.
 
-export default function MasterJadwalTugasPage() {
+function MasterJadwalTugasPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<PatrolScheduleItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -251,10 +254,12 @@ export default function MasterJadwalTugasPage() {
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
-                        <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
+                        {canCreate('jadwal') && (
+                            <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
                             <Plus className="h-4 w-4" />
                             <span>Tambah Data</span>
                         </button>
+                        )}
                     </div>
                 </div>
 
@@ -349,12 +354,16 @@ export default function MasterJadwalTugasPage() {
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
+                                                {canUpdate('jadwal') && (
+                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
                                                     <Edit className="h-4 w-4" />
                                                 </button>
-                                                <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
+                                                )}
+                                                {canDelete('jadwal') && (
+                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
                                                     <Trash className="h-4 w-4" />
                                                 </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -512,3 +521,8 @@ export default function MasterJadwalTugasPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(MasterJadwalTugasPage, {
+    permissions: ['jadwal.index']
+});

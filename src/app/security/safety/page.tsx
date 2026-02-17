@@ -6,6 +6,8 @@ import apiClient from '@/lib/api';
 import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, User, Eye, Calendar } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 type SafetyBriefingItem = {
     id: number;
@@ -23,7 +25,8 @@ type KaryawanOption = {
     nama_karyawan: string;
 };
 
-export default function SecuritySafetyBriefingPage() {
+function SecuritySafetyBriefingPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<SafetyBriefingItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -231,10 +234,12 @@ export default function SecuritySafetyBriefingPage() {
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
-                        <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
+                        {canCreate('safety') && (
+                            <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
                             <Plus className="h-4 w-4" />
                             <span>Tambah Data</span>
                         </button>
+                        )}
                     </div>
                 </div>
 
@@ -319,12 +324,16 @@ export default function SecuritySafetyBriefingPage() {
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
+                                                {canUpdate('safety') && (
+                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
                                                     <Edit className="h-4 w-4" />
                                                 </button>
-                                                <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
+                                                )}
+                                                {canDelete('safety') && (
+                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
                                                     <Trash className="h-4 w-4" />
                                                 </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -444,3 +453,8 @@ export default function SecuritySafetyBriefingPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(SecuritySafetyBriefingPage, {
+    permissions: ['safety.index']
+});

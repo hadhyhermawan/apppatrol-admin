@@ -8,6 +8,8 @@ import Swal from 'sweetalert2';
 import clsx from 'clsx';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Image from 'next/image';
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 type PresensiItem = {
     id: number;
@@ -30,7 +32,8 @@ type MasterOptions = {
     // Other options if needed
 };
 
-export default function PresensiPage() {
+function PresensiPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<PresensiItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -363,9 +366,11 @@ export default function PresensiPage() {
                                                 <button title="Edit" className="hover:text-yellow-500 text-yellow-400">
                                                     <Edit className="h-5 w-5" />
                                                 </button>
-                                                <button onClick={() => handleDelete(item.id)} title="Hapus" className="hover:text-red-500 text-red-500">
+                                                {canDelete('presensi') && (
+                                                    <button onClick={() => handleDelete(item.id)} title="Hapus" className="hover:text-red-500 text-red-500">
                                                     <Trash className="h-5 w-5" />
                                                 </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -401,3 +406,8 @@ export default function PresensiPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(PresensiPage, {
+    permissions: ['presensi.index']
+});

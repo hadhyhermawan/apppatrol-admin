@@ -7,6 +7,8 @@ import { RefreshCw, Search, Trash2, ArrowLeft, ArrowRight, Monitor, User, Calend
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import flatpickr from "flatpickr";
+import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 import "flatpickr/dist/flatpickr.min.css";
 
 type LogItem = {
@@ -21,7 +23,8 @@ type LogItem = {
     logout_at: string | null;
 };
 
-export default function UtilitiesLogsPage() {
+function UtilitiesLogsPage() {
+    const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<LogItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -230,13 +233,15 @@ export default function UtilitiesLogsPage() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 text-center">
-                                            <button
+                                            {canDelete('logs') && (
+                                                    <button
                                                 onClick={() => handleDelete(item.id)}
                                                 className="hover:text-red-500 text-gray-500 dark:text-gray-400 transition-colors"
                                                 title="Hapus Log"
                                             >
                                                 <Trash2 className="h-5 w-5" />
                                             </button>
+                                                )}
                                         </td>
                                     </tr>
                                 ))
@@ -273,3 +278,8 @@ export default function UtilitiesLogsPage() {
         </MainLayout>
     );
 }
+
+// Protect page with permission
+export default withPermission(UtilitiesLogsPage, {
+    permissions: ['logs.index']
+});
