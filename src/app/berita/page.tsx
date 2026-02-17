@@ -254,7 +254,7 @@ export default function BeritaPage() {
                                 <div className="w-full md:w-48 h-32 flex-shrink-0 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden relative">
                                     {item.foto ? (
                                         <Image
-                                            src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}/uploads/berita/${item.foto}`}
+                                            src={item.foto}
                                             alt={item.judul}
                                             fill
                                             className="object-cover"
