@@ -146,10 +146,10 @@ function PresensiPage() {
     };
 
     // Helper Image URL
-    // Adhering to the Karyawan page style which uses localhost storage for now
+    // Backend now returns full URLs, so just return as-is
     const getImageUrl = (filename: string | null) => {
         if (!filename) return null;
-        return `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}/storage/uploads/absensi/${filename}`;
+        return filename;
     };
 
     // Helper Maps URL
