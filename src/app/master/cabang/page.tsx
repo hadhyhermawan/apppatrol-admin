@@ -195,9 +195,9 @@ function MasterCabangPage() {
                         </button>
                         {canCreate('cabang') && (
                             <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Data</span>
-                        </button>
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Data</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -264,13 +264,13 @@ function MasterCabangPage() {
                                             <div className="flex items-center justify-center gap-2">
                                                 {canUpdate('cabang') && (
                                                     <button onClick={() => handleOpenEdit(item)} className="hover:text-brand-500 text-gray-500 dark:text-gray-400">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
+                                                        <Edit className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                                 {canDelete('cabang') && (
                                                     <button onClick={() => handleDelete(item.kode_cabang)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
-                                                    <Trash className="h-4 w-4" />
-                                                </button>
+                                                        <Trash className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -352,6 +352,7 @@ function MasterCabangPage() {
                                             placeholder="Contoh: HEAD OFFICE"
                                             value={formData.nama_cabang}
                                             onChange={e => setFormData({ ...formData, nama_cabang: e.target.value })}
+                                            maxLength={50}
                                         />
                                     </div>
                                 </div>
@@ -364,6 +365,7 @@ function MasterCabangPage() {
                                         placeholder="Jl. Contoh No. 123, Jakarta Selatan"
                                         value={formData.alamat_cabang}
                                         onChange={e => setFormData({ ...formData, alamat_cabang: e.target.value })}
+                                        maxLength={100}
                                     ></textarea>
                                 </div>
 
@@ -376,6 +378,7 @@ function MasterCabangPage() {
                                             placeholder="021-12345678"
                                             value={formData.telepon_cabang}
                                             onChange={e => setFormData({ ...formData, telepon_cabang: e.target.value })}
+                                            maxLength={13}
                                         />
                                     </div>
                                     <div>

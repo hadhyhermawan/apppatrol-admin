@@ -6,8 +6,17 @@ import apiClient from '@/lib/api';
 import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, Package, Calendar } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
+import Image from 'next/image';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
+import dynamic from 'next/dynamic';
+import clsx from 'clsx';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 
 type BarangItem = {
     id_barang: number;
@@ -31,10 +40,11 @@ function SecurityBarangPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [dateStart, setDateStart] = useState('');
     const [dateEnd, setDateEnd] = useState('');
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     const [cabangOptions, setCabangOptions] = useState<CabangOption[]>([]);
 
-    // Pagination State (Client-side initially)
+    // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
 
@@ -91,6 +101,7 @@ function SecurityBarangPage() {
             }
         } catch (error) {
             console.error("Failed to fetch barang data", error);
+            setData([]);
         } finally {
             setLoading(false);
         }
@@ -104,10 +115,9 @@ function SecurityBarangPage() {
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchData();
-        }, 500);
+        }, 800);
         return () => clearTimeout(timer);
     }, [searchTerm, dateStart, dateEnd]);
-
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -231,6 +241,25 @@ function SecurityBarangPage() {
         <MainLayout>
             <PageBreadcrumb pageTitle="Log Book Barang" />
 
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <img
+                        src={previewImage}
+                        alt="Preview"
+                        className="max-h-[90vh] max-w-full rounded-lg shadow-2xl object-contain"
+                    />
+                    <button
+                        className="absolute top-5 right-5 text-white bg-black/50 rounded-full p-2 hover:bg-white/20 transition-colors"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+            )}
+
             <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-semibold text-black dark:text-white">
@@ -243,9 +272,9 @@ function SecurityBarangPage() {
                         </button>
                         {canCreate('barang') && (
                             <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Data</span>
-                        </button>
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Data</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -265,19 +294,23 @@ function SecurityBarangPage() {
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
                     <div>
-                        <input
-                            type="datetime-local"
-                            value={dateStart}
-                            onChange={e => setDateStart(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
+                        <DatePicker
+                            id="date-start"
+                            placeholder="Dari Waktu"
+                            defaultDate={dateStart}
+                            enableTime
+                            dateFormat="Y-m-d H:i"
+                            onChange={(dates: Date[], dateStr: string) => setDateStart(dateStr)}
                         />
                     </div>
                     <div>
-                        <input
-                            type="datetime-local"
-                            value={dateEnd}
-                            onChange={e => setDateEnd(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
+                        <DatePicker
+                            id="date-end"
+                            placeholder="Sampai Waktu"
+                            defaultDate={dateEnd}
+                            enableTime
+                            dateFormat="Y-m-d H:i"
+                            onChange={(dates: Date[], dateStr: string) => setDateEnd(dateStr)}
                         />
                     </div>
                 </div>
@@ -318,8 +351,8 @@ function SecurityBarangPage() {
                                         </td>
                                         <td className="px-4 py-4 text-sm">
                                             <div className="grid gap-1">
-                                                <div className="flex items-center gap-1"><span className="text-gray-500 w-12">Dari</span>: <span className="font-medium">{item.dari}</span></div>
-                                                <div className="flex items-center gap-1"><span className="text-gray-500 w-12">Untuk</span>: <span className="font-medium">{item.untuk}</span></div>
+                                                <div className="flex items-center gap-1"><span className="text-gray-500 w-12">Dari</span>: <span className="font-medium text-black dark:text-white">{item.dari}</span></div>
+                                                <div className="flex items-center gap-1"><span className="text-gray-500 w-12">Untuk</span>: <span className="font-medium text-black dark:text-white">{item.untuk}</span></div>
                                                 {item.kode_cabang && <div className="text-xs text-gray-400 mt-1">Cabang: {item.kode_cabang}</div>}
                                             </div>
                                         </td>
@@ -334,27 +367,51 @@ function SecurityBarangPage() {
                                             )}
                                         </td>
                                         <td className="px-4 py-4 text-center text-sm">
-                                            <div className="flex flex-col gap-1 items-center">
-                                                {item.image ? (
-                                                    <a href={item.image} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-xs">Msk</a>
-                                                ) : null}
-                                                {item.foto_keluar ? (
-                                                    <a href={item.foto_keluar} target="_blank" rel="noopener noreferrer" className="text-red-500 hover:underline text-xs">Klr</a>
-                                                ) : null}
-                                                {!item.image && !item.foto_keluar && <span className="text-xs text-gray-400">-</span>}
+                                            <div className="flex items-center justify-center -space-x-2">
+                                                {item.image && (
+                                                    <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Masuk">
+                                                        <Image
+                                                            src={item.image}
+                                                            alt="Masuk"
+                                                            width={40}
+                                                            height={40}
+                                                            className="h-full w-full object-cover cursor-pointer hover:opacity-80 transition"
+                                                            unoptimized
+                                                            onClick={() => setPreviewImage(item.image)}
+                                                            onError={(e: any) => e.target.style.display = 'none'}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {item.foto_keluar && (
+                                                    <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Keluar">
+                                                        <Image
+                                                            src={item.foto_keluar}
+                                                            alt="Keluar"
+                                                            width={40}
+                                                            height={40}
+                                                            className="h-full w-full object-cover cursor-pointer hover:opacity-80 transition"
+                                                            unoptimized
+                                                            onClick={() => setPreviewImage(item.foto_keluar)}
+                                                            onError={(e: any) => e.target.style.display = 'none'}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {!item.image && !item.foto_keluar && (
+                                                    <span className="text-xs text-gray-400">-</span>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
                                                 {canUpdate('barang') && (
                                                     <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
+                                                        <Edit className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                                 {canDelete('barang') && (
                                                     <button onClick={() => handleDelete(item.id_barang)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
-                                                    <Trash className="h-4 w-4" />
-                                                </button>
+                                                        <Trash className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -369,7 +426,7 @@ function SecurityBarangPage() {
                 {data.length > 0 && (
                     <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-stroke pt-4 dark:border-strokedark">
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Menampilkan {(currentPage - 1) * perPage + 1} - {Math.min(currentPage * perPage, data.length)} dari {data.length} data
+                            Menampilkan <span className="font-medium text-black dark:text-white">{(currentPage - 1) * perPage + 1}</span> - <span className="font-medium text-black dark:text-white">{Math.min(currentPage * perPage, data.length)}</span> dari <span className="font-medium text-black dark:text-white">{data.length}</span> data
                         </div>
                         <div className="flex gap-2">
                             <button
@@ -416,7 +473,7 @@ function SecurityBarangPage() {
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Jenis Barang</label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                         placeholder="Contoh: Paket Dokumen"
                                         value={formData.jenis_barang}
                                         onChange={e => setFormData({ ...formData, jenis_barang: e.target.value })}
@@ -428,7 +485,7 @@ function SecurityBarangPage() {
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Dari</label>
                                         <input
                                             type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             value={formData.dari}
                                             onChange={e => setFormData({ ...formData, dari: e.target.value })}
                                         />
@@ -437,7 +494,7 @@ function SecurityBarangPage() {
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Untuk</label>
                                         <input
                                             type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             value={formData.untuk}
                                             onChange={e => setFormData({ ...formData, untuk: e.target.value })}
                                         />
@@ -449,23 +506,19 @@ function SecurityBarangPage() {
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Penerima</label>
                                         <input
                                             type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             value={formData.penerima}
                                             onChange={e => setFormData({ ...formData, penerima: e.target.value })}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Cabang (Opsional)</label>
-                                        <select
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        <SearchableSelect
+                                            options={cabangOptions.map(opt => ({ value: opt.code, label: opt.name }))}
                                             value={formData.kode_cabang}
-                                            onChange={e => setFormData({ ...formData, kode_cabang: e.target.value })}
-                                        >
-                                            <option value="">Pilih Cabang</option>
-                                            {cabangOptions.map(opt => (
-                                                <option key={opt.code} value={opt.code}>{opt.name}</option>
-                                            ))}
-                                        </select>
+                                            onChange={(val) => setFormData({ ...formData, kode_cabang: val })}
+                                            placeholder="Pilih Cabang"
+                                        />
                                     </div>
                                 </div>
 
@@ -473,7 +526,7 @@ function SecurityBarangPage() {
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Foto Masuk (URL)</label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                         placeholder="https://..."
                                         value={formData.image}
                                         onChange={e => setFormData({ ...formData, image: e.target.value })}
@@ -483,7 +536,7 @@ function SecurityBarangPage() {
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Foto Keluar (URL)</label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                         placeholder="https://..."
                                         value={formData.foto_keluar}
                                         onChange={e => setFormData({ ...formData, foto_keluar: e.target.value })}
@@ -493,7 +546,7 @@ function SecurityBarangPage() {
                             </div>
 
                             <div className="px-6 py-4 bg-gray-50 dark:bg-meta-4/30 flex justify-end gap-3 border-t border-stroke dark:border-strokedark sticky bottom-0 z-10">
-                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium text-black bg-white border border-stroke rounded-lg hover:bg-gray-50">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium text-black bg-white border border-stroke rounded-lg hover:bg-gray-50 dark:bg-meta-4 dark:text-white dark:border-strokedark">
                                     Batal
                                 </button>
                                 <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-opacity-90 flex items-center">
@@ -508,7 +561,6 @@ function SecurityBarangPage() {
     );
 }
 
-// Protect page with permission
 export default withPermission(SecurityBarangPage, {
     permissions: ['barang.index']
 });

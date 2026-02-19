@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import apiClient from '@/lib/api';
 import {
     Users, Search, Filter, RefreshCw, Battery, MapPin,
-    Wifi, WifiOff, Clock, User, Building, Radio
+    Wifi, WifiOff, Clock, User, Building, Radio, ChevronDown, X
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import Image from 'next/image';
@@ -29,6 +29,10 @@ const Popup = dynamic(
 );
 const Polyline = dynamic(
     () => import('react-leaflet').then((mod) => mod.Polyline),
+    { ssr: false }
+);
+const Circle = dynamic(
+    () => import('react-leaflet').then((mod) => mod.Circle),
     { ssr: false }
 );
 
@@ -73,6 +77,8 @@ interface EmployeeData {
     nama_karyawan: string;
     kode_cabang: string;
     nama_cabang: string;
+    lokasi_cabang: string | null;
+    radius_cabang: number | null;
     latitude: number | null;
     longitude: number | null;
     is_online: number;
@@ -88,6 +94,121 @@ interface EmployeeData {
     distance_to_office_meter: number | null;
 }
 
+interface SearchableSelectProps {
+    options: any[];
+    value: string;
+    onChange: (val: string) => void;
+    placeholder: string;
+    valueKey: string;
+    labelKey: string;
+}
+
+const SearchableSelect = ({ options, value, onChange, placeholder, valueKey, labelKey }: SearchableSelectProps) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    // Sync search with value
+    useEffect(() => {
+        const selected = options.find(o => o[valueKey] === value);
+        if (selected) {
+            setSearch(selected[labelKey]);
+        } else if (!value) {
+            setSearch('');
+        }
+    }, [value, options, valueKey, labelKey]);
+
+    const filteredOptions = options.filter(opt =>
+        String(opt[labelKey]).toLowerCase().includes(search.toLowerCase())
+    );
+
+    // Handle click outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+                // Reset search to selected value label on close
+                const selected = options.find(o => o[valueKey] === value);
+                if (selected) setSearch(selected[labelKey]);
+                else if (!value) setSearch('');
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [wrapperRef, value, options, valueKey, labelKey]);
+
+    return (
+        <div ref={wrapperRef} className="relative w-full">
+            <div className="relative">
+                <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => {
+                        setSearch(e.target.value);
+                        setIsOpen(true);
+                        // If user clears input, clear value immediately? Optional.
+                        // Better: let them search, only clear if they select 'Semua' or empty search completely
+                        if (e.target.value === '') onChange('');
+                    }}
+                    onFocus={() => setIsOpen(true)}
+                    placeholder={placeholder}
+                    className="w-full pl-3 pr-8 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none truncate"
+                />
+                <div className="absolute right-2 top-2.5 text-gray-400 pointer-events-none">
+                    <ChevronDown className="w-4 h-4" />
+                </div>
+                {value && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onChange('');
+                            setSearch('');
+                            setIsOpen(true);
+                        }}
+                        className="absolute right-8 top-2.5 text-gray-400 hover:text-gray-600 pointer-events-auto"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                )}
+            </div>
+
+            {isOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <div
+                        className="px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b dark:border-gray-700"
+                        onClick={() => {
+                            onChange('');
+                            setSearch('');
+                            setIsOpen(false);
+                        }}
+                    >
+                        {placeholder} (Semua)
+                    </div>
+                    {filteredOptions.length > 0 ? (
+                        filteredOptions.map((opt) => (
+                            <div
+                                key={opt[valueKey]}
+                                className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${value === opt[valueKey] ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600' : 'text-gray-700 dark:text-gray-200'}`}
+                                onClick={() => {
+                                    onChange(opt[valueKey]);
+                                    setSearch(opt[labelKey]);
+                                    setIsOpen(false);
+                                }}
+                            >
+                                {opt[labelKey]}
+                            </div>
+                        ))
+                    ) : (
+                        <div className="px-3 py-2 text-sm text-gray-400 text-center">
+                            Tidak ditemukan
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function TrackingView() {
     const [employees, setEmployees] = useState<EmployeeData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -98,10 +219,42 @@ export default function TrackingView() {
     const [loadingHistory, setLoadingHistory] = useState(false);
     const mapRef = useRef<L.Map>(null);
 
+    // Filter States
+    const [cabangOptions, setCabangOptions] = useState<any[]>([]);
+    const [deptOptions, setDeptOptions] = useState<any[]>([]);
+    const [shiftOptions, setShiftOptions] = useState<any[]>([]);
+    const [selectedCabang, setSelectedCabang] = useState('');
+    const [selectedDept, setSelectedDept] = useState('');
+    const [selectedShift, setSelectedShift] = useState('');
+
+    const fetchOptions = async () => {
+        try {
+            const [cabangRes, deptRes, shiftRes] = await Promise.all([
+                apiClient.get('/master/cabang'),
+                apiClient.get('/master/departemen'),
+                apiClient.get('/master/jamkerja')
+            ]);
+
+            // API client interceptor returns response.data directly
+            // If API returns list, res IS the list. If mapped to {data: ...}, res.data IS the list.
+            setCabangOptions(Array.isArray(cabangRes) ? cabangRes : (cabangRes?.data || []));
+            setDeptOptions(Array.isArray(deptRes) ? deptRes : (deptRes?.data || []));
+            setShiftOptions(Array.isArray(shiftRes) ? shiftRes : (shiftRes?.data || []));
+
+        } catch (error) {
+            console.error("Error fetching options:", error);
+        }
+    };
+
     const fetchEmployees = async () => {
         setLoading(true);
         try {
-            const response = await apiClient.get('/employee-tracking/map-data');
+            const params = {
+                kode_cabang: selectedCabang || undefined,
+                kode_dept: selectedDept || undefined,
+                kode_jadwal: selectedShift || undefined
+            };
+            const response = await apiClient.get('/employee-tracking/map-data', { params });
             if (response && response.data) {
                 setEmployees(response.data);
             }
@@ -134,11 +287,54 @@ export default function TrackingView() {
     };
 
     useEffect(() => {
+        fetchOptions();
         fetchEmployees();
         // Auto refresh every 30 seconds
         const interval = setInterval(fetchEmployees, 30000);
         return () => clearInterval(interval);
-    }, []);
+    }, [selectedCabang, selectedDept, selectedShift]);
+
+    // Auto Zoom Logic
+    const [lastZoomedCabang, setLastZoomedCabang] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!mapRef.current || employees.length === 0) return;
+
+        // Perform zoom only if selectedCabang changed (checked via lastZoomedCabang)
+        // We use a timeout to ensuring map is ready and data is consistent
+        if (selectedCabang !== lastZoomedCabang) {
+
+            if (selectedCabang) {
+                // Focus on specific branch
+                const branchEmp = employees.find(e => e.kode_cabang === selectedCabang);
+                if (branchEmp && branchEmp.lokasi_cabang) {
+                    const parts = branchEmp.lokasi_cabang.split(',').map(s => parseFloat(s.trim()));
+                    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                        mapRef.current.flyTo([parts[0], parts[1]], 17, { duration: 1.5 });
+                        setLastZoomedCabang(selectedCabang);
+                    }
+                }
+            } else {
+                // Focus on all (Fit Bounds)
+                const points: L.LatLngTuple[] = [];
+                employees.forEach(emp => {
+                    if (emp.latitude && emp.longitude) points.push([emp.latitude, emp.longitude]);
+                    if (emp.lokasi_cabang) {
+                        const p = emp.lokasi_cabang.split(',');
+                        if (p.length === 2) points.push([parseFloat(p[0]), parseFloat(p[1])]);
+                    }
+                });
+
+                if (points.length > 0) {
+                    const bounds = L.latLngBounds(points);
+                    if (bounds.isValid()) {
+                        mapRef.current.flyToBounds(bounds, { padding: [50, 50], duration: 1.5 });
+                        setLastZoomedCabang('');
+                    }
+                }
+            }
+        }
+    }, [employees, selectedCabang, lastZoomedCabang]);
 
     const filteredEmployees = employees.filter(emp => {
         const matchesSearch = emp.nama_karyawan.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -195,6 +391,40 @@ export default function TrackingView() {
                                 className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all outline-none"
                             />
                             <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                        </div>
+
+                        {/* Filters */}
+                        <div className="space-y-2">
+                            <SearchableSelect
+                                options={cabangOptions}
+                                value={selectedCabang}
+                                onChange={setSelectedCabang}
+                                placeholder="Pilih Cabang"
+                                valueKey="kode_cabang"
+                                labelKey="nama_cabang"
+                            />
+
+                            <select
+                                value={selectedDept}
+                                onChange={(e) => setSelectedDept(e.target.value)}
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                            >
+                                <option value="">Semua Departemen</option>
+                                {deptOptions.map((opt: any) => (
+                                    <option key={opt.kode_dept} value={opt.kode_dept}>{opt.nama_dept}</option>
+                                ))}
+                            </select>
+
+                            <select
+                                value={selectedShift}
+                                onChange={(e) => setSelectedShift(e.target.value)}
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                            >
+                                <option value="">Semua Jam Kerja</option>
+                                {shiftOptions.map((opt: any) => (
+                                    <option key={opt.kode_jam_kerja} value={opt.kode_jam_kerja}>{opt.nama_jam_kerja}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div className="flex gap-2">
@@ -274,6 +504,7 @@ export default function TrackingView() {
                     <MapContainer
                         center={defaultCenter}
                         zoom={zoomLevel}
+                        minZoom={5}
                         style={{ height: '100%', width: '100%' }}
                         ref={mapRef}
                     >
@@ -285,6 +516,29 @@ export default function TrackingView() {
                         {historyPath.length > 0 && (
                             <Polyline positions={historyPath} color="blue" weight={4} opacity={0.7} dashArray="10, 10" />
                         )}
+
+                        {/* Branch Radius Circles */}
+                        {Array.from(new Map(employees.map(emp => [emp.kode_cabang, emp])).values()).map(emp => {
+                            if (!emp.lokasi_cabang || !emp.radius_cabang) return null;
+                            const parts = emp.lokasi_cabang.split(',').map(s => parseFloat(s.trim()));
+                            if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) return null;
+
+                            return (
+                                <Circle
+                                    key={`radius-${emp.kode_cabang}`}
+                                    center={[parts[0], parts[1]]}
+                                    radius={emp.radius_cabang}
+                                    pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.05, weight: 1, dashArray: '5, 5' }}
+                                >
+                                    <Popup>
+                                        <div className="text-xs font-semibold text-center">
+                                            {emp.nama_cabang}<br />
+                                            Radius: {emp.radius_cabang}m
+                                        </div>
+                                    </Popup>
+                                </Circle>
+                            );
+                        })}
 
                         {filteredEmployees.map(emp => {
                             if (!emp.latitude || !emp.longitude) return null;

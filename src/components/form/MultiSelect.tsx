@@ -24,6 +24,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   const [selectedOptions, setSelectedOptions] =
     useState<string[]>(defaultSelected);
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const toggleDropdown = () => {
     if (disabled) return;
@@ -55,9 +56,9 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
         {label}
       </label>
 
-      <div className="relative z-20 inline-block w-full">
+      <div className={`relative inline-block w-full ${isOpen ? 'z-50' : 'z-20'}`}>
         <div className="relative flex flex-col items-center">
-          <div onClick={toggleDropdown}  className="w-full">
+          <div onClick={toggleDropdown} className="w-full">
             <div className="mb-2 flex h-11 rounded-lg border border-gray-300 py-1.5 pl-3 pr-3 shadow-theme-xs outline-hidden transition focus:border-brand-300 focus:shadow-focus-ring dark:border-gray-700 dark:bg-gray-900 dark:focus:border-brand-300">
               <div className="flex flex-wrap flex-auto gap-2">
                 {selectedValuesText.length > 0 ? (
@@ -104,7 +105,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
               <div className="flex items-center py-1 pl-1 pr-1 w-7">
                 <button
                   type="button"
-                  onClick={toggleDropdown} 
+                  onClick={toggleDropdown}
                   className="w-5 h-5 text-gray-700 outline-hidden cursor-pointer focus:outline-hidden dark:text-gray-400"
                 >
                   <svg
@@ -130,30 +131,51 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 
           {isOpen && (
             <div
-              className="absolute left-0 z-40 w-full overflow-y-auto bg-white rounded-lg shadow-sm top-full max-h-select dark:bg-gray-900"
+              className="absolute left-0 z-40 w-full overflow-y-auto bg-white rounded-lg shadow-sm top-full max-h-60 dark:bg-gray-900 border border-stroke dark:border-strokedark"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Search Input */}
+              <div className="sticky top-0 z-10 bg-white p-2 dark:bg-gray-900 border-b border-stroke dark:border-strokedark">
+                <input
+                  type="text"
+                  className="w-full rounded border border-stroke bg-transparent px-3 py-1 text-sm outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-black dark:text-white"
+                  placeholder="Cari..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
               <div className="flex flex-col">
-                {options.map((option, index) => (
+                {options.filter(opt => opt.text.toLowerCase().includes(searchTerm.toLowerCase())).map((option, index) => (
                   <div key={index}>
                     <div
                       className={`hover:bg-primary/5 w-full cursor-pointer rounded-t border-b border-gray-200 dark:border-gray-800`}
                       onClick={() => handleSelect(option.value)}
                     >
                       <div
-                        className={`relative flex w-full items-center p-2 pl-2 ${
-                          selectedOptions.includes(option.value)
-                            ? "bg-primary/10"
-                            : ""
-                        }`}
+                        className={`relative flex w-full items-center p-2 pl-2 ${selectedOptions.includes(option.value)
+                          ? "bg-primary/10"
+                          : ""
+                          }`}
                       >
-                        <div className="mx-2 leading-6 text-gray-800 dark:text-white/90">
+                        <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded border ${selectedOptions.includes(option.value) ? 'border-primary bg-primary' : 'border-gray-300 dark:border-gray-600'}`}>
+                          {selectedOptions.includes(option.value) && (
+                            <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="leading-6 text-gray-800 dark:text-white/90">
                           {option.text}
                         </div>
                       </div>
                     </div>
                   </div>
                 ))}
+                {options.filter(opt => opt.text.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+                  <div className="p-3 text-center text-sm text-gray-500">Tidak ada data.</div>
+                )}
               </div>
             </div>
           )}

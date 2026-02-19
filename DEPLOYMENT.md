@@ -77,6 +77,8 @@ npm run build
 ```bash
 # Start with PM2
 cd /var/www/apppatrol-admin
+chown -R www-data:www-data .next
+chmod -R 755 .next
 PORT=3010 pm2 start npm --name patrol-frontend -- start
 
 # Save PM2 configuration
@@ -429,3 +431,27 @@ curl -I https://frontend.k3guard.com
 
 **Last Updated**: 2026-02-17  
 **Maintainer**: DevOps Team
+
+### Issue: 500 Internal Server Error (Static Assets)
+
+**Symptoms**: `net::ERR_ABORTED 500` when loading JS/CSS chunks.
+
+**Cause**: 
+- File permission issues on `.next` directory.
+- `optimizeCss` experimental feature failing.
+- Browser caching old file hashes.
+
+**Solutions**:
+1. **Fix Permissions**:
+   ```bash
+   chown -R www-data:www-data .next
+   chmod -R 755 .next
+   ```
+2. **Disable optimizeCss**:
+   In `next.config.ts`:
+   ```typescript
+   experimental: {
+     optimizeCss: false, // Set to false
+   },
+   ```
+3. **Hard Refresh Browser**.

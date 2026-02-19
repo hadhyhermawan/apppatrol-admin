@@ -8,6 +8,7 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
 
 type DeptTaskPointItem = {
     id: number;
@@ -232,9 +233,9 @@ function MasterDeptTaskPointPage() {
                         </button>
                         {canCreate('depttaskpoint') && (
                             <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Data</span>
-                        </button>
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Data</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -255,28 +256,20 @@ function MasterDeptTaskPointPage() {
                     </div>
 
                     <div>
-                        <select
+                        <SearchableSelect
+                            options={[{ value: "", label: "Semua Cabang" }, ...cabangOptions.map(opt => ({ value: opt.code, label: opt.name }))]}
                             value={filterCabang}
-                            onChange={(e) => setFilterCabang(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                        >
-                            <option value="">Semua Cabang</option>
-                            {cabangOptions.map((opt) => (
-                                <option key={opt.code} value={opt.code}>{opt.name}</option>
-                            ))}
-                        </select>
+                            onChange={(val) => setFilterCabang(val)}
+                            placeholder="Semua Cabang"
+                        />
                     </div>
                     <div>
-                        <select
+                        <SearchableSelect
+                            options={[{ value: "", label: "Semua Departemen" }, ...deptOptions.map(opt => ({ value: opt.code, label: opt.name }))]}
                             value={filterDept}
-                            onChange={(e) => setFilterDept(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                        >
-                            <option value="">Semua Departemen</option>
-                            {deptOptions.map((opt) => (
-                                <option key={opt.code} value={opt.code}>{opt.name}</option>
-                            ))}
-                        </select>
+                            onChange={(val) => setFilterDept(val)}
+                            placeholder="Semua Departemen"
+                        />
                     </div>
                 </div>
 
@@ -349,13 +342,13 @@ function MasterDeptTaskPointPage() {
                                             <div className="flex items-center justify-center gap-2">
                                                 {canUpdate('depttaskpoint') && (
                                                     <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
+                                                        <Edit className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                                 {canDelete('depttaskpoint') && (
                                                     <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
-                                                    <Trash className="h-4 w-4" />
-                                                </button>
+                                                        <Trash className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -416,29 +409,21 @@ function MasterDeptTaskPointPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Cabang</label>
-                                        <select
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        <SearchableSelect
+                                            options={cabangOptions.map(opt => ({ value: opt.code, label: opt.name }))}
                                             value={formData.kode_cabang}
-                                            onChange={e => setFormData({ ...formData, kode_cabang: e.target.value })}
-                                        >
-                                            <option value="">Pilih Cabang</option>
-                                            {cabangOptions.map(opt => (
-                                                <option key={opt.code} value={opt.code}>{opt.name}</option>
-                                            ))}
-                                        </select>
+                                            onChange={(val) => setFormData({ ...formData, kode_cabang: val })}
+                                            placeholder="Pilih Cabang"
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Departemen</label>
-                                        <select
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        <SearchableSelect
+                                            options={deptOptions.map(opt => ({ value: opt.code, label: opt.name }))}
                                             value={formData.kode_dept}
-                                            onChange={e => setFormData({ ...formData, kode_dept: e.target.value })}
-                                        >
-                                            <option value="">Pilih Departemen</option>
-                                            {deptOptions.map(opt => (
-                                                <option key={opt.code} value={opt.code}>{opt.name}</option>
-                                            ))}
-                                        </select>
+                                            onChange={(val) => setFormData({ ...formData, kode_dept: val })}
+                                            placeholder="Pilih Departemen"
+                                        />
                                     </div>
                                 </div>
 

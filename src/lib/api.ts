@@ -28,6 +28,9 @@ apiClient.interceptors.response.use(
 // Interceptor for request headers (attach token)
 apiClient.interceptors.request.use(
     (config) => {
+        // DEBUG LOGGING
+        console.log(`[DEBUG API REQUEST] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, config.data);
+
         if (typeof window !== 'undefined') {
             const token = localStorage.getItem('patrol_token');
             if (token && config.headers) {

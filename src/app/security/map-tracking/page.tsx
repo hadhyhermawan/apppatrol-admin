@@ -27,6 +27,11 @@ const Popup = dynamic(
     { ssr: false }
 );
 
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
+
 type PatrolTrack = {
     id: number;
     patrol_session_id: number;
@@ -118,13 +123,12 @@ function MapTrackingPage() {
                         Monitoring Lokasi Patroli
                     </h2>
                     <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                        <div className="relative">
-                            <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                            <input
-                                type="date"
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                                className="w-full sm:w-40 rounded-lg border-[1.5px] border-stroke bg-transparent pl-10 pr-4 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
+                        <div className="w-full sm:w-50">
+                            <DatePicker
+                                id="date-tracking"
+                                placeholder="Pilih Tanggal"
+                                defaultDate={selectedDate}
+                                onChange={(dates: Date[], dateStr: string) => setSelectedDate(dateStr)}
                             />
                         </div>
                         <div className="relative">

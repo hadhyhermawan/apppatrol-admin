@@ -7,53 +7,13 @@ import Swal from 'sweetalert2';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import flatpickr from "flatpickr";
-import "flatpickr/dist/themes/light.css";
+import SearchableSelect from '@/components/form/SearchableSelect';
+import dynamic from 'next/dynamic';
 
-const DatePickerInput = ({ label, name, value, onChange, placeholder = "YYYY-MM-DD", required = false }: any) => {
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        if (inputRef.current) {
-            const fp = flatpickr(inputRef.current, {
-                defaultDate: value,
-                dateFormat: "Y-m-d",
-                allowInput: true,
-                onChange: (selectedDates, dateStr) => {
-                    onChange({ target: { name, value: dateStr } });
-                }
-            });
-
-            return () => {
-                fp.destroy();
-            };
-        }
-    }, []);
-
-    // Watch for external value changes (e.g. from initialData)
-    useEffect(() => {
-        if (inputRef.current && (inputRef.current as any)._flatpickr) {
-            (inputRef.current as any)._flatpickr.setDate(value, false);
-        }
-    }, [value]);
-
-    return (
-        <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
-                {label} {required && <span className="text-red-500">*</span>}
-            </label>
-            <div className="relative">
-                <input
-                    ref={inputRef}
-                    name={name}
-                    placeholder={placeholder}
-                    className="w-full rounded-lg border border-gray-300 bg-white p-2.5 pl-10 text-sm text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-brand-500 dark:focus:ring-brand-500"
-                />
-                <Calendar className="absolute left-3 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
-            </div>
-        </div>
-    );
-};
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 
 interface OptionItem {
     code: string;
@@ -112,6 +72,16 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                 alamat: initialData.alamat || '',
                 tempat_lahir: initialData.tempat_lahir || '',
                 tanggal_lahir: initialData.tanggal_lahir || '',
+
+                // Robust handling for potential null values from backend
+                kode_cabang: initialData.kode_cabang || '',
+                kode_dept: initialData.kode_dept || '',
+                kode_jabatan: initialData.kode_jabatan || '',
+                kode_status_kawin: initialData.kode_status_kawin || '',
+                kode_jadwal: initialData.kode_jadwal || '',
+                jenis_kelamin: initialData.jenis_kelamin || 'L',
+                status_karyawan: initialData.status_karyawan || 'C',
+
                 masa_aktif_kartu_anggota: initialData.masa_aktif_kartu_anggota || '',
                 no_kartu_anggota: initialData.nik, // Force sync with NIK
 
@@ -183,8 +153,20 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
     };
 
     const handleSubmit = async () => {
-        if (!formData.nik || !formData.nama_karyawan || (!formData.password && mode === 'create')) {
-            Swal.fire('Error', 'Mohon lengkapi data wajib (NIK, Nama, Password)', 'error');
+        if (!formData.nik || !formData.nama_karyawan) {
+            Swal.fire('Error', 'Mohon lengkapi data wajib (NIK, Nama Lengkap)', 'error');
+            return;
+        }
+
+        if (formData.kode_dept === 'UDV' && !formData.no_sim) {
+            Swal.fire('Error', 'Driver wajib mengisi Nomor SIM', 'error');
+            setActiveTab('pribadi');
+            return;
+        }
+
+        if (formData.kode_dept === 'UK3' && !formData.no_kartu_anggota) {
+            Swal.fire('Error', 'Security wajib mengisi Nomor Kartu Anggota', 'error');
+            setActiveTab('pribadi');
             return;
         }
 
@@ -281,12 +263,11 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                         value={formData.nik || ''}
                                         onChange={(e) => {
                                             handleChange(e);
-                                            // Auto-fill password and no_kartu_anggota with NIK in create mode
+                                            // Auto-fill no_kartu_anggota with NIK in create mode
                                             if (mode === 'create') {
                                                 setFormData((prev: any) => ({
                                                     ...prev,
                                                     nik: e.target.value,
-                                                    password: e.target.value,
                                                     no_kartu_anggota: e.target.value
                                                 }));
                                             }
@@ -312,7 +293,6 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                                 setFormData((prev: any) => ({
                                                     ...prev,
                                                     nik: val,
-                                                    password: val,
                                                     no_kartu_anggota: val
                                                 }));
                                             }
@@ -321,9 +301,11 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                     />
                                 </InputGroup>
 
-                                <InputGroup label="Nomor SIM (Optional)">
-                                    <input type="text" name="no_sim" value={formData.no_sim || ''} onChange={handleChange} className={inputClass} />
-                                </InputGroup>
+                                {formData.kode_dept === 'UDV' && (
+                                    <InputGroup label="Nomor SIM (Wajib untuk Driver)" required>
+                                        <input type="text" name="no_sim" value={formData.no_sim || ''} onChange={handleChange} className={inputClass} />
+                                    </InputGroup>
+                                )}
 
                                 <InputGroup label="Jenis Kelamin">
                                     <select name="jenis_kelamin" value={formData.jenis_kelamin || 'L'} onChange={handleChange} className={inputClass}>
@@ -335,29 +317,35 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                 <InputGroup label="Tempat Lahir">
                                     <input type="text" name="tempat_lahir" value={formData.tempat_lahir || ''} onChange={handleChange} className={inputClass} />
                                 </InputGroup>
-                                <DatePickerInput
-                                    label="Tanggal Lahir"
-                                    name="tanggal_lahir"
-                                    value={formData.tanggal_lahir || ''}
-                                    onChange={handleChange}
-                                />
+                                <div className="mb-4">
+                                    <DatePicker
+                                        id="tanggal_lahir"
+                                        label="Tanggal Lahir"
+                                        defaultDate={formData.tanggal_lahir}
+                                        onChange={(dates, str) => handleChange({ target: { name: 'tanggal_lahir', value: str } } as any)}
+                                        placeholder="YYYY-MM-DD"
+                                    />
+                                </div>
 
-                                <InputGroup label="Status Pernikahan">
-                                    <select name="kode_status_kawin" value={formData.kode_status_kawin || ''} onChange={handleChange} className={inputClass}>
-                                        <option value="">Pilih Status</option>
-                                        {(options?.status_kawin && options.status_kawin.length > 0) ? (
-                                            options.status_kawin.map(ok => <option key={ok.code} value={ok.code}>{ok.name}</option>)
-                                        ) : (
-                                            // Fallback options if API returns empty
-                                            <>
-                                                <option value="1">Belum Kawin</option>
-                                                <option value="2">Kawin</option>
-                                                <option value="3">Cerai Hidup</option>
-                                                <option value="4">Cerai Mati</option>
-                                            </>
-                                        )}
-                                    </select>
-                                </InputGroup>
+                                <div className="mb-4">
+                                    <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                                        Status Pernikahan
+                                    </label>
+                                    <SearchableSelect
+                                        options={(options?.status_kawin && options.status_kawin.length > 0) ?
+                                            options.status_kawin.map(ok => ({ value: ok.code, label: ok.name })) :
+                                            [
+                                                { value: "1", label: "Belum Kawin" },
+                                                { value: "2", label: "Kawin" },
+                                                { value: "3", label: "Cerai Hidup" },
+                                                { value: "4", label: "Cerai Mati" }
+                                            ]
+                                        }
+                                        value={formData.kode_status_kawin}
+                                        onChange={(val) => setFormData({ ...formData, kode_status_kawin: val })}
+                                        placeholder="Pilih Status"
+                                    />
+                                </div>
 
                                 <InputGroup label="Pendidikan Terakhir">
                                     <select name="pendidikan_terakhir" value={formData.pendidikan_terakhir || ''} onChange={handleChange} className={inputClass}>
@@ -379,49 +367,50 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                         <div className={activeTab === 'pekerjaan' ? 'block' : 'hidden'}>
                             <SectionTitle title="Detail Pekerjaan & Posisi" icon={Briefcase} />
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                <InputGroup label="Cabang Penempatan" required>
-                                    <select name="kode_cabang" value={formData.kode_cabang || ''} onChange={handleChange} className={inputClass}>
-                                        <option value="">Pilih Cabang</option>
-                                        {(options?.cabang && options.cabang.length > 0) ? (
-                                            options.cabang.map(c => <option key={c.code} value={c.code}>{c.name}</option>)
-                                        ) : (
-                                            <>
-                                                <option value="PST">Kantor Pusat</option>
-                                                <option value="CBG">Cabang Utama</option>
-                                            </>
-                                        )}
-                                    </select>
-                                </InputGroup>
-                                <InputGroup label="Departemen" required>
-                                    <select
-                                        name="kode_dept"
-                                        value={formData.kode_dept || ''}
-                                        onChange={(e) => {
-                                            handleChange(e);
-                                            // Reset jabatan when department changes
-                                            setFormData((prev: any) => ({ ...prev, kode_dept: e.target.value, kode_jabatan: '' }));
-                                        }}
-                                        className={inputClass}
-                                    >
-                                        <option value="">Pilih Departemen</option>
-                                        {(options?.departemen && options.departemen.length > 0) ? (
-                                            options.departemen.map(d => <option key={d.code} value={d.code}>{d.name}</option>)
-                                        ) : (
-                                            <>
-                                                <option value="UK3">Unit K3L & Keamanan</option>
-                                                <option value="UCS">Unit Cleaning Service</option>
-                                                <option value="UDV">Unit Driver</option>
-                                                <option value="HRD">Human Resource</option>
-                                                <option value="FIN">Finance</option>
-                                                <option value="IT">Information Technology</option>
-                                            </>
-                                        )}
-                                    </select>
-                                </InputGroup>
-                                <InputGroup label="Jabatan" required>
-                                    <select name="kode_jabatan" value={formData.kode_jabatan || ''} onChange={handleChange} className={inputClass}>
-                                        <option value="">Pilih Jabatan</option>
-                                        {(options?.jabatan?.length > 0 ? options.jabatan : [
+                                <div className="mb-4">
+                                    <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                                        Cabang Penempatan <span className="text-red-500">*</span>
+                                    </label>
+                                    <SearchableSelect
+                                        options={(options?.cabang && options.cabang.length > 0) ?
+                                            options.cabang.map(c => ({ value: c.code, label: c.name })) :
+                                            [
+                                                { value: "PST", label: "Kantor Pusat" },
+                                                { value: "CBG", label: "Cabang Utama" }
+                                            ]
+                                        }
+                                        value={formData.kode_cabang}
+                                        onChange={(val) => setFormData({ ...formData, kode_cabang: val })}
+                                        placeholder="Pilih Cabang"
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                                        Departemen <span className="text-red-500">*</span>
+                                    </label>
+                                    <SearchableSelect
+                                        options={(options?.departemen && options.departemen.length > 0) ?
+                                            options.departemen.map(d => ({ value: d.code, label: d.name })) :
+                                            [
+                                                { value: "UK3", label: "Unit K3L & Keamanan" },
+                                                { value: "UCS", label: "Unit Cleaning Service" },
+                                                { value: "UDV", label: "Unit Driver" },
+                                                { value: "HRD", label: "Human Resource" },
+                                                { value: "FIN", label: "Finance" },
+                                                { value: "IT", label: "Information Technology" }
+                                            ]
+                                        }
+                                        value={formData.kode_dept}
+                                        onChange={(val) => setFormData({ ...formData, kode_dept: val, kode_jabatan: '' })}
+                                        placeholder="Pilih Departemen"
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                                        Jabatan <span className="text-red-500">*</span>
+                                    </label>
+                                    <SearchableSelect
+                                        options={(options?.jabatan?.length > 0 ? options.jabatan : [
                                             { code: 'DNR', name: 'Danru (Komandan Regu)' },
                                             { code: 'KRD', name: 'Koordinator' },
                                             { code: 'STP', name: 'Satpam (Security)' },
@@ -429,25 +418,18 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                             { code: 'DRV', name: 'Driver' },
                                             { code: 'MGR', name: 'Manager' },
                                             { code: 'STF', name: 'Staff' }
-                                        ])
-                                            .filter(j => {
-                                                if (!formData.kode_dept) return true; // Show all if no dept selected
-
-                                                // Filter Logic
-                                                if (formData.kode_dept === 'UCS') { // Unit Cleaning Service
-                                                    return ['CSV'].includes(j.code);
-                                                }
-                                                if (formData.kode_dept === 'UDV') { // Unit Driver
-                                                    return ['DRV'].includes(j.code);
-                                                }
-                                                if (formData.kode_dept === 'UK3') { // Unit K3L & Keamanan
-                                                    return ['DNR', 'KRD', 'STP'].includes(j.code);
-                                                }
-                                                return true;
-                                            })
-                                            .map(j => <option key={j.code} value={j.code}>{j.name}</option>)}
-                                    </select>
-                                </InputGroup>
+                                        ]).filter(j => {
+                                            if (!formData.kode_dept) return true;
+                                            if (formData.kode_dept === 'UCS') return ['CSV'].includes(j.code);
+                                            if (formData.kode_dept === 'UDV') return ['DRV'].includes(j.code);
+                                            if (formData.kode_dept === 'UK3') return ['DNR', 'KRD', 'STP'].includes(j.code);
+                                            return true;
+                                        }).map(j => ({ value: j.code, label: j.name }))}
+                                        value={formData.kode_jabatan}
+                                        onChange={(val) => setFormData({ ...formData, kode_jabatan: val })}
+                                        placeholder="Pilih Jabatan"
+                                    />
+                                </div>
 
                                 <InputGroup label="Status Karyawan">
                                     <select name="status_karyawan" value={formData.status_karyawan || 'C'} onChange={handleChange} className={inputClass}>
@@ -459,19 +441,27 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                 </InputGroup>
 
 
-                                <InputGroup label="Jadwal Kerja (Shift)">
-                                    <select name="kode_jadwal" value={formData.kode_jadwal || ''} onChange={handleChange} className={inputClass}>
-                                        <option value="">Pilih Jadwal</option>
-                                        {options?.jadwal?.map(j => <option key={j.code} value={j.code}>{j.name}</option>)}
-                                    </select>
-                                </InputGroup>
+                                <div className="mb-4">
+                                    <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                                        Jadwal Kerja (Shift)
+                                    </label>
+                                    <SearchableSelect
+                                        options={options?.jadwal?.map(j => ({ value: j.code, label: j.name })) || []}
+                                        value={formData.kode_jadwal}
+                                        onChange={(val) => setFormData({ ...formData, kode_jadwal: val })}
+                                        placeholder="Pilih Jadwal"
+                                    />
+                                </div>
 
-                                <DatePickerInput
-                                    label="Tanggal Masuk"
-                                    name="tanggal_masuk"
-                                    value={formData.tanggal_masuk || ''}
-                                    onChange={handleChange}
-                                />
+                                <div className="mb-4">
+                                    <DatePicker
+                                        id="tanggal_masuk"
+                                        label="Tanggal Masuk"
+                                        defaultDate={formData.tanggal_masuk}
+                                        onChange={(dates, str) => handleChange({ target: { name: 'tanggal_masuk', value: str } } as any)}
+                                        placeholder="YYYY-MM-DD"
+                                    />
+                                </div>
 
                                 <InputGroup label="Status Aktif">
                                     <select name="status_aktif_karyawan" value={formData.status_aktif_karyawan || '1'} onChange={handleChange} className={inputClass}>
@@ -480,17 +470,20 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                     </select>
                                 </InputGroup>
 
-                                {(!formData.kode_dept || formData.kode_dept === 'UK3') && (
+                                {formData.kode_dept === 'UK3' && (
                                     <>
-                                        <InputGroup label="Nomor Kartu Anggota">
+                                        <InputGroup label="Nomor Kartu Anggota" required>
                                             <input type="text" name="no_kartu_anggota" value={formData.no_kartu_anggota || ''} onChange={handleChange} className={inputClass} />
                                         </InputGroup>
-                                        <DatePickerInput
-                                            label="Masa Aktif KTA (Kartu Tanda Anggota)"
-                                            name="masa_aktif_kartu_anggota"
-                                            value={formData.masa_aktif_kartu_anggota || ''}
-                                            onChange={handleChange}
-                                        />
+                                        <div className="mb-4">
+                                            <DatePicker
+                                                id="masa_aktif_kartu_anggota"
+                                                label="Masa Aktif KTA (Kartu Tanda Anggota)"
+                                                defaultDate={formData.masa_aktif_kartu_anggota}
+                                                onChange={(dates, str) => handleChange({ target: { name: 'masa_aktif_kartu_anggota', value: str } } as any)}
+                                                placeholder="YYYY-MM-DD"
+                                            />
+                                        </div>
                                     </>
                                 )}
                             </div>
@@ -564,14 +557,14 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
 
                                     const dept = formData.kode_dept;
 
-                                    // Foto Kartu Anggota: Only for UK3 (Security) or if no dept selected
+                                    // Foto Kartu Anggota: Only for UK3 (Security)
                                     if (doc.id === 'foto_kartu_anggota') {
-                                        return !dept || dept === 'UK3';
+                                        return dept === 'UK3';
                                     }
 
-                                    // Foto SIM: Only for UK3 (Security) and UDV (Driver) or if no dept selected
+                                    // Foto SIM: Only for UDV (Driver)
                                     if (doc.id === 'foto_sim') {
-                                        return !dept || dept === 'UK3' || dept === 'UDV';
+                                        return dept === 'UDV';
                                     }
 
                                     return true;
@@ -599,20 +592,13 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                             <SectionTitle title="Pengaturan Sistem & Keamanan" icon={Settings} />
 
                             <div className="mb-6 rounded-lg bg-orange-50 p-4 border border-orange-200 dark:bg-orange-900/20 dark:border-orange-800">
-                                <InputGroup label="Password Akun" required={mode === 'create'}>
-                                    <div className="relative">
-                                        <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                                        <input
-                                            type="password"
-                                            name="password"
-                                            value={formData.password || ''}
-                                            onChange={handleChange}
-                                            className={`${inputClass} pl-10`}
-                                            placeholder={mode === 'edit' ? 'Kosongkan jika tidak ingin mengubah password' : 'Default mengikuti NIK'}
-                                        />
-                                    </div>
-                                    {mode === 'create' && <p className="mt-1 text-xs text-gray-500">Secara default password akan disamakan dengan NIK input.</p>}
-                                </InputGroup>
+                                <p className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
+                                    Informasi Akun
+                                </p>
+                                <p className="text-xs text-orange-700 dark:text-orange-300">
+                                    Password Login Android akan diatur secara otomatis mengikuti <strong>NIK</strong>.
+                                    Untuk mengubah password, gunakan fitur Reset Password di aplikasi atau Edit Data setelah karyawan dibuat.
+                                </p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

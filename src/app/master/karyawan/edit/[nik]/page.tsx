@@ -43,15 +43,22 @@ export default function EditKaryawanPage() {
                 // The current backend implementation has GET /master/karyawan with search query.
                 // Let's rely on search for now. Ideally backend should have GET /master/karyawan/{nik}
 
-                const response = await apiClient.get(`/master/karyawan?search=${nik}&per_page=1`);
-                if (response.data.data && response.data.data.length > 0) {
-                    setInitialData(response.data.data[0]);
+                const response = await apiClient.get(`/master/karyawan/${nik}`);
+                console.log("[DEBUG] Fetch Karyawan Response:", response);
+
+                // API mengembalikan { status: true, data: {...}, message: ... }
+                // Karena apiClient interceptor sudah return response.data (body),
+                // maka response variable berisi body tersebut.
+                if (response && response.data) {
+                    console.log("[DEBUG] Sc Setting Initial Data:", response.data);
+                    setInitialData(response.data);
                 } else {
+                    console.error("[DEBUG] Data karyawan tidak ditemukan dalam response");
                     Swal.fire('Error', 'Data karyawan tidak ditemukan', 'error');
                 }
 
             } catch (error) {
-                console.error("Failed to load data", error);
+                console.error("[DEBUG] Failed to load data", error);
                 Swal.fire('Error', 'Gagal memuat data', 'error');
             } finally {
                 setLoading(false);

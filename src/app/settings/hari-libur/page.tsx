@@ -8,6 +8,13 @@ import { Plus, Search, Trash2, Edit, RefreshCw, Calendar, ArrowLeft, ArrowRight 
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
+import dynamic from 'next/dynamic';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 
 type HariLibur = {
     kode_libur: string;
@@ -52,6 +59,9 @@ function HariLiburPage() {
 
     useEffect(() => {
         fetchData();
+    }, [searchCabang, dateFrom, dateTo]);
+
+    useEffect(() => {
         fetchCabang();
     }, []);
 
@@ -191,9 +201,9 @@ function HariLiburPage() {
                         </button>
                         {canCreate('harilibur') && (
                             <button onClick={handleCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Libur</span>
-                        </button>
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Libur</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -213,43 +223,30 @@ function HariLiburPage() {
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
                     <div>
-                        <select
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                        <SearchableSelect
+                            options={cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))}
                             value={searchCabang}
-                            onChange={(e) => {
-                                setSearchCabang(e.target.value);
-                                fetchData();
-                            }}
-                        >
-                            <option value="">Semua Cabang</option>
-                            {cabangOptions.map(c => (
-                                <option key={c.kode_cabang} value={c.kode_cabang}>{c.nama_cabang}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <input
-                            type="date"
-                            value={dateFrom}
-                            onChange={(e) => {
-                                setDateFrom(e.target.value);
-                                fetchData();
-                            }}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                            placeholder="Dari Tanggal"
+                            onChange={(val) => setSearchCabang(val)}
+                            placeholder="Semua Cabang"
                         />
                     </div>
                     <div>
-                        <input
-                            type="date"
-                            value={dateTo}
-                            onChange={(e) => {
-                                setDateTo(e.target.value);
-                                fetchData();
-                            }}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                            placeholder="Sampai Tanggal"
-                        />
+                        <div>
+                            <DatePicker
+                                id="date-from"
+                                placeholder="Dari Tanggal"
+                                defaultDate={dateFrom}
+                                onChange={(dates: Date[], dateStr: string) => setDateFrom(dateStr)}
+                            />
+                        </div>
+                        <div>
+                            <DatePicker
+                                id="date-to"
+                                placeholder="Sampai Tanggal"
+                                defaultDate={dateTo}
+                                onChange={(dates: Date[], dateStr: string) => setDateTo(dateStr)}
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -300,8 +297,8 @@ function HariLiburPage() {
                                                 </button>
                                                 {canDelete('harilibur') && (
                                                     <button onClick={() => handleDelete(item.kode_libur)} className="hover:text-red-500 text-gray-500 dark:text-gray-400" title="Hapus">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -352,25 +349,21 @@ function HariLiburPage() {
                             <div className="flex flex-col gap-6 mb-6">
                                 <div>
                                     <label className="mb-2.5 block text-black dark:text-white font-medium">Tanggal Libur</label>
-                                    <input
-                                        type="date"
-                                        value={formData.tanggal}
-                                        onChange={(e) => setFormData({ ...formData, tanggal: e.target.value })}
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
-                                        required
+                                    <DatePicker
+                                        id="form-tanggal"
+                                        placeholder="Pilih Tanggal"
+                                        defaultDate={formData.tanggal}
+                                        onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, tanggal: dateStr })}
                                     />
                                 </div>
                                 <div>
                                     <label className="mb-2.5 block text-black dark:text-white font-medium">Cabang</label>
-                                    <select
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
+                                    <SearchableSelect
+                                        options={cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))}
                                         value={formData.kode_cabang}
-                                        onChange={(e) => setFormData({ ...formData, kode_cabang: e.target.value })}
-                                        required
-                                    >
-                                        <option value="">Pilih Cabang</option>
-                                        {cabangOptions.map(c => <option key={c.kode_cabang} value={c.kode_cabang}>{c.nama_cabang}</option>)}
-                                    </select>
+                                        onChange={(val) => setFormData({ ...formData, kode_cabang: val })}
+                                        placeholder="Pilih Cabang"
+                                    />
                                 </div>
                                 <div>
                                     <label className="mb-2.5 block text-black dark:text-white font-medium">Keterangan</label>

@@ -3,11 +3,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, MapPin, Map } from 'lucide-react';
+import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, MapPin, Map, Building } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
 
 type PatrolPointItem = {
     id: number;
@@ -98,13 +99,29 @@ function MasterPatrolPointPage() {
         fetchData();
     }, [filterCabang, searchTerm]); // Fetch when filters change
 
-    // Client-side pagination handling since endpoint returns all currently
-    const paginatedData = useMemo(() => {
-        const start = (currentPage - 1) * perPage;
-        return data.slice(start, start + perPage);
-    }, [data, currentPage, perPage]);
+    // Grouping Logic
+    const groupedData = useMemo(() => {
+        const groups: Record<string, PatrolPointItem[]> = {};
+        data.forEach(item => {
+            if (!groups[item.kode_cabang]) groups[item.kode_cabang] = [];
+            groups[item.kode_cabang].push(item);
+        });
+        return groups;
+    }, [data]);
 
-    const totalPages = Math.ceil(data.length / perPage);
+    const allBranchCodes = useMemo(() => Object.keys(groupedData).sort(), [groupedData]);
+
+    const paginatedBranchCodes = useMemo(() => {
+        const start = (currentPage - 1) * 5; // 5 Branches per page
+        return allBranchCodes.slice(start, start + 5);
+    }, [allBranchCodes, currentPage]);
+
+    const totalPages = Math.max(1, Math.ceil(allBranchCodes.length / 5));
+
+    const getCabangName = (code: string) => {
+        const found = cabangOptions.find(c => c.code === code);
+        return found ? found.name : code;
+    };
 
     // Handlers
     const handleOpenCreate = () => {
@@ -225,9 +242,9 @@ function MasterPatrolPointPage() {
                         </button>
                         {canCreate('patrolpoint') && (
                             <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Data</span>
-                        </button>
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Data</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -248,92 +265,97 @@ function MasterPatrolPointPage() {
                     </div>
 
                     <div>
-                        <select
+                        <SearchableSelect
+                            options={[{ value: "", label: "Semua Cabang" }, ...cabangOptions.map(opt => ({ value: opt.code, label: opt.name }))]}
                             value={filterCabang}
-                            onChange={(e) => setFilterCabang(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                        >
-                            <option value="">Semua Cabang</option>
-                            {cabangOptions.map((opt) => (
-                                <option key={opt.code} value={opt.code}>{opt.name}</option>
-                            ))}
-                        </select>
+                            onChange={(val) => setFilterCabang(val)}
+                            placeholder="Semua Cabang"
+                        />
                     </div>
                 </div>
 
-                <div className="max-w-full overflow-x-auto">
-                    <table className="w-full table-auto">
-                        <thead>
-                            <tr className="bg-gray-100 text-left dark:bg-gray-800">
-                                <th className="min-w-[50px] px-4 py-4 font-medium text-black dark:text-white text-center">No</th>
-                                <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Kode Cabang</th>
-                                <th className="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white">Nama Titik</th>
-                                <th className="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white">Koordinat</th>
-                                <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Radius</th>
-                                <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Urutan</th>
-                                <th className="px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
-                            ) : paginatedData.length === 0 ? (
-                                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan</td></tr>
-                            ) : (
-                                paginatedData.map((item, idx) => (
-                                    <tr key={item.id} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20">
-                                        <td className="px-4 py-4 text-center">
-                                            <p className="text-black dark:text-white text-sm">{(currentPage - 1) * perPage + idx + 1}</p>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className="inline-flex rounded bg-gray-100 px-2 py-1 text-sm font-medium text-black dark:bg-meta-4 dark:text-white">
-                                                {item.kode_cabang}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <Map className="text-brand-500 w-4 h-4" />
-                                                <h5 className="font-medium text-black dark:text-white text-sm">{item.nama_titik}</h5>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <a href={getMapsUrl(item.latitude, item.longitude)} target="_blank" className="flex items-center gap-1 text-sm text-brand-500 hover:underline">
-                                                <MapPin className="h-3 w-3" />
-                                                {Number(item.latitude).toFixed(6)}, {Number(item.longitude).toFixed(6)}
-                                            </a>
-                                        </td>
-                                        <td className="px-4 py-4 text-center">
-                                            <span className="text-sm text-gray-500">{item.radius} m</span>
-                                        </td>
-                                        <td className="px-4 py-4 text-center">
-                                            <span className="text-sm font-bold bg-gray-100 dark:bg-meta-4 px-2 py-0.5 rounded">{item.urutan}</span>
-                                        </td>
-                                        <td className="px-4 py-4 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                {canUpdate('patrolpoint') && (
-                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
-                                                )}
-                                                {canDelete('patrolpoint') && (
-                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
-                                                    <Trash className="h-4 w-4" />
-                                                </button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                <div className="flex flex-col gap-8">
+                    {loading ? (
+                        <div className="p-8 text-center text-gray-500">Memuat data...</div>
+                    ) : allBranchCodes.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">Tidak ada data ditemukan</div>
+                    ) : (
+                        paginatedBranchCodes.map(branchCode => (
+                            <div key={branchCode} className="border border-stroke dark:border-strokedark rounded-xl overflow-hidden shadow-sm">
+                                <div className="bg-gray-100 dark:bg-meta-4/30 px-6 py-3 border-b border-stroke dark:border-strokedark flex justify-between items-center">
+                                    <h3 className="font-bold text-lg text-black dark:text-white flex items-center gap-2">
+                                        <Building className="w-5 h-5 text-brand-500" />
+                                        {getCabangName(branchCode)}
+                                    </h3>
+                                    <span className="text-sm text-gray-500 bg-white dark:bg-meta-4 px-2 py-1 rounded border border-gray-200 dark:border-strokedark">
+                                        {groupedData[branchCode].length} Titik
+                                    </span>
+                                </div>
+                                <div className="max-w-full overflow-x-auto">
+                                    <table className="w-full table-auto">
+                                        <thead>
+                                            <tr className="bg-white dark:bg-boxdark border-b border-stroke dark:border-strokedark text-left">
+                                                <th className="min-w-[50px] px-4 py-3 font-medium text-black dark:text-white text-center">No</th>
+                                                <th className="min-w-[200px] px-4 py-3 font-medium text-black dark:text-white">Nama Titik</th>
+                                                <th className="min-w-[200px] px-4 py-3 font-medium text-black dark:text-white">Koordinat</th>
+                                                <th className="min-w-[100px] px-4 py-3 font-medium text-black dark:text-white text-center">Radius</th>
+                                                <th className="min-w-[100px] px-4 py-3 font-medium text-black dark:text-white text-center">Urutan</th>
+                                                <th className="px-4 py-3 font-medium text-black dark:text-white text-center">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {groupedData[branchCode].map((item, idx) => (
+                                                <tr key={item.id} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20 last:border-0 transition-colors">
+                                                    <td className="px-4 py-3 text-center">
+                                                        <p className="text-black dark:text-white text-sm">{idx + 1}</p>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <MapPin className="text-brand-500 w-4 h-4" />
+                                                            <h5 className="font-medium text-black dark:text-white text-sm">{item.nama_titik}</h5>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <a href={getMapsUrl(item.latitude, item.longitude)} target="_blank" className="flex items-center gap-1 text-sm text-brand-500 hover:underline">
+                                                            <Map className="h-3 w-3" />
+                                                            {Number(item.latitude).toFixed(6)}, {Number(item.longitude).toFixed(6)}
+                                                        </a>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100">{item.radius} m</span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <span className="text-sm font-bold bg-gray-100 dark:bg-meta-4 px-2 py-0.5 rounded">{item.urutan}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            {canUpdate('patrolpoint') && (
+                                                                <button onClick={() => handleOpenEdit(item)} className="p-1 hover:bg-yellow-50 text-gray-500 hover:text-yellow-600 dark:text-gray-400 rounded transition">
+                                                                    <Edit className="h-4 w-4" />
+                                                                </button>
+                                                            )}
+                                                            {canDelete('patrolpoint') && (
+                                                                <button onClick={() => handleDelete(item.id)} className="p-1 hover:bg-red-50 text-gray-500 hover:text-red-600 dark:text-gray-400 rounded transition">
+                                                                    <Trash className="h-4 w-4" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
 
                 {/* Pagination */}
                 {data.length > 0 && (
                     <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-stroke pt-4 dark:border-strokedark">
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Menampilkan {(currentPage - 1) * perPage + 1} - {Math.min(currentPage * perPage, data.length)} dari {data.length} data
+                            Menampilkan {(currentPage - 1) * 5 + 1} - {Math.min(currentPage * 5, allBranchCodes.length)} dari {allBranchCodes.length} Cabang (Total {data.length} Titik)
                         </div>
                         <div className="flex gap-2">
                             <button
@@ -379,16 +401,12 @@ function MasterPatrolPointPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Cabang</label>
-                                        <select
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        <SearchableSelect
+                                            options={cabangOptions.map(opt => ({ value: opt.code, label: opt.name }))}
                                             value={formData.kode_cabang}
-                                            onChange={e => setFormData({ ...formData, kode_cabang: e.target.value })}
-                                        >
-                                            <option value="">Pilih Cabang</option>
-                                            {cabangOptions.map(opt => (
-                                                <option key={opt.code} value={opt.code}>{opt.name}</option>
-                                            ))}
-                                        </select>
+                                            onChange={(val) => setFormData({ ...formData, kode_cabang: val })}
+                                            placeholder="Pilih Cabang"
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Nama Titik</label>

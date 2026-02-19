@@ -302,7 +302,7 @@ function MasterDepartemenPage() {
                                         placeholder="Contoh: IT"
                                         value={formData.kode_dept}
                                         onChange={e => setFormData({ ...formData, kode_dept: e.target.value })}
-                                        maxLength={10}
+                                        maxLength={3}
                                         disabled={modalMode === 'edit'}
                                     />
                                 </div>

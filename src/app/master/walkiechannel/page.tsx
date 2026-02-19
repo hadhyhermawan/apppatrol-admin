@@ -8,6 +8,7 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import MultiSelect from '@/components/form/MultiSelect';
 
 type WalkieChannel = {
     id: number;
@@ -22,9 +23,10 @@ type WalkieChannel = {
     cabang_members: string[];
 };
 
-type Option = {
+type MultiSelectOption = {
     value: string;
-    label: string;
+    text: string;
+    selected: boolean;
 };
 
 function WalkieChannelPage() {
@@ -46,8 +48,8 @@ function WalkieChannelPage() {
         dept_members: [] as string[]
     });
 
-    const [cabangOptions, setCabangOptions] = useState<Option[]>([]);
-    const [deptOptions, setDeptOptions] = useState<Option[]>([]);
+    const [cabangOptions, setCabangOptions] = useState<MultiSelectOption[]>([]);
+    const [deptOptions, setDeptOptions] = useState<MultiSelectOption[]>([]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -66,10 +68,10 @@ function WalkieChannelPage() {
     const fetchOptions = async () => {
         try {
             const cabangs: any = await apiClient.get('/master/walkiechannel/options/cabang');
-            setCabangOptions(cabangs.map((c: any) => ({ value: c.kode_cabang, label: c.nama_cabang })));
+            setCabangOptions(cabangs.map((c: any) => ({ value: c.kode_cabang, text: c.nama_cabang, selected: false })));
 
             const depts: any = await apiClient.get('/master/walkiechannel/options/departemen');
-            setDeptOptions(depts.map((d: any) => ({ value: d.kode_dept, label: d.nama_dept })));
+            setDeptOptions(depts.map((d: any) => ({ value: d.kode_dept, text: d.nama_dept, selected: false })));
         } catch (error) {
             console.error("Failed to fetch options", error);
         }
@@ -133,6 +135,13 @@ function WalkieChannelPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validation
+        if (formData.cabang_members.length === 0) {
+            Swal.fire('Validasi Gagal', 'Harap pilih minimal satu cabang member.', 'warning');
+            return;
+        }
+
         try {
             if (editingItem) {
                 await apiClient.put(`/master/walkiechannel/${editingItem.id}`, formData);
@@ -145,14 +154,6 @@ function WalkieChannelPage() {
             fetchData();
         } catch (error: any) {
             Swal.fire('Gagal!', error.response?.data?.detail || 'Gagal menyimpan data.', 'error');
-        }
-    };
-
-    const toggleSelection = (list: string[], item: string) => {
-        if (list.includes(item)) {
-            return list.filter(i => i !== item);
-        } else {
-            return [...list, item];
         }
     };
 
@@ -170,21 +171,21 @@ function WalkieChannelPage() {
                             <input
                                 type="text"
                                 placeholder="Cari channel..."
-                                className="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 text-black outline-none focus:border-primary focus-visible:shadow-none dark:border-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
+                                className="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 text-black outline-none focus:border-brand-500 focus-visible:shadow-none dark:border-strokedark dark:bg-form-input dark:text-white dark:focus:border-brand-500"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                     </div>
                     {canCreate('walkiechannel') && (
-                            <button
-                        onClick={handleCreate}
-                        className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-primary px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition lg:px-8 xl:px-10"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Tambah Channel
-                    </button>
-                        )}
+                        <button
+                            onClick={handleCreate}
+                            className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition lg:px-8 xl:px-10"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Tambah Channel
+                        </button>
+                    )}
                 </div>
 
                 <div className="max-w-full overflow-x-auto">
@@ -210,28 +211,28 @@ function WalkieChannelPage() {
                                         <td className="px-4 py-4 text-black dark:text-white font-mono">{item.code}</td>
                                         <td className="px-4 py-4 text-black dark:text-white">
                                             <div className="font-bold">{item.name}</div>
-                                            <div className="text-xs text-gray-500">Members: {item.cabang_members.length} Cabang</div>
+                                            <div className="text-xs text-text opacity-70">Members: {item.cabang_members.length} Cabang</div>
                                         </td>
                                         <td className="px-4 py-4 text-center">
-                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${item.auto_join ? 'bg-success/10 text-success' : 'bg-gray-100 text-gray-500'}`}>
+                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${item.auto_join ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
                                                 {item.auto_join ? 'Yes' : 'No'}
                                             </span>
                                         </td>
                                         <td className="px-4 py-4 text-center">{item.priority}</td>
                                         <td className="px-4 py-4 text-center">
-                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${item.active ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${item.active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                                                 {item.active ? 'Active' : 'Inactive'}
                                             </span>
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => handleEdit(item)} className="text-primary hover:text-primary/80 transition" title="Edit">
+                                                <button onClick={() => handleEdit(item)} className="text-brand-500 hover:text-brand-600 transition" title="Edit">
                                                     <Edit2 className="h-4 w-4" />
                                                 </button>
                                                 {canDelete('walkiechannel') && (
-                                                    <button onClick={() => handleDelete(item.id)} className="text-danger hover:text-danger/80 transition" title="Hapus">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                    <button onClick={() => handleDelete(item.id)} className="text-red-500 hover:text-red-600 transition" title="Hapus">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -243,36 +244,40 @@ function WalkieChannelPage() {
                 </div>
             </div>
 
-            {/* Manual Modal Implementation */}
+            {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-lg dark:bg-boxdark max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in backdrop-blur-sm">
+                    <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl dark:bg-boxdark max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold text-black dark:text-white">
                                 {editingItem ? 'Edit Channel' : 'Tambah Channel'}
                             </h3>
                             <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-black dark:hover:text-white text-2xl">&times;</button>
                         </div>
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <form onSubmit={handleSubmit} className="space-y-5">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-black dark:text-white">Kode Channel</label>
+                                    <label className="mb-2 block text-sm font-medium text-black dark:text-white">Kode Channel (ID)</label>
                                     <input
                                         type="text"
                                         required
-                                        className="w-full rounded border border-stroke bg-transparent px-4 py-2 outline-none transition focus:border-primary dark:border-strokedark dark:bg-form-input"
+                                        className="w-full rounded border border-stroke bg-transparent px-4 py-3 outline-none transition focus:border-brand-500 dark:border-strokedark dark:bg-form-input"
                                         value={formData.code}
-                                        onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') })}
+                                        onChange={(e) => {
+                                            // Enforce Uppercase and allowed chars only (A-Z, 0-9, _)
+                                            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '');
+                                            setFormData({ ...formData, code: val });
+                                        }}
                                         placeholder="EX: REGIONAL_1"
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">Hanya huruf besar dan underscore.</p>
+                                    <p className="text-xs text-gray-500 mt-1">Hanya huruf besar, angka, dan underscore.</p>
                                 </div>
                                 <div>
                                     <label className="mb-2 block text-sm font-medium text-black dark:text-white">Nama Channel</label>
                                     <input
                                         type="text"
                                         required
-                                        className="w-full rounded border border-stroke bg-transparent px-4 py-2 outline-none transition focus:border-primary dark:border-strokedark dark:bg-form-input"
+                                        className="w-full rounded border border-stroke bg-transparent px-4 py-3 outline-none transition focus:border-brand-500 dark:border-strokedark dark:bg-form-input"
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         placeholder="Regional Jawa Timur"
@@ -286,15 +291,15 @@ function WalkieChannelPage() {
                                     <input
                                         type="number"
                                         required
-                                        className="w-full rounded border border-stroke bg-transparent px-4 py-2 outline-none transition focus:border-primary dark:border-strokedark dark:bg-form-input"
+                                        className="w-full rounded border border-stroke bg-transparent px-4 py-3 outline-none transition focus:border-brand-500 dark:border-strokedark dark:bg-form-input"
                                         value={formData.priority}
-                                        onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) })}
+                                        onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
                                     />
                                 </div>
                                 <div>
                                     <label className="mb-2 block text-sm font-medium text-black dark:text-white">Auto Join?</label>
                                     <select
-                                        className="w-full rounded border border-stroke bg-transparent px-4 py-2 outline-none transition focus:border-primary dark:border-strokedark dark:bg-form-input"
+                                        className="w-full rounded border border-stroke bg-transparent px-4 py-3 outline-none transition focus:border-brand-500 dark:border-strokedark dark:bg-form-input"
                                         value={formData.auto_join}
                                         onChange={(e) => setFormData({ ...formData, auto_join: parseInt(e.target.value) })}
                                     >
@@ -305,7 +310,7 @@ function WalkieChannelPage() {
                                 <div>
                                     <label className="mb-2 block text-sm font-medium text-black dark:text-white">Status</label>
                                     <select
-                                        className="w-full rounded border border-stroke bg-transparent px-4 py-2 outline-none transition focus:border-primary dark:border-strokedark dark:bg-form-input"
+                                        className="w-full rounded border border-stroke bg-transparent px-4 py-3 outline-none transition focus:border-brand-500 dark:border-strokedark dark:bg-form-input"
                                         value={formData.active}
                                         onChange={(e) => setFormData({ ...formData, active: parseInt(e.target.value) })}
                                     >
@@ -315,59 +320,43 @@ function WalkieChannelPage() {
                                 </div>
                             </div>
 
-                            {/* Cabang & Dept Selection */}
+                            {/* Cabang & Dept Selection using MultiSelect */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-black dark:text-white">Cabang Members (Wajib)</label>
-                                    <div className="h-48 overflow-y-auto border border-stroke rounded p-2 dark:border-strokedark bg-gray-50 dark:bg-meta-4/10">
-                                        {cabangOptions.map(opt => (
-                                            <div key={opt.value} className="flex items-start gap-2 mb-1 p-1 hover:bg-gray-200 dark:hover:bg-meta-4 rounded cursor-pointer" onClick={() => setFormData({ ...formData, cabang_members: toggleSelection(formData.cabang_members, opt.value) })}>
-                                                <input
-                                                    type="checkbox"
-                                                    id={`cabang-${opt.value}`}
-                                                    checked={formData.cabang_members.includes(opt.value)}
-                                                    readOnly
-                                                    className="mt-1"
-                                                />
-                                                <label htmlFor={`cabang-${opt.value}`} className="text-sm cursor-pointer select-none flex-1">{opt.label}</label>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-1">Minimal pilih 1 cabang.</p>
+                                    <div className="mb-2 block text-sm font-medium text-black dark:text-white">Cabang Members <span className="text-red-500">*</span></div>
+                                    <MultiSelect
+                                        label=""
+                                        options={cabangOptions}
+                                        defaultSelected={formData.cabang_members}
+                                        onChange={(selected: string[]) => setFormData({ ...formData, cabang_members: selected })}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Wajib pilih minimal satu cabang.</p>
                                 </div>
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-black dark:text-white">Departemen (Opsional)</label>
-                                    <div className="h-48 overflow-y-auto border border-stroke rounded p-2 dark:border-strokedark bg-gray-50 dark:bg-meta-4/10">
-                                        {deptOptions.map(opt => (
-                                            <div key={opt.value} className="flex items-start gap-2 mb-1 p-1 hover:bg-gray-200 dark:hover:bg-meta-4 rounded cursor-pointer" onClick={() => setFormData({ ...formData, dept_members: toggleSelection(formData.dept_members, opt.value) })}>
-                                                <input
-                                                    type="checkbox"
-                                                    id={`dept-${opt.value}`}
-                                                    checked={formData.dept_members.includes(opt.value)}
-                                                    readOnly
-                                                    className="mt-1"
-                                                />
-                                                <label htmlFor={`dept-${opt.value}`} className="text-sm cursor-pointer select-none flex-1">{opt.label}</label>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-1">Kosongkan jika untuk semua dept.</p>
+                                    <div className="mb-2 block text-sm font-medium text-black dark:text-white">Departemen Allowed</div>
+                                    <MultiSelect
+                                        label=""
+                                        options={deptOptions}
+                                        defaultSelected={formData.dept_members}
+                                        onChange={(selected: string[]) => setFormData({ ...formData, dept_members: selected })}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Opsional (Kosong = Semua Dept).</p>
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-4 border-t border-stroke dark:border-strokedark">
+                            <div className="sticky bottom-0 z-30 -mx-6 -mb-6 flex justify-end gap-3 border-t border-stroke bg-white px-6 py-4 dark:border-strokedark dark:bg-boxdark">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="rounded border border-stroke px-6 py-2 text-black hover:bg-gray-100 dark:border-strokedark dark:text-white dark:hover:bg-meta-4"
+                                    className="rounded border border-stroke px-6 py-2.5 text-black hover:bg-gray-100 dark:border-strokedark dark:text-white dark:hover:bg-meta-4 font-medium"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded bg-primary px-6 py-2 text-white hover:bg-opacity-90"
+                                    className="rounded bg-brand-500 px-6 py-2.5 text-white hover:bg-opacity-90 font-medium shadow-sm"
                                 >
-                                    Simpan
+                                    Simpan Channel
                                 </button>
                             </div>
                         </form>

@@ -19,6 +19,7 @@ interface PermissionContextType {
     canUpdate: (resource: string) => boolean;
     canDelete: (resource: string) => boolean;
     canView: (resource: string) => boolean;
+    canDetail: (resource: string) => boolean;
     isSuperAdmin: boolean;
     refreshPermissions: () => Promise<void>;
 }
@@ -34,12 +35,21 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
         try {
             setLoading(true);
 
+            // Check if token exists before making request
+            const token = typeof window !== 'undefined' ? localStorage.getItem('patrol_token') : null;
+            if (!token) {
+                setPermissions([]);
+                setIsSuperAdmin(false);
+                setLoading(false);
+                return;
+            }
+
             // Get current user's permissions from backend
             const data: any = await apiClient.get('/auth/me');
 
             // Check if super admin (role id = 1 or role name = 'super admin')
             const isSuperAdminUser = data.roles?.some((role: any) =>
-                role.id === 1 || role.name === 'super admin'
+                role.id === 1 || role.name?.toLowerCase() === 'super admin'
             );
             setIsSuperAdmin(isSuperAdminUser);
 
@@ -51,8 +61,11 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
                 const permissionNames = data.permissions?.map((p: Permission) => p.name) || [];
                 setPermissions(permissionNames);
             }
-        } catch (error) {
-            console.error('Error fetching permissions:', error);
+        } catch (error: any) {
+            // Only log if it's not a 401 (since 401 is expected if token expired)
+            if (error.response?.status !== 401) {
+                console.error('Error fetching permissions:', error);
+            }
             setPermissions([]);
             setIsSuperAdmin(false);
         } finally {
@@ -124,6 +137,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
                 canUpdate,
                 canDelete,
                 canView,
+                canDetail: (resource: string) => hasPermission(`${resource}.show`) || hasPermission(`${resource}.index`),
                 isSuperAdmin,
                 refreshPermissions
             }}

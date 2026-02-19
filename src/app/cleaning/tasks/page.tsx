@@ -8,6 +8,13 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
+import dynamic from 'next/dynamic';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 
 type TaskItem = {
     id: number;
@@ -250,9 +257,9 @@ function CleaningTasksPage() {
                         </button>
                         {canCreate('cleaning') && (
                             <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Tugas</span>
-                        </button>
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Tugas</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -272,19 +279,19 @@ function CleaningTasksPage() {
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
                     <div>
-                        <input
-                            type="date"
-                            value={dateStart}
-                            onChange={e => setDateStart(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
+                        <DatePicker
+                            id="filter-date-start"
+                            placeholder="Dari Tanggal"
+                            defaultDate={dateStart}
+                            onChange={(dates, str) => setDateStart(str)}
                         />
                     </div>
                     <div>
-                        <input
-                            type="date"
-                            value={dateEnd}
-                            onChange={e => setDateEnd(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
+                        <DatePicker
+                            id="filter-date-end"
+                            placeholder="Sampai Tanggal"
+                            defaultDate={dateEnd}
+                            onChange={(dates, str) => setDateEnd(str)}
                         />
                     </div>
                 </div>
@@ -342,8 +349,8 @@ function CleaningTasksPage() {
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${item.status === 'complete'
-                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                                                 }`}>
                                                 {item.status.toUpperCase()}
                                             </span>
@@ -352,13 +359,13 @@ function CleaningTasksPage() {
                                             <div className="flex items-center justify-center gap-2">
                                                 {canUpdate('cleaning') && (
                                                     <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
+                                                        <Edit className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                                 {canDelete('cleaning') && (
                                                     <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
-                                                    <Trash className="h-4 w-4" />
-                                                </button>
+                                                        <Trash className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -418,39 +425,34 @@ function CleaningTasksPage() {
 
                                 <div>
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Petugas (UCS) <span className="text-red-500">*</span></label>
-                                    <select
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                    <SearchableSelect
+                                        options={karyawanList.map(k => ({ value: k.nik, label: `${k.nama_karyawan} (${k.nik})` }))}
                                         value={formData.nik}
-                                        onChange={e => setFormData({ ...formData, nik: e.target.value })}
-                                        required
-                                    >
-                                        <option value="">Pilih Petugas</option>
-                                        {karyawanList.map(k => (
-                                            <option key={k.nik} value={k.nik}>{k.nama_karyawan}</option>
-                                        ))}
-                                    </select>
+                                        onChange={(val) => setFormData({ ...formData, nik: val })}
+                                        placeholder="Pilih Petugas"
+                                    />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Tanggal</label>
-                                        <input
-                                            type="date"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
-                                            value={formData.tanggal}
-                                            onChange={e => setFormData({ ...formData, tanggal: e.target.value })}
-                                            required
+                                        <DatePicker
+                                            id="form-tanggal"
+                                            placeholder="Pilih Tanggal"
+                                            defaultDate={formData.tanggal}
+                                            onChange={(dates, str) => setFormData({ ...formData, tanggal: str })}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Jam Tugas</label>
-                                        <input
-                                            type="time"
-                                            step="1"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
-                                            value={formData.jam_tugas}
-                                            onChange={e => setFormData({ ...formData, jam_tugas: e.target.value })}
-                                            required
+                                        <DatePicker
+                                            id="form-jam"
+                                            mode="time"
+                                            enableTime
+                                            dateFormat="H:i"
+                                            placeholder="Pilih Jam"
+                                            defaultDate={formData.jam_tugas}
+                                            onChange={(dates, str) => setFormData({ ...formData, jam_tugas: str })}
                                         />
                                     </div>
                                 </div>

@@ -25,7 +25,7 @@
     "jsvectormap": "^1.7.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.564.0",
-    "next": "16.1.6",
+    "next": "^16.1.6",
     "react": "19.2.3",
     "react-apexcharts": "^2.0.0",
     "react-dom": "19.2.3",

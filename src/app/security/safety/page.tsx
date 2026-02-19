@@ -3,11 +3,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, User, Eye, Calendar } from 'lucide-react';
+import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, User, Eye, Calendar, Clock, MapPin } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
+import Image from 'next/image';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
+import dynamic from 'next/dynamic';
+import clsx from 'clsx';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 
 type SafetyBriefingItem = {
     id: number;
@@ -33,8 +42,9 @@ function SecuritySafetyBriefingPage() {
     const [dateStart, setDateStart] = useState('');
     const [dateEnd, setDateEnd] = useState('');
     const [karyawanList, setKaryawanList] = useState<KaryawanOption[]>([]);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-    // Pagination State (Client-side initially)
+    // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
 
@@ -88,6 +98,7 @@ function SecuritySafetyBriefingPage() {
             }
         } catch (error) {
             console.error("Failed to fetch safety briefing data", error);
+            setData([]);
         } finally {
             setLoading(false);
         }
@@ -101,10 +112,9 @@ function SecuritySafetyBriefingPage() {
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchData();
-        }, 500);
+        }, 800);
         return () => clearTimeout(timer);
     }, [searchTerm, dateStart, dateEnd]);
-
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -118,7 +128,6 @@ function SecuritySafetyBriefingPage() {
     const handleOpenCreate = () => {
         setErrorMsg('');
         setModalMode('create');
-        // Default datetime to now
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         const nowStr = now.toISOString().slice(0, 16);
@@ -224,6 +233,25 @@ function SecuritySafetyBriefingPage() {
         <MainLayout>
             <PageBreadcrumb pageTitle="Safety Briefing" />
 
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <img
+                        src={previewImage}
+                        alt="Preview"
+                        className="max-h-[90vh] max-w-full rounded-lg shadow-2xl object-contain"
+                    />
+                    <button
+                        className="absolute top-5 right-5 text-white bg-black/50 rounded-full p-2 hover:bg-white/20 transition-colors"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+            )}
+
             <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-semibold text-black dark:text-white">
@@ -236,9 +264,9 @@ function SecuritySafetyBriefingPage() {
                         </button>
                         {canCreate('safety') && (
                             <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Data</span>
-                        </button>
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Data</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -258,19 +286,23 @@ function SecuritySafetyBriefingPage() {
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
                     <div>
-                        <input
-                            type="datetime-local"
-                            value={dateStart}
-                            onChange={e => setDateStart(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
+                        <DatePicker
+                            id="date-start"
+                            placeholder="Dari Waktu"
+                            defaultDate={dateStart}
+                            enableTime
+                            dateFormat="Y-m-d H:i"
+                            onChange={(dates: Date[], dateStr: string) => setDateStart(dateStr)}
                         />
                     </div>
                     <div>
-                        <input
-                            type="datetime-local"
-                            value={dateEnd}
-                            onChange={e => setDateEnd(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
+                        <DatePicker
+                            id="date-end"
+                            placeholder="Sampai Waktu"
+                            defaultDate={dateEnd}
+                            enableTime
+                            dateFormat="Y-m-d H:i"
+                            onChange={(dates: Date[], dateStr: string) => setDateEnd(dateStr)}
                         />
                     </div>
                 </div>
@@ -280,8 +312,8 @@ function SecuritySafetyBriefingPage() {
                         <thead>
                             <tr className="bg-gray-100 text-left dark:bg-gray-800">
                                 <th className="min-w-[50px] px-4 py-4 font-medium text-black dark:text-white text-center">No</th>
-                                <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Waktu</th>
                                 <th className="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white">Petugas / Pimpinan</th>
+                                <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Waktu</th>
                                 <th className="min-w-[250px] px-4 py-4 font-medium text-black dark:text-white">Keterangan</th>
                                 <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Foto</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>
@@ -299,6 +331,17 @@ function SecuritySafetyBriefingPage() {
                                             <p className="text-black dark:text-white text-sm">{(currentPage - 1) * perPage + idx + 1}</p>
                                         </td>
                                         <td className="px-4 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="relative h-10 w-10 text-brand-500 bg-brand-50 rounded-full flex items-center justify-center font-bold">
+                                                    {item.nama_karyawan ? item.nama_karyawan.substring(0, 2).toUpperCase() : '??'}
+                                                </div>
+                                                <div>
+                                                    <h5 className="font-bold text-black dark:text-white">{item.nama_karyawan}</h5>
+                                                    <div className="text-xs text-gray-500">{item.nik}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4">
                                             <div className="flex items-center gap-2">
                                                 <Calendar className="w-4 h-4 text-gray-400" />
                                                 <span className="text-black dark:text-white text-sm font-medium">
@@ -306,33 +349,36 @@ function SecuritySafetyBriefingPage() {
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4">
-                                            <div>
-                                                <h5 className="font-semibold text-black dark:text-white text-sm">{item.nama_karyawan}</h5>
-                                                <p className="text-xs text-gray-500">{item.nik}</p>
-                                            </div>
-                                        </td>
                                         <td className="px-4 py-4 text-sm">
                                             <p className="line-clamp-2">{item.keterangan || '-'}</p>
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             {item.foto ? (
-                                                <a href={item.foto} target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline text-xs flex items-center justify-center">
-                                                    <Eye className="w-4 h-4 mr-1" /> Lihat
-                                                </a>
-                                            ) : <span className="text-xs text-gray-400">No Img</span>}
+                                                <div className="relative h-10 w-10 mx-auto rounded-full overflow-hidden border-2 border-white dark:border-boxdark shadow-sm bg-gray-200">
+                                                    <Image
+                                                        src={item.foto}
+                                                        alt="Foto Briefing"
+                                                        width={40}
+                                                        height={40}
+                                                        className="object-cover w-full h-full cursor-pointer hover:opacity-80 transition"
+                                                        unoptimized
+                                                        onClick={() => setPreviewImage(item.foto)}
+                                                        onError={(e: any) => e.target.style.display = 'none'}
+                                                    />
+                                                </div>
+                                            ) : <span className="text-xs text-gray-400">-</span>}
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
                                                 {canUpdate('safety') && (
-                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
+                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-yellow-400">
+                                                        <Edit className="h-5 w-5" />
+                                                    </button>
                                                 )}
                                                 {canDelete('safety') && (
-                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
-                                                    <Trash className="h-4 w-4" />
-                                                </button>
+                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-red-500">
+                                                        <Trash className="h-5 w-5" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -347,7 +393,7 @@ function SecuritySafetyBriefingPage() {
                 {data.length > 0 && (
                     <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-stroke pt-4 dark:border-strokedark">
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Menampilkan {(currentPage - 1) * perPage + 1} - {Math.min(currentPage * perPage, data.length)} dari {data.length} data
+                            Menampilkan <span className="font-medium text-black dark:text-white">{(currentPage - 1) * perPage + 1}</span> - <span className="font-medium text-black dark:text-white">{Math.min(currentPage * perPage, data.length)}</span> dari <span className="font-medium text-black dark:text-white">{data.length}</span> data
                         </div>
                         <div className="flex gap-2">
                             <button
@@ -392,33 +438,31 @@ function SecuritySafetyBriefingPage() {
 
                                 <div>
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Waktu Briefing</label>
-                                    <input
-                                        type="datetime-local"
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
-                                        value={formData.tanggal_jam}
-                                        onChange={e => setFormData({ ...formData, tanggal_jam: e.target.value })}
+                                    <DatePicker
+                                        id="form-tanggal-jam"
+                                        placeholder="Pilih Waktu"
+                                        defaultDate={formData.tanggal_jam}
+                                        enableTime
+                                        dateFormat="Y-m-d H:i"
+                                        onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, tanggal_jam: dateStr })}
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Petugas / Pimpinan</label>
-                                    <select
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                    <SearchableSelect
+                                        options={karyawanList.map(k => ({ value: k.nik, label: `${k.nama_karyawan} (${k.nik})` }))}
                                         value={formData.nik}
-                                        onChange={e => setFormData({ ...formData, nik: e.target.value })}
-                                    >
-                                        <option value="">Pilih Petugas (Karyawan)</option>
-                                        {karyawanList.map(k => (
-                                            <option key={k.nik} value={k.nik}>{k.nama_karyawan} ({k.nik})</option>
-                                        ))}
-                                    </select>
+                                        onChange={(val) => setFormData({ ...formData, nik: val })}
+                                        placeholder="Pilih Petugas (Karyawan)"
+                                    />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Foto Dokumentasi (URL)</label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                         placeholder="https://..."
                                         value={formData.foto}
                                         onChange={e => setFormData({ ...formData, foto: e.target.value })}
@@ -429,7 +473,7 @@ function SecuritySafetyBriefingPage() {
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Keterangan / Materi Briefing</label>
                                     <textarea
                                         rows={4}
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                         placeholder="Isi materi briefing..."
                                         value={formData.keterangan}
                                         onChange={e => setFormData({ ...formData, keterangan: e.target.value })}
@@ -439,7 +483,7 @@ function SecuritySafetyBriefingPage() {
                             </div>
 
                             <div className="px-6 py-4 bg-gray-50 dark:bg-meta-4/30 flex justify-end gap-3 border-t border-stroke dark:border-strokedark sticky bottom-0 z-10">
-                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium text-black bg-white border border-stroke rounded-lg hover:bg-gray-50">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium text-black bg-white border border-stroke rounded-lg hover:bg-gray-50 dark:bg-meta-4 dark:text-white dark:border-strokedark">
                                     Batal
                                 </button>
                                 <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-opacity-90 flex items-center">
@@ -454,7 +498,4 @@ function SecuritySafetyBriefingPage() {
     );
 }
 
-// Protect page with permission
-export default withPermission(SecuritySafetyBriefingPage, {
-    permissions: ['safety.index']
-});
+export default withPermission(SecuritySafetyBriefingPage, { permissions: ['safety.index'] });

@@ -37,13 +37,11 @@ const nextConfig: NextConfig = {
   },
   // Optimize CSS loading to prevent preload warnings
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
   },
   // Disable CSS preloading if not needed immediately
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn']
-    } : false,
+    removeConsole: false,
   }
 };
 

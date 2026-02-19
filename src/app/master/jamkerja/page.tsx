@@ -8,6 +8,7 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import TimePicker from '@/components/form/TimePicker';
 
 type JamKerjaItem = {
     kode_jam_kerja: string;
@@ -53,19 +54,29 @@ function MasterJamKerjaPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
+
+    // ... imports
+
     const fetchData = async () => {
         setLoading(true);
         try {
+            console.log("Fetching Jam Kerja..."); // DEBUG
             const response: any = await apiClient.get('/master/jamkerja');
+            console.log("Jam Kerja Response:", response); // DEBUG
+
             if (Array.isArray(response)) {
+                console.log("Data is Array from root"); // DEBUG
                 setData(response);
             } else if (response.data && Array.isArray(response.data)) {
+                console.log("Data is Array from response.data"); // DEBUG
                 setData(response.data);
             } else {
+                console.warn("Unexpected Data Format:", response); // DEBUG
                 setData([]);
             }
         } catch (error) {
             console.error("Failed to fetch jam kerja", error);
+            setData([]);
         } finally {
             setLoading(false);
         }
@@ -77,11 +88,17 @@ function MasterJamKerjaPage() {
 
     // Filter & Pagination Logic
     const filteredData = useMemo(() => {
-        return data.filter(item =>
-            item.nama_jam_kerja.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.kode_jam_kerja.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        console.log("Filtering Data...", data); // DEBUG
+        return data.filter(item => {
+            const name = (item.nama_jam_kerja || '');
+            const code = (item.kode_jam_kerja || '');
+            if (!item.nama_jam_kerja) console.warn("Missing nama_jam_kerja for:", item); // DEBUG
+
+            return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                code.toLowerCase().includes(searchTerm.toLowerCase());
+        });
     }, [data, searchTerm]);
+
 
     const paginatedData = useMemo(() => {
         const start = (currentPage - 1) * perPage;
@@ -140,6 +157,7 @@ function MasterJamKerjaPage() {
         try {
             // Prepare payload - handle empty strings for optional times
             const payload = { ...formData };
+
             if (!payload.jam_awal_istirahat) delete payload.jam_awal_istirahat;
             if (!payload.jam_akhir_istirahat) delete payload.jam_akhir_istirahat;
             if (!payload.keterangan) delete payload.keterangan;
@@ -160,7 +178,21 @@ function MasterJamKerjaPage() {
             });
         } catch (error: any) {
             console.error(error);
-            const msg = error.response?.data?.detail || 'Terjadi kesalahan saat menyimpan.';
+            const detail = error.response?.data?.detail;
+            let msg = 'Terjadi kesalahan saat menyimpan.';
+
+            if (typeof detail === 'string') {
+                msg = detail;
+            } else if (Array.isArray(detail)) {
+                // Formatting Pydantic errors: [{loc: [..], msg: ..}, ..]
+                msg = detail.map((err: any) => {
+                    const field = err.loc && err.loc.length > 0 ? err.loc[err.loc.length - 1] : '';
+                    return `${field ? field + ': ' : ''}${err.msg}`;
+                }).join(', ');
+            } else if (detail && typeof detail === 'object') {
+                msg = JSON.stringify(detail);
+            }
+
             setErrorMsg(msg);
         } finally {
             setIsSubmitting(false);
@@ -213,9 +245,9 @@ function MasterJamKerjaPage() {
                         </button>
                         {canCreate('jamkerja') && (
                             <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Data</span>
-                        </button>
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Data</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -272,7 +304,7 @@ function MasterJamKerjaPage() {
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-1 text-sm font-medium text-black dark:text-white">
                                                 <Clock className="w-4 h-4 text-brand-500" />
-                                                <span>{item.jam_masuk?.substring(0, 5)} - {item.jam_pulang?.substring(0, 5)}</span>
+                                                <span>{(item.jam_masuk || '').substring(0, 5)} - {(item.jam_pulang || '').substring(0, 5)}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 text-center">
@@ -288,13 +320,13 @@ function MasterJamKerjaPage() {
                                             <div className="flex items-center justify-center gap-2">
                                                 {canUpdate('jamkerja') && (
                                                     <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
+                                                        <Edit className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                                 {canDelete('jamkerja') && (
                                                     <button onClick={() => handleDelete(item.kode_jam_kerja)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
-                                                    <Trash className="h-4 w-4" />
-                                                </button>
+                                                        <Trash className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -379,21 +411,17 @@ function MasterJamKerjaPage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                     <div className="col-span-2">
-                                        <label className="block text-sm font-semibold text-black dark:text-white mb-2">Jam Masuk</label>
-                                        <input
-                                            type="time"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        <TimePicker
+                                            label="Jam Masuk"
                                             value={formData.jam_masuk}
-                                            onChange={e => setFormData({ ...formData, jam_masuk: e.target.value })}
+                                            onChange={(val: string) => setFormData({ ...formData, jam_masuk: val })}
                                         />
                                     </div>
                                     <div className="col-span-2">
-                                        <label className="block text-sm font-semibold text-black dark:text-white mb-2">Jam Pulang</label>
-                                        <input
-                                            type="time"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        <TimePicker
+                                            label="Jam Pulang"
                                             value={formData.jam_pulang}
-                                            onChange={e => setFormData({ ...formData, jam_pulang: e.target.value })}
+                                            onChange={(val: string) => setFormData({ ...formData, jam_pulang: val })}
                                         />
                                     </div>
                                 </div>
@@ -437,23 +465,21 @@ function MasterJamKerjaPage() {
 
                                     {formData.istirahat === 'Y' && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-black dark:text-white mb-2">Mulai Istirahat</label>
-                                                <input
-                                                    type="time"
-                                                    className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
-                                                    value={formData.jam_awal_istirahat || ''}
-                                                    onChange={e => setFormData({ ...formData, jam_awal_istirahat: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-black dark:text-white mb-2">Selesai Istirahat</label>
-                                                <input
-                                                    type="time"
-                                                    className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
-                                                    value={formData.jam_akhir_istirahat || ''}
-                                                    onChange={e => setFormData({ ...formData, jam_akhir_istirahat: e.target.value })}
-                                                />
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
+                                                <div>
+                                                    <TimePicker
+                                                        label="Mulai Istirahat"
+                                                        value={formData.jam_awal_istirahat || ''}
+                                                        onChange={(val: string) => setFormData({ ...formData, jam_awal_istirahat: val })}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <TimePicker
+                                                        label="Selesai Istirahat"
+                                                        value={formData.jam_akhir_istirahat || ''}
+                                                        onChange={(val: string) => setFormData({ ...formData, jam_akhir_istirahat: val })}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     )}

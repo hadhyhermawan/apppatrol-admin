@@ -6,7 +6,13 @@ import apiClient from '@/lib/api';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { Plus, Search, Trash2, Edit, RefreshCw, FileText, ArrowLeft, ArrowRight, Eye, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
+import SearchableSelect from '@/components/form/SearchableSelect';
+import dynamic from 'next/dynamic';
 
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 type IzinDinas = {
     kode_izin_dinas: string;
     nik: string;
@@ -74,6 +80,9 @@ export default function IzinDinasPage() {
 
     useEffect(() => {
         fetchData();
+    }, [searchCabang, searchDept, searchStatus, dateFrom, dateTo, searchTerm]);
+
+    useEffect(() => {
         fetchOptions();
     }, []);
 
@@ -301,34 +310,48 @@ export default function IzinDinasPage() {
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
                     <div>
-                        <select
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                        <SearchableSelect
+                            options={cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))}
                             value={searchCabang}
-                            onChange={(e) => {
-                                setSearchCabang(e.target.value);
-                                fetchData();
+                            onChange={(val) => {
+                                setSearchCabang(val);
+                                // fetchData called via useEffect or manual? Original onChange called fetchData but SearchableSelect onChange is val. 
+                                // SearchableSelect updates state. We need to trigger fetch. 
+                                // Actually original code called fetchData() in onChange.
+                                // But SearchableSelect doesn't accept extra side effects easily in props unless I wrap it?
+                                // Wait, setSearchCabang(val) updates state. 
+                                // BUT fetchData() reads state? 
+                                // In original code: onChange={e => { setSearchCabang(e.target.value); fetchData(); }}
+                                // fetchData uses state variables. React state update is async.
+                                // Calling fetchData immediately after setState might use OLD state.
+                                // The original code was buggy likely? 
+                                // Note: setData(Array...) in fetchData. 
+                                // Ah, actually the useEffect line 75 calls fetchData once.
+                                // And I see NO useEffect for [searchCabang].
+                                // So original code WAS buggy (using stale state) or relying on something else?
+                                // Wait, usually e.target.value is passed to params? No, fetchData uses state `searchCabang`.
+                                // This is a classic React bug. 
+                                // I should fix this by using useEffect to trigger fetch or passing params.
+                                // But to be safe, I will stick to pattern or improve it.
+                                // I can't easily change the hook logic in this replacement chunk.
+                                // I will use a setTimeout or similar? 
+                                // OR: SearchableSelect onChange calls setVal. 
+                                // I will rely on the user manually clicking Refresh or I should add useEffect for these?
+                                // I'll assume I should just start by replacing UI.
                             }}
-                        >
-                            <option value="">Semua Cabang</option>
-                            {cabangOptions.map(c => (
-                                <option key={c.kode_cabang} value={c.kode_cabang}>{c.nama_cabang}</option>
-                            ))}
-                        </select>
+                            placeholder="Semua Cabang"
+                        />
                     </div>
                     <div>
-                        <select
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                        <SearchableSelect
+                            options={deptOptions.map(d => ({ value: d.kode_dept, label: d.nama_dept }))}
                             value={searchDept}
-                            onChange={(e) => {
-                                setSearchDept(e.target.value);
-                                fetchData();
+                            onChange={(val) => {
+                                setSearchDept(val);
+                                // fetchData(); // potential stale state issue
                             }}
-                        >
-                            <option value="">Semua Dept</option>
-                            {deptOptions.map(d => (
-                                <option key={d.kode_dept} value={d.kode_dept}>{d.nama_dept}</option>
-                            ))}
-                        </select>
+                            placeholder="Semua Dept"
+                        />
                     </div>
                     <div>
                         <select
@@ -346,15 +369,25 @@ export default function IzinDinasPage() {
                         </select>
                     </div>
                     <div>
-                        <input
-                            type="date"
-                            value={dateFrom}
-                            onChange={(e) => {
-                                setDateFrom(e.target.value);
-                                fetchData();
+                        <DatePicker
+                            id="date-from"
+                            placeholder="Dari Tanggal"
+                            defaultDate={dateFrom}
+                            onChange={(dates: Date[], dateStr: string) => {
+                                setDateFrom(dateStr);
+                                // fetchData();
                             }}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                            placeholder="Dari"
+                        />
+                    </div>
+                    <div>
+                        <DatePicker
+                            id="date-to"
+                            placeholder="Sampai Tanggal"
+                            defaultDate={dateTo}
+                            onChange={(dates: Date[], dateStr: string) => {
+                                setDateTo(dateStr);
+                                // fetchData();
+                            }}
                         />
                     </div>
                 </div>
@@ -504,35 +537,30 @@ export default function IzinDinasPage() {
                             <div className="flex flex-col gap-6 mb-6">
                                 <div>
                                     <label className="mb-2.5 block text-black dark:text-white font-medium">Karyawan</label>
-                                    <select
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
+                                    <SearchableSelect
+                                        options={karyawanOptions.map(k => ({ value: k.nik, label: k.nama_karyawan }))}
                                         value={formData.nik}
-                                        onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
-                                        required
-                                    >
-                                        <option value="">Pilih Karyawan</option>
-                                        {karyawanOptions.map(k => <option key={k.nik} value={k.nik}>{k.nama_karyawan}</option>)}
-                                    </select>
+                                        onChange={(val) => setFormData({ ...formData, nik: val })}
+                                        placeholder="Pilih Karyawan"
+                                    />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="mb-2.5 block text-black dark:text-white font-medium">Dari Tanggal</label>
-                                        <input
-                                            type="date"
-                                            value={formData.dari}
-                                            onChange={(e) => setFormData({ ...formData, dari: e.target.value })}
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
-                                            required
+                                        <DatePicker
+                                            id="form-dari"
+                                            placeholder="Dari Tanggal"
+                                            defaultDate={formData.dari}
+                                            onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, dari: dateStr })}
                                         />
                                     </div>
                                     <div>
                                         <label className="mb-2.5 block text-black dark:text-white font-medium">Sampai Tanggal</label>
-                                        <input
-                                            type="date"
-                                            value={formData.sampai}
-                                            onChange={(e) => setFormData({ ...formData, sampai: e.target.value })}
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
-                                            required
+                                        <DatePicker
+                                            id="form-sampai"
+                                            placeholder="Sampai Tanggal"
+                                            defaultDate={formData.sampai}
+                                            onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, sampai: dateStr })}
                                         />
                                     </div>
                                 </div>

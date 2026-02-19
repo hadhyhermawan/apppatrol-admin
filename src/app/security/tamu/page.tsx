@@ -6,8 +6,16 @@ import apiClient from '@/lib/api';
 import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, UserCheck, Clock } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
+import Image from 'next/image';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
+import dynamic from 'next/dynamic';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 
 type TamuItem = {
     id_tamu: number;
@@ -44,6 +52,7 @@ function SecurityTamuPage() {
     const [dateStart, setDateStart] = useState('');
     const [dateEnd, setDateEnd] = useState('');
     const [karyawanList, setKaryawanList] = useState<KaryawanOption[]>([]);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -121,6 +130,7 @@ function SecurityTamuPage() {
             }
         } catch (error) {
             console.error("Failed to fetch tamu data", error);
+            setData([]);
         } finally {
             setLoading(false);
         }
@@ -134,7 +144,7 @@ function SecurityTamuPage() {
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchData();
-        }, 500);
+        }, 800);
         return () => clearTimeout(timer);
     }, [searchTerm, dateStart, dateEnd]);
 
@@ -287,6 +297,25 @@ function SecurityTamuPage() {
         <MainLayout>
             <PageBreadcrumb pageTitle="Buku Tamu (Visitor)" />
 
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <img
+                        src={previewImage}
+                        alt="Preview"
+                        className="max-h-[90vh] max-w-full rounded-lg shadow-2xl object-contain"
+                    />
+                    <button
+                        className="absolute top-5 right-5 text-white bg-black/50 rounded-full p-2 hover:bg-white/20 transition-colors"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+            )}
+
             <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-semibold text-black dark:text-white">
@@ -299,9 +328,9 @@ function SecurityTamuPage() {
                         </button>
                         {canCreate('tamu') && (
                             <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Data</span>
-                        </button>
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Data</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -321,19 +350,23 @@ function SecurityTamuPage() {
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
                     <div>
-                        <input
-                            type="datetime-local"
-                            value={dateStart}
-                            onChange={e => setDateStart(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
+                        <DatePicker
+                            id="date-start"
+                            placeholder="Dari Waktu"
+                            defaultDate={dateStart}
+                            enableTime
+                            dateFormat="Y-m-d H:i"
+                            onChange={(dates: Date[], dateStr: string) => setDateStart(dateStr)}
                         />
                     </div>
                     <div>
-                        <input
-                            type="datetime-local"
-                            value={dateEnd}
-                            onChange={e => setDateEnd(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
+                        <DatePicker
+                            id="date-end"
+                            placeholder="Sampai Waktu"
+                            defaultDate={dateEnd}
+                            enableTime
+                            dateFormat="Y-m-d H:i"
+                            onChange={(dates: Date[], dateStr: string) => setDateEnd(dateStr)}
                         />
                     </div>
                 </div>
@@ -388,25 +421,49 @@ function SecurityTamuPage() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 text-center">
-                                            <div className="flex justify-center gap-1">
+                                            <div className="flex justify-center gap-1 -space-x-2">
                                                 {item.foto ? (
-                                                    <a href={item.foto} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:scale-105 transition">
-                                                        <UserCheck size={18} />
-                                                    </a>
-                                                ) : <span className="text-gray-300"><UserCheck size={18} /></span>}
+                                                    <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Masuk">
+                                                        <Image
+                                                            src={item.foto}
+                                                            alt="Masuk"
+                                                            width={40}
+                                                            height={40}
+                                                            className="h-full w-full object-cover cursor-pointer hover:opacity-80 transition"
+                                                            unoptimized
+                                                            onClick={() => setPreviewImage(item.foto || null)}
+                                                            onError={(e: any) => e.target.style.display = 'none'}
+                                                        />
+                                                    </div>
+                                                ) : null}
+                                                {item.foto_keluar ? (
+                                                    <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Keluar">
+                                                        <Image
+                                                            src={item.foto_keluar}
+                                                            alt="Keluar"
+                                                            width={40}
+                                                            height={40}
+                                                            className="h-full w-full object-cover cursor-pointer hover:opacity-80 transition"
+                                                            unoptimized
+                                                            onClick={() => setPreviewImage(item.foto_keluar || null)}
+                                                            onError={(e: any) => e.target.style.display = 'none'}
+                                                        />
+                                                    </div>
+                                                ) : null}
+                                                {!item.foto && !item.foto_keluar && <span className="text-xs text-gray-400">-</span>}
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
                                                 {canUpdate('tamu') && (
                                                     <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
+                                                        <Edit className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                                 {canDelete('tamu') && (
                                                     <button onClick={() => handleDelete(item.id_tamu)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
-                                                    <Trash className="h-4 w-4" />
-                                                </button>
+                                                        <Trash className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -469,7 +526,7 @@ function SecurityTamuPage() {
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Nama Tamu <span className="text-red-500">*</span></label>
                                         <input
                                             type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             placeholder="Nama Lengkap"
                                             value={formData.nama}
                                             onChange={e => setFormData({ ...formData, nama: e.target.value })}
@@ -480,7 +537,7 @@ function SecurityTamuPage() {
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Perusahaan / Instansi</label>
                                         <input
                                             type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             placeholder="Asal Perusahaan"
                                             value={formData.perusahaan}
                                             onChange={e => setFormData({ ...formData, perusahaan: e.target.value })}
@@ -493,7 +550,7 @@ function SecurityTamuPage() {
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Nomor Telepon</label>
                                         <input
                                             type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             value={formData.no_telp}
                                             onChange={e => setFormData({ ...formData, no_telp: e.target.value })}
                                         />
@@ -502,7 +559,7 @@ function SecurityTamuPage() {
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Alamat</label>
                                         <input
                                             type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             value={formData.alamat}
                                             onChange={e => setFormData({ ...formData, alamat: e.target.value })}
                                         />
@@ -514,7 +571,7 @@ function SecurityTamuPage() {
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Bertemu Dengan</label>
                                         <input
                                             type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             placeholder="Nama Karyawan/Departemen"
                                             value={formData.bertemu_dengan}
                                             onChange={e => setFormData({ ...formData, bertemu_dengan: e.target.value })}
@@ -523,7 +580,7 @@ function SecurityTamuPage() {
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Dengan Perjanjian?</label>
                                         <select
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             value={formData.dengan_perjanjian}
                                             onChange={e => setFormData({ ...formData, dengan_perjanjian: e.target.value })}
                                         >
@@ -537,7 +594,7 @@ function SecurityTamuPage() {
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Keperluan</label>
                                     <textarea
                                         rows={2}
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                         placeholder="Jelaskan keperluan kunjungan..."
                                         value={formData.keperluan}
                                         onChange={e => setFormData({ ...formData, keperluan: e.target.value })}
@@ -548,7 +605,7 @@ function SecurityTamuPage() {
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Jenis Kendaraan</label>
                                         <select
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             value={formData.jenis_kendaraan}
                                             onChange={e => setFormData({ ...formData, jenis_kendaraan: e.target.value })}
                                         >
@@ -561,7 +618,7 @@ function SecurityTamuPage() {
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Nomor Polisi</label>
                                         <input
                                             type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             placeholder="Nomor Polisi (jika berkendara)"
                                             value={formData.no_pol}
                                             onChange={e => setFormData({ ...formData, no_pol: e.target.value })}
@@ -573,32 +630,29 @@ function SecurityTamuPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-stroke dark:border-strokedark pt-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Waktu Masuk <span className="text-red-500">*</span></label>
-                                        <input
-                                            type="datetime-local"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
-                                            value={formData.jam_masuk}
-                                            onChange={e => setFormData({ ...formData, jam_masuk: e.target.value })}
-                                            required
+                                        <DatePicker
+                                            id="form-jam-masuk"
+                                            placeholder="Pilih Waktu"
+                                            defaultDate={formData.jam_masuk}
+                                            enableTime
+                                            dateFormat="Y-m-d H:i"
+                                            onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, jam_masuk: dateStr })}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Petugas Masuk (Satpam)</label>
-                                        <select
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        <SearchableSelect
+                                            options={karyawanList.map(k => ({ value: k.nik, label: `${k.nama_karyawan} (${k.nik})` }))}
                                             value={formData.nik_satpam}
-                                            onChange={e => setFormData({ ...formData, nik_satpam: e.target.value })}
-                                        >
-                                            <option value="">Pilih Petugas</option>
-                                            {karyawanList.map(k => (
-                                                <option key={k.nik} value={k.nik}>{k.nama_karyawan}</option>
-                                            ))}
-                                        </select>
+                                            onChange={(val) => setFormData({ ...formData, nik_satpam: val })}
+                                            placeholder="Pilih Petugas"
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Foto Masuk (URL)</label>
                                         <input
                                             type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
                                             placeholder="https://..."
                                             value={formData.foto}
                                             onChange={e => setFormData({ ...formData, foto: e.target.value })}
@@ -609,32 +663,40 @@ function SecurityTamuPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-stroke dark:border-strokedark pt-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Waktu Keluar</label>
-                                        <input
-                                            type="datetime-local"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
-                                            value={formData.jam_keluar}
-                                            onChange={e => setFormData({ ...formData, jam_keluar: e.target.value })}
+                                        <DatePicker
+                                            id="form-jam-keluar"
+                                            placeholder="Pilih Waktu"
+                                            defaultDate={formData.jam_keluar}
+                                            enableTime
+                                            dateFormat="Y-m-d H:i"
+                                            onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, jam_keluar: dateStr })}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Petugas Keluar (Satpam)</label>
-                                        <select
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                        <SearchableSelect
+                                            options={karyawanList.map(k => ({ value: k.nik, label: `${k.nama_karyawan} (${k.nik})` }))}
                                             value={formData.nik_satpam_keluar}
-                                            onChange={e => setFormData({ ...formData, nik_satpam_keluar: e.target.value })}
-                                        >
-                                            <option value="">Pilih Petugas</option>
-                                            {karyawanList.map(k => (
-                                                <option key={k.nik} value={k.nik}>{k.nama_karyawan}</option>
-                                            ))}
-                                        </select>
+                                            onChange={(val) => setFormData({ ...formData, nik_satpam_keluar: val })}
+                                            placeholder="Pilih Petugas"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-black dark:text-white mb-2">Foto Keluar (URL)</label>
+                                        <input
+                                            type="text"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
+                                            placeholder="https://..."
+                                            value={formData.foto_keluar}
+                                            onChange={e => setFormData({ ...formData, foto_keluar: e.target.value })}
+                                        />
                                     </div>
                                 </div>
 
                             </div>
 
                             <div className="px-6 py-4 bg-gray-50 dark:bg-meta-4/30 flex justify-end gap-3 border-t border-stroke dark:border-strokedark sticky bottom-0 z-10">
-                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium text-black bg-white border border-stroke rounded-lg hover:bg-gray-50">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium text-black bg-white border border-stroke rounded-lg hover:bg-gray-50 dark:bg-meta-4 dark:text-white dark:border-strokedark">
                                     Batal
                                 </button>
                                 <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-opacity-90 flex items-center">
@@ -649,7 +711,6 @@ function SecurityTamuPage() {
     );
 }
 
-// Protect page with permission
 export default withPermission(SecurityTamuPage, {
     permissions: ['tamu.index']
 });

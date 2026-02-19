@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { Search, UserPlus, Filter, Database, ArrowLeft, ArrowRight, User, GraduationCap, Building2, MapPin, Smartphone, Key, AlertTriangle, Lock, Unlock, Fingerprint, Clock, FileText, Trash, Edit, Plus, RefreshCw, SmartphoneNfc, MoreHorizontal } from 'lucide-react';
+import { Search, UserPlus, Filter, Database, ArrowLeft, ArrowRight, User, GraduationCap, Building2, MapPin, Smartphone, Key, AlertTriangle, Lock, Unlock, Fingerprint, Watch, FileText, Trash, Edit, Plus, RefreshCw, SmartphoneNfc, MoreHorizontal, Timer } from 'lucide-react';
 import clsx from 'clsx';
 import Link from 'next/link';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
@@ -11,6 +11,7 @@ import Image from 'next/image';
 import Swal from 'sweetalert2';
 import KaryawanModal from './KaryawanModal';
 import SetJamKerjaModal from './SetJamKerjaModal';
+import SearchableSelect from '@/components/form/SearchableSelect';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
 
@@ -61,7 +62,7 @@ type MasterOptions = {
 // ... (keep types)
 
 function MasterKaryawanPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, canView, canDetail } = usePermissions();
     const [data, setData] = useState<KaryawanItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -205,6 +206,46 @@ function MasterKaryawanPage() {
         }
     };
 
+    const handleUserAction = async (item: KaryawanItem) => {
+        const hasUser = !!item.id_user;
+        const confirmText = hasUser
+            ? `Akun login untuk ${item.nama_karyawan} akan dihapus. User tidak bisa login lagi.`
+            : `Buat akun login untuk ${item.nama_karyawan}? Password default adalah NIK.`;
+
+        const result = await Swal.fire({
+            title: `${hasUser ? 'Hapus' : 'Buat'} User Login?`,
+            text: confirmText,
+            icon: hasUser ? 'warning' : 'question',
+            showCancelButton: true,
+            confirmButtonColor: hasUser ? '#d33' : '#3085d6',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: hasUser ? 'Ya, Hapus User!' : 'Ya, Buat User!',
+            cancelButtonText: 'Batal'
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            if (hasUser) {
+                await apiClient.delete(`/master/karyawan/${item.nik}/delete-user`);
+            } else {
+                await apiClient.post(`/master/karyawan/${item.nik}/create-user`);
+            }
+
+            Swal.fire({
+                title: 'Berhasil!',
+                text: `User berhasil ${hasUser ? 'dihapus' : 'dibuat'}.`,
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            fetchData();
+        } catch (error: any) {
+            console.error(error);
+            Swal.fire('Gagal!', error.response?.data?.detail || "Gagal memproses user.", 'error');
+        }
+    };
+
     const getStatusBadge = (status: string) => {
         const isActive = status === '1' || status.toLowerCase() === 'y' || status.toLowerCase() === 'aktif';
         return (
@@ -265,34 +306,33 @@ function MasterKaryawanPage() {
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
 
-                    <select
+                    <SearchableSelect
+                        options={options.cabang.map(o => ({ value: o.code, label: o.name }))}
                         value={filterCabang}
-                        onChange={e => setFilterCabang(e.target.value)}
-                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-4 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4"
-                    >
-                        <option value="">Semua Cabang</option>
-                        {options.cabang.map(o => <option key={o.code} value={o.code}>{o.name}</option>)}
-                    </select>
+                        onChange={(val) => setFilterCabang(val)}
+                        placeholder="Semua Cabang"
+                        className="w-full min-w-[200px]"
+                    />
 
-                    <select
+                    <SearchableSelect
+                        options={options.departemen.map(o => ({ value: o.code, label: o.name }))}
                         value={filterDept}
-                        onChange={e => setFilterDept(e.target.value)}
-                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-4 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4"
-                    >
-                        <option value="">Semua Departemen</option>
-                        {options.departemen.map(o => <option key={o.code} value={o.code}>{o.name}</option>)}
-                    </select>
+                        onChange={(val) => setFilterDept(val)}
+                        placeholder="Semua Departemen"
+                        className="w-full min-w-[200px]"
+                    />
 
-                    <select
+                    <SearchableSelect
+                        options={[
+                            { value: 'aktif', label: 'Aktif' },
+                            { value: 'expiring', label: 'Akan Habis' },
+                            { value: 'expired', label: 'Kadaluarsa' }
+                        ]}
                         value={filterMasa}
-                        onChange={e => setFilterMasa(e.target.value)}
-                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-4 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4"
-                    >
-                        <option value="">Filter Masa Anggota</option>
-                        <option value="aktif">Aktif</option>
-                        <option value="expiring">Akan Habis</option>
-                        <option value="expired">Kadaluarsa</option>
-                    </select>
+                        onChange={(val) => setFilterMasa(val)}
+                        placeholder="Filter Masa Anggota"
+                        className="w-full min-w-[200px]"
+                    />
                 </div>
 
                 <div className="max-w-full overflow-x-auto">
@@ -304,12 +344,10 @@ function MasterKaryawanPage() {
                                 <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Jabatan & Dept</th>
                                 <th className="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">Cabang</th>
                                 <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Status</th>
-                                <th className="min-w-[90px] px-2 py-4 font-medium text-black dark:text-white text-center" title="Lock Location"><MapPin className="mx-auto h-4 w-4" /></th>
-                                <th className="min-w-[90px] px-2 py-4 font-medium text-black dark:text-white text-center" title="Lock Jam Kerja"><Clock className="mx-auto h-4 w-4" /></th>
-                                <th className="min-w-[90px] px-2 py-4 font-medium text-black dark:text-white text-center" title="Multi Device"><Smartphone className="mx-auto h-4 w-4" /></th>
+
                                 <th className="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">Kontak</th>
                                 <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Masa Anggota</th>
-                                <th className="min-w-[180px] px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>
+                                <th className="min-w-[280px] px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -359,42 +397,7 @@ function MasterKaryawanPage() {
                                         </td>
 
                                         {/* TOGGLE ICONS */}
-                                        <td className="px-2 py-4 text-center">
-                                            <button
-                                                onClick={() => handleToggle(item.nik, 'location')}
-                                                className="hover:opacity-80 transition"
-                                                title={item.lock_location === '1' ? "Location Locked" : "Location Unlocked"}
-                                            >
-                                                {item.lock_location === '1' ?
-                                                    <Lock className="mx-auto h-4 w-4 text-green-500" /> :
-                                                    <Unlock className="mx-auto h-4 w-4 text-red-500" />
-                                                }
-                                            </button>
-                                        </td>
-                                        <td className="px-2 py-4 text-center">
-                                            <button
-                                                onClick={() => handleToggle(item.nik, 'jamkerja')}
-                                                className="hover:opacity-80 transition"
-                                                title={item.lock_jam_kerja === '1' ? "Jam Kerja Locked" : "Jam Kerja Unlocked"}
-                                            >
-                                                {item.lock_jam_kerja === '1' ?
-                                                    <Lock className="mx-auto h-4 w-4 text-green-500" /> :
-                                                    <Unlock className="mx-auto h-4 w-4 text-red-500" />
-                                                }
-                                            </button>
-                                        </td>
-                                        <td className="px-2 py-4 text-center">
-                                            <button
-                                                onClick={() => handleToggle(item.nik, 'multidevice')}
-                                                className="hover:opacity-80 transition"
-                                                title={item.allow_multi_device === '1' ? "Multi Device Allowed" : "Single Device Only"}
-                                            >
-                                                {item.allow_multi_device === '1' ?
-                                                    <SmartphoneNfc className="mx-auto h-4 w-4 text-green-500" /> :
-                                                    <Smartphone className="mx-auto h-4 w-4 text-red-500" />
-                                                }
-                                            </button>
-                                        </td>
+
 
 
                                         <td className="px-4 py-4">
@@ -429,10 +432,54 @@ function MasterKaryawanPage() {
                                                 {canUpdate('karyawan') && (
                                                     <button
                                                         onClick={() => openJamKerjaModal(item.nik)}
-                                                        className="hover:text-blue-500 text-gray-500 dark:text-gray-400"
+                                                        className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
                                                         title="Set Jam Kerja"
                                                     >
-                                                        <Clock className="h-4 w-4" />
+                                                        <Watch className="h-4 w-4" />
+                                                    </button>
+                                                )}
+
+                                                {/* Toggle Location */}
+                                                {canUpdate('karyawan') && (
+                                                    <button
+                                                        onClick={() => handleToggle(item.nik, 'location')}
+                                                        className="hover:opacity-80 text-gray-500 dark:text-gray-400"
+                                                        title={item.lock_location === '1' ? "Location Locked" : "Location Unlocked"}
+                                                    >
+                                                        <MapPin className={`h-4 w-4 ${item.lock_location === '1' ? 'text-green-500' : 'text-red-500'}`} />
+                                                    </button>
+                                                )}
+
+                                                {/* Toggle Jam Kerja Lock */}
+                                                {canUpdate('karyawan') && (
+                                                    <button
+                                                        onClick={() => handleToggle(item.nik, 'jamkerja')}
+                                                        className="hover:opacity-80 text-gray-500 dark:text-gray-400"
+                                                        title={item.lock_jam_kerja === '1' ? "Jam Kerja Locked" : "Jam Kerja Unlocked"}
+                                                    >
+                                                        <Timer className={`h-4 w-4 ${item.lock_jam_kerja === '1' ? 'text-green-500' : 'text-red-500'}`} />
+                                                    </button>
+                                                )}
+
+                                                {/* Toggle Multi Device */}
+                                                {canUpdate('karyawan') && (
+                                                    <button
+                                                        onClick={() => handleToggle(item.nik, 'multidevice')}
+                                                        className="hover:opacity-80 text-gray-500 dark:text-gray-400"
+                                                        title={item.allow_multi_device === '1' ? "Multi Device Allowed" : "Single Device Only"}
+                                                    >
+                                                        <SmartphoneNfc className={`h-4 w-4 ${item.allow_multi_device === '1' ? 'text-green-500' : 'text-red-500'}`} />
+                                                    </button>
+                                                )}
+
+                                                {/* Lock/Unlock Device Login */}
+                                                {canUpdate('karyawan') && (
+                                                    <button
+                                                        onClick={() => handleToggle(item.nik, 'device')}
+                                                        className="hover:opacity-80 text-gray-500 dark:text-gray-400"
+                                                        title="Lock/Unlock Device Login"
+                                                    >
+                                                        <Fingerprint className={`h-4 w-4 ${item.lock_device_login === '1' ? 'text-green-500' : 'text-red-500'}`} />
                                                     </button>
                                                 )}
 
@@ -447,20 +494,6 @@ function MasterKaryawanPage() {
                                                     </Link>
                                                 )}
 
-                                                {/* Lock/Unlock Device */}
-                                                {canUpdate('karyawan') && (
-                                                    <button
-                                                        onClick={() => handleToggle(item.nik, 'device')}
-                                                        className="hover:opacity-80 text-gray-500 dark:text-gray-400"
-                                                        title="Lock/Unlock Device Login"
-                                                    >
-                                                        {item.lock_device_login === '1' ?
-                                                            <Lock className="h-4 w-4 text-green-500" /> :
-                                                            <Unlock className="h-4 w-4 text-red-500" />
-                                                        }
-                                                    </button>
-                                                )}
-
                                                 {/* Reset Session */}
                                                 {canUpdate('karyawan') && (
                                                     <button
@@ -469,6 +502,32 @@ function MasterKaryawanPage() {
                                                         title="Reset Session (Force Logout)"
                                                     >
                                                         <RefreshCw className="h-4 w-4" />
+                                                    </button>
+                                                )}
+
+                                                {/* Detail */}
+                                                {canDetail('karyawan') && (
+                                                    <Link
+                                                        href={`/master/karyawan/show/${item.nik}`}
+                                                        className="hover:text-blue-500 text-gray-500 dark:text-gray-400"
+                                                        title="Detail Data"
+                                                    >
+                                                        <FileText className="h-4 w-4" />
+                                                    </Link>
+                                                )}
+
+                                                {/* User Account Create/Delete */}
+                                                {canUpdate('karyawan') && (
+                                                    <button
+                                                        onClick={() => handleUserAction(item)}
+                                                        className="hover:opacity-80 text-gray-500 dark:text-gray-400"
+                                                        title={item.id_user ? "Hapus User Login" : "Buat User Login"}
+                                                    >
+                                                        {item.id_user ? (
+                                                            <User className="h-4 w-4 text-green-500" />
+                                                        ) : (
+                                                            <UserPlus className="h-4 w-4 text-red-500" />
+                                                        )}
                                                     </button>
                                                 )}
 

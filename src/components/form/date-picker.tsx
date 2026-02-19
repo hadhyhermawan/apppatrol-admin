@@ -1,8 +1,10 @@
+'use client';
+
 import { useEffect } from 'react';
 import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 import Label from './Label';
-import { CalenderIcon } from '../../icons';
+import { Calendar } from 'lucide-react';
 import Hook = flatpickr.Options.Hook;
 import DateOption = flatpickr.Options.DateOption;
 
@@ -13,6 +15,10 @@ type PropsType = {
   defaultDate?: DateOption;
   label?: string;
   placeholder?: string;
+  enableTime?: boolean;
+  dateFormat?: string;
+  allowInput?: boolean;
+  staticDisplay?: boolean;
 };
 
 export default function DatePicker({
@@ -22,15 +28,21 @@ export default function DatePicker({
   label,
   defaultDate,
   placeholder,
+  enableTime = false,
+  dateFormat = "Y-m-d",
+  allowInput = true,
+  staticDisplay = true,
 }: PropsType) {
   useEffect(() => {
     const flatPickr = flatpickr(`#${id}`, {
       mode: mode || "single",
-      static: true,
+      static: staticDisplay,
       monthSelectorType: "static",
-      dateFormat: "Y-m-d",
+      dateFormat,
+      enableTime,
       defaultDate,
       onChange,
+      allowInput,
     });
 
     return () => {
@@ -52,9 +64,9 @@ export default function DatePicker({
         />
 
         <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-          <CalenderIcon className="size-6" />
+          <Calendar className="size-6" />
         </span>
       </div>
-    </div>
+    </div >
   );
 }

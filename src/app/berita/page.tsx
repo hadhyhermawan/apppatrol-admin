@@ -13,7 +13,7 @@ type BeritaItem = {
     id: number;
     judul: string;
     isi: string;
-    foto: string | null;
+    foto_url: string | null;
     kode_dept_target: string | null;
     nama_dept_target: string | null;
     author: string | null;
@@ -38,7 +38,8 @@ export default function BeritaPage() {
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create'); // Edit not fully supported in backend for file upload in this example yet, but structure is here
+    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+    const [selectedId, setSelectedId] = useState<number | null>(null);
     const [formData, setFormData] = useState<{
         judul: string;
         isi: string;
@@ -58,6 +59,7 @@ export default function BeritaPage() {
         setLoading(true);
         try {
             const response: any = await apiClient.get('/berita');
+            console.log("DEBUG BERITA DATA:", response);
             if (response.data && Array.isArray(response.data)) {
                 setData(response.data);
             } else {
@@ -103,9 +105,11 @@ export default function BeritaPage() {
     const totalPages = Math.ceil(filteredData.length / perPage);
 
     // Handlers
+    // Handlers
     const handleOpenCreate = () => {
         setErrorMsg('');
         setModalMode('create');
+        setSelectedId(null);
         setFormData({
             judul: '',
             isi: '',
@@ -113,6 +117,23 @@ export default function BeritaPage() {
             foto: null
         });
         setPreviewImage(null);
+        setIsModalOpen(true);
+        setIsModalOpen(true);
+    };
+
+    const handleOpenEdit = (item: BeritaItem) => {
+        setErrorMsg('');
+        setModalMode('edit');
+        setSelectedId(item.id);
+
+        setFormData({
+            judul: item.judul,
+            isi: item.isi,
+            kode_dept_target: item.kode_dept_target || '',
+            foto: null
+        });
+
+        setPreviewImage(item.foto_url);
         setIsModalOpen(true);
     };
 
@@ -152,17 +173,24 @@ export default function BeritaPage() {
             // Note: Currently router supports POST for create. PUT for edit needs similar multipart handling if updating file.
             // For simplicity, we only implement Create in this snippet properly.
 
-            await apiClient.post('/berita', data, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
+            if (modalMode === 'create') {
+                await apiClient.post('/berita', data, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } else {
+                if (selectedId) {
+                    await apiClient.put(`/berita/${selectedId}`, data, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
                 }
-            });
+            }
 
             setIsModalOpen(false);
             fetchData();
+            fetchData();
             Swal.fire({
                 title: 'Berhasil!',
-                text: 'Berita berhasil diterbitkan.',
+                text: modalMode === 'create' ? 'Berita berhasil diterbitkan.' : 'Berita berhasil diperbarui.',
                 icon: 'success',
                 timer: 1500,
                 showConfirmButton: false
@@ -252,14 +280,15 @@ export default function BeritaPage() {
                         paginatedData.map((item) => (
                             <div key={item.id} className="flex flex-col md:flex-row gap-4 p-4 border border-stroke dark:border-strokedark rounded-xl bg-gray-50 dark:bg-meta-4/20 hover:bg-gray-100 transition">
                                 <div className="w-full md:w-48 h-32 flex-shrink-0 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden relative">
-                                    {item.foto ? (
+                                    {item.foto_url ? (
                                         <Image
-                                            src={item.foto}
+                                            src={item.foto_url}
                                             alt={item.judul}
                                             fill
                                             className="object-cover"
                                             onError={(e: any) => {
-                                                e.target.src = "https://via.placeholder.com/300?text=No+Image"
+                                                console.error("Image load error for:", item.foto_url);
+                                                e.target.src = "https://via.placeholder.com/300?text=No+Image";
                                             }}
                                         />
                                     ) : (
@@ -273,7 +302,7 @@ export default function BeritaPage() {
                                         <div className="flex justify-between items-start">
                                             <h3 className="text-lg font-bold text-black dark:text-white mb-1 line-clamp-1">{item.judul}</h3>
                                             <div className="flex gap-2">
-                                                {/* <button className="p-1 hover:text-brand-500 text-gray-500"><Edit size={16} /></button> */}
+                                                <button onClick={() => handleOpenEdit(item)} className="p-1 hover:text-brand-500 text-gray-500"><Edit size={16} /></button>
                                                 <button onClick={() => handleDelete(item.id)} className="p-1 hover:text-red-500 text-gray-500"><Trash size={16} /></button>
                                             </div>
                                         </div>
@@ -328,7 +357,7 @@ export default function BeritaPage() {
                         {/* Modal Header */}
                         <div className="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center sticky top-0 bg-white dark:bg-boxdark z-10">
                             <h3 className="text-lg font-bold text-black dark:text-white">
-                                Buat Berita Baru
+                                {modalMode === 'create' ? 'Buat Berita Baru' : 'Edit Berita'}
                             </h3>
                             <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                                 <X className="w-5 h-5" />

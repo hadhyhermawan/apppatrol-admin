@@ -1,0 +1,93 @@
+# =================================================
+# HTTP → HTTPS (HANYA k3guard.com)
+# =================================================
+server {
+    listen 80;
+    server_name k3guard.com www.k3guard.com;
+    return 301 https://k3guard.com$request_uri;
+}
+
+# =================================================
+# HTTPS k3guard.com  (COMPAT MODE)
+# =================================================
+server {
+    listen 443 ssl http2;
+    server_name k3guard.com www.k3guard.com;
+
+    ssl_certificate /etc/letsencrypt/live/k3guard.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/k3guard.com/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    root /var/www/appPatrol/public;
+    index index.php index.html index.htm;
+
+    client_max_body_size 100M;
+
+    # =================================================
+    # FACE VERIFICATION (⚠️ KOMPAT DENGAN KODE LAMA)
+    # - TANPA trailing slash
+    # - TIDAK rewrite path
+    # - Host tetap $host
+    # =================================================
+    location ^~ /api/deteksiwajah/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+
+        proxy_buffering off;
+    }
+
+    # =================================================
+    # WEBSOCKET (NodeJS) – BIARKAN SEPERTI LAMA
+    # =================================================
+    location /wss/ {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_http_version 1.1;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+    }
+
+    # =================================================
+    # LARAVEL (ASLI, JANGAN DIUBAH)
+    # =================================================
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_read_timeout 300s;
+    }
+
+    # =================================================
+    # SECURITY (ASLI)
+    # =================================================
+    add_header X-Frame-Options SAMEORIGIN;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+}

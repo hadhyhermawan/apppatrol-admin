@@ -7,6 +7,13 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { Plus, Search, Trash2, Edit, RefreshCw, FileText, ArrowLeft, ArrowRight, Eye, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
+import SearchableSelect from '@/components/form/SearchableSelect';
+import dynamic from 'next/dynamic';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 
 type IzinData = {
     kode: string;
@@ -99,8 +106,11 @@ function PengajuanIzinPage() {
 
     useEffect(() => {
         fetchData();
+    }, [activeTab, searchCabang, searchDept, searchStatus, dateFrom, dateTo]);
+
+    useEffect(() => {
         fetchOptions();
-    }, [activeTab]);
+    }, []);
 
     const fetchData = async () => {
         setLoading(true);
@@ -394,34 +404,20 @@ function PengajuanIzinPage() {
                             <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                         </div>
                         <div>
-                            <select
-                                className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                            <SearchableSelect
+                                options={cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))}
                                 value={searchCabang}
-                                onChange={(e) => {
-                                    setSearchCabang(e.target.value);
-                                    fetchData();
-                                }}
-                            >
-                                <option value="">Semua Cabang</option>
-                                {cabangOptions.map(c => (
-                                    <option key={c.kode_cabang} value={c.kode_cabang}>{c.nama_cabang}</option>
-                                ))}
-                            </select>
+                                onChange={setSearchCabang}
+                                placeholder="Semua Cabang"
+                            />
                         </div>
                         <div>
-                            <select
-                                className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                            <SearchableSelect
+                                options={deptOptions.map(d => ({ value: d.kode_dept, label: d.nama_dept }))}
                                 value={searchDept}
-                                onChange={(e) => {
-                                    setSearchDept(e.target.value);
-                                    fetchData();
-                                }}
-                            >
-                                <option value="">Semua Dept</option>
-                                {deptOptions.map(d => (
-                                    <option key={d.kode_dept} value={d.kode_dept}>{d.nama_dept}</option>
-                                ))}
-                            </select>
+                                onChange={setSearchDept}
+                                placeholder="Semua Dept"
+                            />
                         </div>
                         <div>
                             <select
@@ -439,15 +435,19 @@ function PengajuanIzinPage() {
                             </select>
                         </div>
                         <div>
-                            <input
-                                type="date"
-                                value={dateFrom}
-                                onChange={(e) => {
-                                    setDateFrom(e.target.value);
-                                    fetchData();
-                                }}
-                                className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                                placeholder="Dari"
+                            <DatePicker
+                                id="date-from"
+                                placeholder="Dari Tanggal"
+                                defaultDate={dateFrom}
+                                onChange={(dates: Date[], dateStr: string) => setDateFrom(dateStr)}
+                            />
+                        </div>
+                        <div>
+                            <DatePicker
+                                id="date-to"
+                                placeholder="Sampai Tanggal"
+                                defaultDate={dateTo}
+                                onChange={(dates: Date[], dateStr: string) => setDateTo(dateStr)}
                             />
                         </div>
                     </div>
@@ -594,35 +594,30 @@ function PengajuanIzinPage() {
                             <div className="flex flex-col gap-6 mb-6">
                                 <div>
                                     <label className="mb-2.5 block text-black dark:text-white font-medium">Karyawan</label>
-                                    <select
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
+                                    <SearchableSelect
+                                        options={karyawanOptions.map(k => ({ value: k.nik, label: k.nama_karyawan }))}
                                         value={formData.nik}
-                                        onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
-                                        required
-                                    >
-                                        <option value="">Pilih Karyawan</option>
-                                        {karyawanOptions.map(k => <option key={k.nik} value={k.nik}>{k.nama_karyawan}</option>)}
-                                    </select>
+                                        onChange={(val) => setFormData({ ...formData, nik: val })}
+                                        placeholder="Pilih Karyawan"
+                                    />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="mb-2.5 block text-black dark:text-white font-medium">Dari Tanggal</label>
-                                        <input
-                                            type="date"
-                                            value={formData.dari}
-                                            onChange={(e) => setFormData({ ...formData, dari: e.target.value })}
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
-                                            required
+                                        <DatePicker
+                                            id="form-dari"
+                                            placeholder="Dari Tanggal"
+                                            defaultDate={formData.dari}
+                                            onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, dari: dateStr })}
                                         />
                                     </div>
                                     <div>
                                         <label className="mb-2.5 block text-black dark:text-white font-medium">Sampai Tanggal</label>
-                                        <input
-                                            type="date"
-                                            value={formData.sampai}
-                                            onChange={(e) => setFormData({ ...formData, sampai: e.target.value })}
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
-                                            required
+                                        <DatePicker
+                                            id="form-sampai"
+                                            placeholder="Sampai Tanggal"
+                                            defaultDate={formData.sampai}
+                                            onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, sampai: dateStr })}
                                         />
                                     </div>
                                 </div>

@@ -3,13 +3,20 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { Search, Calendar, MapPin, ArrowLeft, ArrowRight, RefreshCw, User, MoreHorizontal, Filter, Eye, Edit, Trash } from 'lucide-react';
+import { Search, Calendar, MapPin, ArrowLeft, ArrowRight, RefreshCw, User, MoreHorizontal, Filter, Eye, Edit, Trash, X } from 'lucide-react';
 import Swal from 'sweetalert2';
 import clsx from 'clsx';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Image from 'next/image';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import dynamic from 'next/dynamic';
+import SearchableSelect from '@/components/form/SearchableSelect';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 
 type PresensiItem = {
     id: number;
@@ -48,6 +55,7 @@ function PresensiPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [perPage, setPerPage] = useState(20);
     const [totalItems, setTotalItems] = useState(0);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     // Fetch Options (Departments)
     useEffect(() => {
@@ -192,6 +200,25 @@ function PresensiPage() {
         <MainLayout>
             <PageBreadcrumb pageTitle="Monitoring Presensi" />
 
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <img
+                        src={previewImage}
+                        alt="Preview"
+                        className="max-h-[90vh] max-w-full rounded-lg shadow-2xl object-contain"
+                    />
+                    <button
+                        className="absolute top-5 right-5 text-white bg-black/50 rounded-full p-2 hover:bg-white/20 transition-colors"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+            )}
+
             <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-semibold text-black dark:text-white">
@@ -217,26 +244,19 @@ function PresensiPage() {
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
 
-                    <div className="relative">
-                        <input
-                            type="date"
-                            value={dateFilter}
-                            onChange={e => setDateFilter(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-gray-500 dark:text-gray-400"
-                        />
-                        {/* <Calendar className="absolute right-4 top-3 h-5 w-5 text-gray-400 pointer-events-none" /> */}
-                    </div>
+                    <DatePicker
+                        id="date-filter"
+                        placeholder="Filter Tanggal"
+                        defaultDate={dateFilter}
+                        onChange={(dates: Date[], dateStr: string) => setDateFilter(dateStr)}
+                    />
 
-                    <select
+                    <SearchableSelect
+                        options={[{ value: "", label: "Semua Departemen" }, ...options.departemen.map(o => ({ value: o.code, label: o.name }))]}
                         value={filterDept}
-                        onChange={e => setFilterDept(e.target.value)}
-                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                    >
-                        <option value="">Semua Departemen</option>
-                        {options.departemen.map(o => (
-                            <option key={o.code} value={o.code}>{o.name}</option>
-                        ))}
-                    </select>
+                        onChange={(val) => setFilterDept(val)}
+                        placeholder="Semua Departemen"
+                    />
                 </div>
 
                 <div className="max-w-full overflow-x-auto">
@@ -331,9 +351,10 @@ function PresensiPage() {
                                                             alt="In"
                                                             width={40}
                                                             height={40}
-                                                            className="h-full w-full object-cover"
+                                                            className="h-full w-full object-cover cursor-pointer hover:opacity-80 transition"
                                                             unoptimized
                                                             onError={(e: any) => e.target.style.display = 'none'}
+                                                            onClick={() => setPreviewImage(getImageUrl(item.foto_in))}
                                                         />
                                                     </div>
                                                 )}
@@ -344,9 +365,10 @@ function PresensiPage() {
                                                             alt="Out"
                                                             width={40}
                                                             height={40}
-                                                            className="h-full w-full object-cover"
+                                                            className="h-full w-full object-cover cursor-pointer hover:opacity-80 transition"
                                                             unoptimized
                                                             onError={(e: any) => e.target.style.display = 'none'}
+                                                            onClick={() => setPreviewImage(getImageUrl(item.foto_out))}
                                                         />
                                                     </div>
                                                 )}
@@ -368,8 +390,8 @@ function PresensiPage() {
                                                 </button>
                                                 {canDelete('presensi') && (
                                                     <button onClick={() => handleDelete(item.id)} title="Hapus" className="hover:text-red-500 text-red-500">
-                                                    <Trash className="h-5 w-5" />
-                                                </button>
+                                                        <Trash className="h-5 w-5" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -403,7 +425,7 @@ function PresensiPage() {
                     </div>
                 </div>
             </div>
-        </MainLayout>
+        </MainLayout >
     );
 }
 
