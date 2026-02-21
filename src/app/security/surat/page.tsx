@@ -3,12 +3,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { RefreshCw, Search, X, Eye, FileText, ArrowUpRight, ArrowDownLeft, Calendar, ArrowLeft, ArrowRight, Mail } from 'lucide-react';
+import { RefreshCw, Search, X, Eye, FileText, ArrowUpRight, ArrowDownLeft, Calendar, ArrowLeft, ArrowRight, Mail, Trash2, Edit, Save } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Image from 'next/image';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
 import dynamic from 'next/dynamic';
+import Swal from 'sweetalert2';
 
 const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
     ssr: false,
@@ -33,7 +34,7 @@ type SuratItem = {
 };
 
 function SecuritySuratPage() {
-    // const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canUpdate, canDelete } = usePermissions();
     const [activeTab, setActiveTab] = useState<'masuk' | 'keluar'>('masuk');
     const [data, setData] = useState<SuratItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -95,6 +96,77 @@ function SecuritySuratPage() {
     const handleView = (item: SuratItem) => {
         setSelectedItem(item);
         setIsModalOpen(true);
+    };
+
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editForm, setEditForm] = useState<Partial<SuratItem>>({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleEdit = (item: SuratItem) => {
+        setEditForm({
+            ...item,
+            // Format datetime locally "yyyy-MM-ddThh:mm:ss"
+            tanggal_surat: item.tanggal_surat ? new Date(item.tanggal_surat).toISOString().slice(0, 16) : ''
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const submitEdit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        setIsSubmitting(true);
+        try {
+            const url = activeTab === 'masuk' ? `/security/surat-masuk/${editForm.id}` : `/security/surat-keluar/${editForm.id}`;
+            await apiClient.put(url, {
+                ...editForm,
+                tanggal_surat: new Date(editForm.tanggal_surat!).toISOString()
+            });
+
+            Swal.fire({
+                title: 'Berhasil!',
+                text: 'Data surat telah diperbarui.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            setIsEditModalOpen(false);
+            fetchData();
+        } catch (error: any) {
+            Swal.fire('Error!', error?.response?.data?.detail || 'Gagal memperbarui data.', 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (id: number) => {
+        const result = await Swal.fire({
+            title: 'Apakah Yakin Dihapus?',
+            text: "Data surat yang dihapus tidak dapat dikembalikan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, hapus!',
+            cancelButtonText: 'Batal'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const url = activeTab === 'masuk' ? `/security/surat-masuk/${id}` : `/security/surat-keluar/${id}`;
+                await apiClient.delete(url);
+
+                Swal.fire({
+                    title: 'Terhapus!',
+                    text: 'Data surat telah berhasil dihapus.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+                fetchData();
+            } catch (error: any) {
+                Swal.fire('Error!', error?.response?.data?.detail || 'Gagal menghapus data.', 'error');
+            }
+        }
     };
 
     return (
@@ -272,13 +344,33 @@ function SecuritySuratPage() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 text-center">
-                                            <button
-                                                onClick={() => handleView(item)}
-                                                className="inline-flex items-center justify-center p-2 rounded-full hover:bg-gray-100 text-brand-500 dark:hover:bg-meta-4 transition"
-                                                title="Lihat Detail"
-                                            >
-                                                <Eye className="h-5 w-5" />
-                                            </button>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button
+                                                    onClick={() => handleView(item)}
+                                                    className="inline-flex items-center justify-center p-2 rounded-full hover:bg-gray-100 text-brand-500 dark:hover:bg-meta-4 transition"
+                                                    title="Lihat Detail"
+                                                >
+                                                    <Eye className="h-5 w-5" />
+                                                </button>
+                                                {canUpdate && (
+                                                    <button
+                                                        onClick={() => handleEdit(item)}
+                                                        className="inline-flex items-center justify-center p-2 rounded-full hover:bg-blue-100 text-blue-500 dark:hover:bg-meta-4 transition"
+                                                        title="Edit Data"
+                                                    >
+                                                        <Edit className="h-5 w-5" />
+                                                    </button>
+                                                )}
+                                                {canDelete && (
+                                                    <button
+                                                        onClick={() => handleDelete(item.id)}
+                                                        className="inline-flex items-center justify-center p-2 rounded-full hover:bg-red-100 text-red-500 dark:hover:bg-meta-4 transition"
+                                                        title="Hapus Data"
+                                                    >
+                                                        <Trash2 className="h-5 w-5" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -441,6 +533,102 @@ function SecuritySuratPage() {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* MODAL Edit */}
+            {isEditModalOpen && editForm && (
+                <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+                    <form onSubmit={submitEdit} className="bg-white dark:bg-boxdark rounded-lg shadow-xl w-full max-w-lg overflow-hidden transform transition-all scale-100 max-h-[90vh] overflow-y-auto">
+                        <div className="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center bg-white dark:bg-boxdark sticky top-0 z-10">
+                            <h3 className="text-lg font-bold text-black dark:text-white flex items-center gap-2">
+                                <Edit className="w-5 h-5" />
+                                Edit Surat {activeTab === 'masuk' ? 'Masuk' : 'Keluar'}
+                            </h3>
+                            <button type="button" onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="text-sm text-gray-700 dark:text-gray-300 font-medium pb-2 block">Nomor Surat</label>
+                                <input
+                                    required
+                                    type="text"
+                                    value={editForm.nomor_surat || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, nomor_surat: e.target.value }))}
+                                    className="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-gray-700 dark:text-gray-300 font-medium pb-2 block">Tanggal Surat</label>
+                                <input
+                                    required
+                                    type="datetime-local"
+                                    value={editForm.tanggal_surat || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, tanggal_surat: e.target.value }))}
+                                    className="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                                />
+                            </div>
+
+                            {activeTab === 'masuk' ? (
+                                <div>
+                                    <label className="text-sm text-gray-700 dark:text-gray-300 font-medium pb-2 block">Asal Surat</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.asal_surat || ''}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, asal_surat: e.target.value }))}
+                                        className="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                                    />
+                                </div>
+                            ) : null}
+
+                            <div>
+                                <label className="text-sm text-gray-700 dark:text-gray-300 font-medium pb-2 block">Tujuan Surat</label>
+                                <input
+                                    required
+                                    type="text"
+                                    value={editForm.tujuan_surat || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, tujuan_surat: e.target.value }))}
+                                    className="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-gray-700 dark:text-gray-300 font-medium pb-2 block">Perihal</label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    value={editForm.perihal || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, perihal: e.target.value }))}
+                                    className="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-4 bg-gray-50 dark:bg-meta-4/30 border-t border-stroke dark:border-strokedark flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setIsEditModalOpen(false)}
+                                className="px-4 py-2 text-sm font-medium text-black bg-white border border-stroke rounded-lg hover:bg-gray-50"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50 transition"
+                            >
+                                {isSubmitting ? 'Menyimpan...' : (
+                                    <>
+                                        <Save className="w-4 h-4" /> Simpan Update
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             )}
         </MainLayout>
