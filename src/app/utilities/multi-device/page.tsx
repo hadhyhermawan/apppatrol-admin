@@ -188,13 +188,44 @@ function UtilitiesMultiDevicePage() {
                                                             <Smartphone className="w-3 h-3 text-gray-400" />
                                                             <span className="text-xs text-gray-700 dark:text-gray-300 truncate max-w-[200px]" title={dev}>{dev}</span>
                                                         </div>
-                                                        <button
-                                                            onClick={() => handleIgnore(item.user_id, dev)}
-                                                            className="text-[10px] text-gray-400 hover:text-red-500 px-1 border border-transparent hover:border-red-200 rounded"
-                                                            title="Ignore device ini"
-                                                        >
-                                                            Ignore
-                                                        </button>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => handleIgnore(item.user_id, dev)}
+                                                                className="text-[10px] text-gray-400 hover:text-yellow-600 px-1 border border-transparent hover:border-yellow-200 rounded"
+                                                                title="Ignore device ini"
+                                                            >
+                                                                Ignore
+                                                            </button>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    const result = await Swal.fire({
+                                                                        title: 'Hapus Device?',
+                                                                        text: `Hapus semua log login untuk device "${dev}" dari user ini? Data tidak bisa dikembalikan.`,
+                                                                        icon: 'warning',
+                                                                        showCancelButton: true,
+                                                                        confirmButtonText: 'Ya, Hapus!',
+                                                                        confirmButtonColor: '#d33',
+                                                                        cancelButtonText: 'Batal'
+                                                                    });
+
+                                                                    if (result.isConfirmed) {
+                                                                        try {
+                                                                            await apiClient.delete('/utilities/multi-device/logs', {
+                                                                                params: { user_id: item.user_id, device: dev }
+                                                                            });
+                                                                            Swal.fire('Terhapus!', 'Log device berhasil dihapus.', 'success');
+                                                                            fetchData();
+                                                                        } catch (error) {
+                                                                            Swal.fire('Gagal!', 'Gagal menghapus log device.', 'error');
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                className="text-[10px] text-red-400 hover:text-red-600 px-1 border border-transparent hover:border-red-200 rounded"
+                                                                title="Hapus log device ini"
+                                                            >
+                                                                Hapus
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>

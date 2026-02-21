@@ -59,7 +59,7 @@ export const routePermissions: RoutePermission[] = [
     // Laporan
     { path: '/reports/presensi', permissions: ['laporan.index'] },
     { path: '/reports/salary', permissions: ['laporan.index'] },
-    { path: '/reports/patrol-monitoring', permissions: ['monitoringpatrol.index'] },
+    { path: '/reports/tugas-monitoring', permissions: ['monitoringpatrol.index'] },
 
     // Payroll
     { path: '/payroll/jenis-tunjangan', permissions: ['jenistunjangan.index'] },
@@ -80,6 +80,7 @@ export const routePermissions: RoutePermission[] = [
     { path: '/settings/general', permissions: ['generalsetting.index'] },
     { path: '/settings/jam-kerja-dept', permissions: ['jamkerjadepartemen.index'] },
     { path: '/settings/hari-libur', permissions: ['harilibur.index'] },
+    { path: '/settings/reminder', permissions: [] },   // Accessible to all authenticated users
     { path: '/settings/users', permissions: ['users.index'] },
 ];
 

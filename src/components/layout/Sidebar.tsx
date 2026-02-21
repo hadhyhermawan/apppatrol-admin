@@ -58,6 +58,7 @@ const menuItems: MenuItem[] = [
             { name: 'Data Surat', href: '/security/surat', permissions: ['surat.index'] },
             { name: 'Manajemen Regu', href: '/security/teams', permissions: ['teams.index'] },
             { name: 'Map Tracking', href: '/security/map-tracking', permissions: ['tracking.index'] },
+            { name: 'Pelanggaran', href: '/security/violations', permissions: ['giatpatrol.index'] },
             { name: 'Laporan Keamanan', href: '/security/reports', permissions: ['laporan.index'] },
         ]
     },
@@ -92,7 +93,7 @@ const menuItems: MenuItem[] = [
         submenu: [
             { name: 'Laporan Presensi', href: '/reports/presensi', permissions: ['laporan.index'] },
             { name: 'Laporan Gaji', href: '/reports/salary', permissions: ['laporan.index'] },
-            { name: 'Monitoring Patroli', href: '/reports/patrol-monitoring', permissions: ['monitoringpatrol.index'] },
+            { name: 'Laporan Tugas', href: '/reports/tugas-monitoring', permissions: ['monitoringpatrol.index'] },
         ]
     },
     {
@@ -124,11 +125,12 @@ const menuItems: MenuItem[] = [
     {
         name: 'Konfigurasi',
         icon: Settings,
-        permissions: ['generalsetting.index', 'jamkerjadepartemen.index', 'harilibur.index'],
+        permissions: [],   // Section selalu tampil; child item mengatur aksesnya sendiri
         submenu: [
             { name: 'General Setting', href: '/settings/general', permissions: ['generalsetting.index'] },
             { name: 'Jam Kerja Departemen', href: '/settings/jam-kerja-dept', permissions: ['jamkerjadepartemen.index'] },
             { name: 'Hari Libur', href: '/settings/hari-libur', permissions: ['harilibur.index'] },
+            { name: 'Landing Page', href: '/settings/landing-page', permissions: ['super_admin_only'] },
             { name: 'User Management', href: '/settings/users', permissions: ['users.index'] },
         ]
     }
@@ -186,6 +188,8 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
                             if (isSuperAdmin) return true;
                             // If no permissions required, show to everyone
                             if (!item.permissions || item.permissions.length === 0) return true;
+                            // super_admin_only items are never shown to non-super-admin
+                            if (item.permissions.includes('super_admin_only')) return false;
                             // Check if user has any of the required permissions
                             return hasAnyPermission(item.permissions);
                         })
@@ -197,6 +201,10 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
                             // Filter submenu items by permissions
                             const filteredSubmenu = hasSubmenu
                                 ? item.submenu!.filter(sub => {
+                                    // super_admin_only: only show when isSuperAdmin is confirmed true
+                                    if (sub.permissions?.includes('super_admin_only')) {
+                                        return isSuperAdmin === true;
+                                    }
                                     if (isSuperAdmin) return true;
                                     if (!sub.permissions || sub.permissions.length === 0) return true;
                                     return hasAnyPermission(sub.permissions);
@@ -205,6 +213,11 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
 
                             // Don't show parent menu if all submenu items are filtered out
                             if (hasSubmenu && filteredSubmenu.length === 0) return null;
+
+                            if (item.name === 'Konfigurasi') {
+                                console.log('[Sidebar] Konfigurasi filteredSubmenu:', filteredSubmenu.map(s => s.name));
+                                console.log('[Sidebar] isSuperAdmin val:', isSuperAdmin);
+                            }
 
                             return (
                                 <div key={item.name}>
@@ -273,6 +286,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
                         <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-white truncate">Admin</p>
                             <p className="text-[10px] text-slate-400 truncate">Super Admin</p>
+                            <p className="text-[10px] text-yellow-400 mt-1">Debug isSuperAdmin: {isSuperAdmin ? 'TRUE' : 'FALSE'}</p>
                         </div>
                     </div>
                 </div>

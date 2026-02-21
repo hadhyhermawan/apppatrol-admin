@@ -99,6 +99,7 @@ function SecurityTamuPage() {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     // Fetch Karyawan
     const fetchKaryawan = async () => {
@@ -199,8 +200,8 @@ function SecurityTamuPage() {
             keperluan: item.keperluan || '',
             jenis_kendaraan: item.jenis_kendaraan || 'PEJALAN KAKI',
             no_pol: item.no_pol || '',
-            jam_masuk: item.jam_masuk ? new Date(item.jam_masuk).toISOString().slice(0, 16) : '',
-            jam_keluar: item.jam_keluar ? new Date(item.jam_keluar).toISOString().slice(0, 16) : '',
+            jam_masuk: item.jam_masuk ? item.jam_masuk.replace('T', ' ').substring(0, 16) : '',
+            jam_keluar: item.jam_keluar ? item.jam_keluar.replace('T', ' ').substring(0, 16) : '',
             nik_satpam: item.nik_satpam || '',
             nik_satpam_keluar: item.nik_satpam_keluar || '',
             foto: item.foto || '',
@@ -217,19 +218,33 @@ function SecurityTamuPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrorMsg('');
+        setFieldErrors({});
 
-        if (!formData.nama || !formData.jam_masuk) {
-            setErrorMsg('Harap isi Nama dan Jam Masuk.');
+        // Validasi per-field
+        const errs: Record<string, string> = {};
+        if (!formData.nama.trim()) errs.nama = 'Nama tamu wajib diisi';
+        if (!formData.jam_masuk) errs.jam_masuk = 'Waktu masuk wajib diisi';
+        if (Object.keys(errs).length > 0) {
+            setFieldErrors(errs);
             return;
         }
+
+        // Pastikan format datetime lengkap (tambah detik jika tidak ada)
+        const fixDatetime = (str: string) => {
+            if (!str) return str;
+            // Jika format "YYYY-MM-DD HH:mm" (tanpa detik), tambahkan ":00"
+            if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(str)) return str + ':00';
+            return str;
+        };
 
         setIsSubmitting(true);
         try {
             const payload = {
                 ...formData,
+                jam_masuk: fixDatetime(formData.jam_masuk) || null,
+                jam_keluar: fixDatetime(formData.jam_keluar) || null,
                 nik_satpam: formData.nik_satpam || null,
                 nik_satpam_keluar: formData.nik_satpam_keluar || null,
-                jam_keluar: formData.jam_keluar || null,
                 foto: formData.foto || null,
                 foto_keluar: formData.foto_keluar || null,
                 alamat: formData.alamat || null,
@@ -513,7 +528,7 @@ function SecurityTamuPage() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleSubmit} noValidate>
                             <div className="px-6 py-5 space-y-4">
                                 {errorMsg && (
                                     <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100">
@@ -526,12 +541,13 @@ function SecurityTamuPage() {
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Nama Tamu <span className="text-red-500">*</span></label>
                                         <input
                                             type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
+                                            className={`w-full rounded-lg border-[1.5px] bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:bg-form-input text-black dark:text-white ${fieldErrors.nama ? 'border-red-500 focus:border-red-500' : 'border-stroke dark:border-form-strokedark'
+                                                }`}
                                             placeholder="Nama Lengkap"
                                             value={formData.nama}
-                                            onChange={e => setFormData({ ...formData, nama: e.target.value })}
-                                            required
+                                            onChange={e => { setFormData({ ...formData, nama: e.target.value }); setFieldErrors(p => ({ ...p, nama: '' })); }}
                                         />
+                                        {fieldErrors.nama && <p className="mt-1 text-xs text-red-500">{fieldErrors.nama}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Perusahaan / Instansi</label>
@@ -631,13 +647,15 @@ function SecurityTamuPage() {
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Waktu Masuk <span className="text-red-500">*</span></label>
                                         <DatePicker
+                                            key={`jam-masuk-${editingId ?? 'new'}`}
                                             id="form-jam-masuk"
                                             placeholder="Pilih Waktu"
                                             defaultDate={formData.jam_masuk}
                                             enableTime
                                             dateFormat="Y-m-d H:i"
-                                            onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, jam_masuk: dateStr })}
+                                            onChange={(dates: Date[], dateStr: string) => { setFormData({ ...formData, jam_masuk: dateStr }); setFieldErrors(p => ({ ...p, jam_masuk: '' })); }}
                                         />
+                                        {fieldErrors.jam_masuk && <p className="mt-1 text-xs text-red-500">{fieldErrors.jam_masuk}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Petugas Masuk (Satpam)</label>
@@ -664,6 +682,7 @@ function SecurityTamuPage() {
                                     <div>
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Waktu Keluar</label>
                                         <DatePicker
+                                            key={`jam-keluar-${editingId ?? 'new'}`}
                                             id="form-jam-keluar"
                                             placeholder="Pilih Waktu"
                                             defaultDate={formData.jam_keluar}

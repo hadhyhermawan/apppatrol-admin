@@ -1,11 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import MainLayout from '@/components/layout/MainLayout';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { TrendingUp, TrendingDown, Users, Shield, Clock, MapPin, Briefcase, UserCheck, AlertCircle, Activity, Calendar } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 import apiClient from '@/lib/api';
+
+const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false }) as any;
 
 type StockCard = {
     title: string;
@@ -23,6 +28,11 @@ type DashboardData = {
     patroli_aktif_list: any[];
     presensi_open_list: any[];
     tidak_hadir_list: any[];
+    recent_activities: any[];
+    chart_data: {
+        categories: string[];
+        series: { name: string; data: number[] }[];
+    };
     tanggal: string;
 };
 
@@ -178,29 +188,67 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <h3 className="text-xl font-semibold text-black dark:text-white">
-                                Portfolio Performance
+                                Tren Kehadiran & Aktivitas
                             </h3>
                             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                Here is your performance stats of each month
+                                Statistik 30 hari terakhir
                             </p>
-                        </div>
-                        <div className="flex gap-2">
-                            <button className="rounded-lg border border-stroke px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-strokedark dark:hover:bg-meta-4">
-                                Month
-                            </button>
-                            <button className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-opacity-90">
-                                Year
-                            </button>
                         </div>
                     </div>
                 </div>
-                <div className="p-6">
-                    <div className="flex h-80 items-center justify-center rounded-lg bg-gray-50 dark:bg-meta-4">
-                        <div className="text-center">
-                            <Activity className="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600" />
-                            <p className="mt-3 text-sm text-gray-500">Chart: Monthly Performance Trend</p>
+                <div className="p-4">
+                    {dashData && dashData.chart_data ? (
+                        <div className="-ml-5">
+                            <ReactApexChart
+                                options={{
+                                    chart: {
+                                        type: 'area',
+                                        height: 350,
+                                        fontFamily: 'Satoshi, sans-serif',
+                                        toolbar: { show: false },
+                                    },
+                                    colors: ['#3C50E0', '#80CAEE'],
+                                    fill: {
+                                        type: 'gradient',
+                                        gradient: {
+                                            shadeIntensity: 1,
+                                            opacityFrom: 0.7,
+                                            opacityTo: 0.9,
+                                            stops: [0, 90, 100],
+                                        },
+                                    },
+                                    dataLabels: { enabled: false },
+                                    stroke: { curve: 'smooth', width: 2 },
+                                    xaxis: {
+                                        categories: dashData.chart_data.categories,
+                                        axisBorder: { show: false },
+                                        axisTicks: { show: false },
+                                    },
+                                    yaxis: {
+                                        title: { style: { fontSize: '0px' } },
+                                    },
+                                    grid: {
+                                        strokeDashArray: 5,
+                                        yaxis: { lines: { show: true } },
+                                    },
+                                    tooltip: {
+                                        theme: 'light',
+                                        x: { show: true },
+                                    },
+                                }}
+                                series={dashData.chart_data.series}
+                                type="area"
+                                height={350}
+                            />
                         </div>
-                    </div>
+                    ) : (
+                        <div className="flex h-80 items-center justify-center bg-gray-50 dark:bg-meta-4">
+                            <div className="text-center">
+                                <Activity className="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600" />
+                                <p className="mt-3 text-sm text-gray-500">Loading Chart Data...</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -248,33 +296,40 @@ export default function DashboardPage() {
                     </div>
                     <div className="p-6">
                         <div className="space-y-4">
-                            {[
-                                { type: 'patrol', name: 'Ahmad Fauzi', action: 'Memulai patroli', time: '10 menit lalu', icon: Shield, color: 'green' },
-                                { type: 'attendance', name: 'Siti Nurhaliza', action: 'Absen masuk', time: '25 menit lalu', icon: UserCheck, color: 'blue' },
-                                { type: 'leave', name: 'Budi Santoso', action: 'Mengajukan izin', time: '1 jam lalu', icon: AlertCircle, color: 'orange' },
-                                { type: 'patrol', name: 'Dewi Lestari', action: 'Menyelesaikan patroli', time: '2 jam lalu', icon: Shield, color: 'green' },
-                                { type: 'attendance', name: 'Joko Widodo', action: 'Absen pulang', time: '3 jam lalu', icon: Clock, color: 'purple' }
-                            ].map((activity, idx) => {
-                                const Icon = activity.icon;
-                                const colorMap = {
-                                    green: 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400',
-                                    blue: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400',
-                                    orange: 'bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-400',
-                                    purple: 'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-400'
-                                };
-                                return (
-                                    <div key={idx} className="flex items-start gap-4">
-                                        <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${colorMap[activity.color as keyof typeof colorMap]}`}>
-                                            <Icon className="h-5 w-5" />
+                            {dashData && dashData.recent_activities && dashData.recent_activities.length > 0 ? (
+                                dashData.recent_activities.map((activity, idx) => {
+                                    // Map string icon to component
+                                    const IconComponent =
+                                        activity.icon === 'UserCheck' ? UserCheck :
+                                            activity.icon === 'Shield' ? Shield :
+                                                activity.icon === 'Clock' ? Clock :
+                                                    activity.icon === 'AlertCircle' ? AlertCircle : Activity;
+
+                                    const colorMap: any = {
+                                        green: 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400',
+                                        blue: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400',
+                                        orange: 'bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-400',
+                                        purple: 'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-400'
+                                    };
+
+                                    return (
+                                        <div key={idx} className="flex items-start gap-4">
+                                            <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${colorMap[activity.color] || colorMap.blue}`}>
+                                                <IconComponent className="h-5 w-5" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="font-medium text-black dark:text-white">{activity.name}</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">{activity.action}</p>
+                                                <p className="mt-1 text-xs text-gray-400">
+                                                    {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true, locale: id })}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="font-medium text-black dark:text-white">{activity.name}</p>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">{activity.action}</p>
-                                            <p className="mt-1 text-xs text-gray-400">{activity.time}</p>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })
+                            ) : (
+                                <p className="text-center text-gray-500">Belum ada aktivitas hari ini.</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -283,10 +338,30 @@ export default function DashboardPage() {
             {/* Bottom Stats Grid */}
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {[
-                    { label: 'Presensi Terbuka', value: '12', subtitle: 'Belum absen pulang', icon: Clock },
-                    { label: 'Patroli Target', value: '80', subtitle: 'Target hari ini', icon: Shield },
-                    { label: 'Tamu Hari Ini', value: '24', subtitle: 'Pengunjung terdaftar', icon: Users },
-                    { label: 'Alfa', value: '1', subtitle: 'Tidak hadir tanpa keterangan', icon: AlertCircle }
+                    {
+                        label: 'Presensi Terbuka',
+                        value: dashData?.stats?.presensi_open || 0,
+                        subtitle: 'Belum absen pulang',
+                        icon: Clock
+                    },
+                    {
+                        label: 'Patroli Target',
+                        value: dashData?.stats?.target_patroli || 0,
+                        subtitle: 'Jadwal Aktif',
+                        icon: Shield
+                    },
+                    {
+                        label: 'Tamu Hari Ini',
+                        value: dashData?.stats?.tamu_hari_ini || 0,
+                        subtitle: 'Pengunjung terdaftar',
+                        icon: Users
+                    },
+                    {
+                        label: 'Barang Keluar/Masuk',
+                        value: dashData?.stats?.barang_hari_ini || 0,
+                        subtitle: 'Total transaksi barang',
+                        icon: Briefcase
+                    }
                 ].map((stat, idx) => {
                     const Icon = stat.icon;
                     return (

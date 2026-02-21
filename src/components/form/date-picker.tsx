@@ -5,8 +5,8 @@ import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 import Label from './Label';
 import { Calendar } from 'lucide-react';
-import Hook = flatpickr.Options.Hook;
-import DateOption = flatpickr.Options.DateOption;
+type Hook = flatpickr.Options.Hook;
+type DateOption = flatpickr.Options.DateOption;
 
 type PropsType = {
   id: string;

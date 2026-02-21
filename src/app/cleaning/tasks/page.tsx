@@ -45,6 +45,7 @@ function CleaningTasksPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [dateStart, setDateStart] = useState('');
     const [dateEnd, setDateEnd] = useState('');
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [karyawanList, setKaryawanList] = useState<KaryawanOption[]>([]);
 
     // Pagination State
@@ -245,6 +246,25 @@ function CleaningTasksPage() {
         <MainLayout>
             <PageBreadcrumb pageTitle="Tugas Cleaning" />
 
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <img
+                        src={previewImage}
+                        alt="Preview"
+                        className="max-h-[90vh] max-w-full rounded-lg shadow-2xl object-contain"
+                    />
+                    <button
+                        className="absolute top-5 right-5 text-white bg-black/50 rounded-full p-2 hover:bg-white/20 transition-colors"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+            )}
+
             <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-semibold text-black dark:text-white">
@@ -305,14 +325,15 @@ function CleaningTasksPage() {
                                 <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Waktu Tugas</th>
                                 <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Lokasi & Shift</th>
                                 <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Status</th>
+                                <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Foto Absen</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
+                                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
                             ) : paginatedData.length === 0 ? (
-                                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan</td></tr>
+                                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan</td></tr>
                             ) : (
                                 paginatedData.map((item, idx) => (
                                     <tr key={item.id} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20">
@@ -341,7 +362,14 @@ function CleaningTasksPage() {
                                                 {item.lokasi_absen && (
                                                     <div className="flex items-center gap-1 text-xs">
                                                         <MapPin size={12} className="text-red-500" />
-                                                        <span className="truncate max-w-[150px]">{item.lokasi_absen}</span>
+                                                        <a
+                                                            href={`https://maps.google.com/?q=${item.lokasi_absen}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-blue-500 hover:underline truncate max-w-[150px]"
+                                                        >
+                                                            Lokasi Maps
+                                                        </a>
                                                     </div>
                                                 )}
                                                 <span className="text-xs bg-gray-100 px-2 py-0.5 rounded w-fit">Shift: {item.kode_jam_kerja}</span>
@@ -356,14 +384,35 @@ function CleaningTasksPage() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-4 text-center">
+                                            {item.foto_absen ? (
+                                                <div className="flex justify-center">
+                                                    <img
+                                                        src={item.foto_absen}
+                                                        alt="Foto Absen"
+                                                        className="h-10 w-10 rounded-full border-2 border-white dark:border-boxdark object-cover cursor-pointer hover:opacity-80 transition shadow-sm bg-gray-200"
+                                                        onClick={() => setPreviewImage(item.foto_absen)}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="flex justify-center text-gray-400">
+                                                    <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                                        <ClipboardList className="h-5 w-5 opacity-30" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
                                                 {canUpdate('cleaning') && (
-                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
+                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400" title="Edit">
                                                         <Edit className="h-4 w-4" />
                                                     </button>
                                                 )}
+                                                <button onClick={() => window.location.href = `/cleaning/tasks/${item.id}`} className="hover:text-blue-500 text-gray-500 dark:text-gray-400" title="Detail">
+                                                    <ClipboardList className="h-4 w-4" />
+                                                </button>
                                                 {canDelete('cleaning') && (
-                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
+                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400" title="Hapus">
                                                         <Trash className="h-4 w-4" />
                                                     </button>
                                                 )}

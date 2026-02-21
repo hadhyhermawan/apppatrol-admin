@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { withPermission } from '@/hoc/withPermission';
+import apiClient from '@/lib/api';
 
 interface Role {
     id: number;
@@ -64,14 +65,14 @@ function RolePermissionContent() {
         try {
             setLoading(true);
             const [rolesRes, groupsRes, permsRes] = await Promise.all([
-                fetch("/api-py/role-permission/roles"),
-                fetch("/api-py/role-permission/permission-groups"),
-                fetch("/api-py/role-permission/permissions"),
+                apiClient.get("/role-permission/roles"),
+                apiClient.get("/role-permission/permission-groups"),
+                apiClient.get("/role-permission/permissions"),
             ]);
 
-            if (rolesRes.ok) setRoles(await rolesRes.json());
-            if (groupsRes.ok) setPermissionGroups(await groupsRes.json());
-            if (permsRes.ok) setPermissions(await permsRes.json());
+            if (rolesRes) setRoles(rolesRes as any);
+            if (groupsRes) setPermissionGroups(groupsRes as any);
+            if (permsRes) setPermissions(permsRes as any);
         } catch (error) {
             console.error("Error fetching data:", error);
         } finally {
@@ -81,9 +82,8 @@ function RolePermissionContent() {
 
     const fetchRoleDetails = async (roleId: number) => {
         try {
-            const res = await fetch(`/api-py/role-permission/roles/${roleId}`);
-            if (res.ok) {
-                const data = await res.json();
+            const data: any = await apiClient.get(`/role-permission/roles/${roleId}`);
+            if (data) {
                 setSelectedRole(data.role);
                 setRolePermissions(data.permissions);
             }
@@ -94,13 +94,9 @@ function RolePermissionContent() {
 
     const assignPermissionGroup = async (roleId: number, groupId: number) => {
         try {
-            const res = await fetch("/api-py/role-permission/assign-permission-group", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ role_id: roleId, group_id: groupId }),
-            });
+            const res = await apiClient.post("/role-permission/assign-permission-group", { role_id: roleId, group_id: groupId });
 
-            if (res.ok) {
+            if (res) {
                 alert("Permissions assigned successfully!");
                 if (selectedRole) fetchRoleDetails(selectedRole.id);
                 fetchData();
@@ -112,13 +108,9 @@ function RolePermissionContent() {
 
     const removePermission = async (roleId: number, permissionId: number) => {
         try {
-            const res = await fetch("/api-py/role-permission/remove-permissions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ role_id: roleId, permission_ids: [permissionId] }),
-            });
+            const res = await apiClient.post("/role-permission/remove-permissions", { role_id: roleId, permission_ids: [permissionId] });
 
-            if (res.ok) {
+            if (res) {
                 alert("Permission removed successfully!");
                 if (selectedRole) fetchRoleDetails(selectedRole.id);
                 fetchData();
@@ -312,15 +304,11 @@ function RolePermissionContent() {
                                                                                 if (e.target.checked) {
                                                                                     // Assign permission
                                                                                     try {
-                                                                                        const res = await fetch("/api-py/role-permission/assign-permissions", {
-                                                                                            method: "POST",
-                                                                                            headers: { "Content-Type": "application/json" },
-                                                                                            body: JSON.stringify({
-                                                                                                role_id: selectedRole.id,
-                                                                                                permission_ids: [perm.id]
-                                                                                            }),
+                                                                                        const res = await apiClient.post("/role-permission/assign-permissions", {
+                                                                                            role_id: selectedRole.id,
+                                                                                            permission_ids: [perm.id]
                                                                                         });
-                                                                                        if (res.ok) {
+                                                                                        if (res) {
                                                                                             fetchRoleDetails(selectedRole.id);
                                                                                             fetchData();
                                                                                         }
@@ -413,6 +401,6 @@ function RolePermissionPage() {
 }
 
 // Protect page with permission
-export default withPermission(RolePermissionContent, {
+export default withPermission(RolePermissionPage, {
     permissions: ['roles.index', 'permissions.index']
 });

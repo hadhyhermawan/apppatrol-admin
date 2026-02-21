@@ -19,6 +19,7 @@ apiClient.interceptors.response.use(
             if (typeof window !== 'undefined') {
                 localStorage.removeItem('patrol_token');
                 localStorage.removeItem('patrol_user');
+                localStorage.removeItem('patrol_is_super_admin');
             }
         }
         return Promise.reject(error);

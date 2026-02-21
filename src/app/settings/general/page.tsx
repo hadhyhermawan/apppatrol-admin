@@ -211,11 +211,27 @@ function GeneralSettingPage() {
                                 </div>
 
                                 <div>
-                                    <label className="mb-2.5 block text-black dark:text-white">Batas Jam Absen (Menit Toleransi)</label>
+                                    <label className="mb-2.5 block text-black dark:text-white">
+                                        Batas Jam Absen Masuk (Toleransi Jam)
+                                        <span className="ml-1 text-xs text-gray-400 font-normal">— contoh: 2 = boleh absen ±2 jam dari jam_masuk</span>
+                                    </label>
                                     <Input
                                         type="number"
                                         name="batas_jam_absen"
                                         defaultValue={formData.batas_jam_absen}
+                                        onChange={handleInputChange}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-2.5 block text-black dark:text-white">
+                                        Batas Jam Absen Pulang (Toleransi Jam)
+                                        <span className="ml-1 text-xs text-gray-400 font-normal">— contoh: 3 = tidak bisa pulang lebih dari 3 jam sebelum jam_pulang</span>
+                                    </label>
+                                    <Input
+                                        type="number"
+                                        name="batas_jam_absen_pulang"
+                                        defaultValue={formData.batas_jam_absen_pulang}
                                         onChange={handleInputChange}
                                     />
                                 </div>

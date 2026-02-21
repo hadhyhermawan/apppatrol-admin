@@ -2,95 +2,324 @@
 
 ## 📋 Overview
 
-**Project**: AppPatrol Admin Dashboard  
-**Framework**: Next.js 16.1.6 (Turbopack)  
-**Domain**: https://frontend.k3guard.com  
-**Port**: 3010  
-**Process Manager**: PM2  
-**Backend API**: Python FastAPI (Port 8000)
+| Item | Value |
+|------|-------|
+| **Framework** | Next.js 16.1.6 |
+| **Domain** | https://frontend.k3guard.com |
+| **Port** | 3010 |
+| **Process Manager** | PM2 |
+| **Backend API** | Python FastAPI (Port 8000) |
+| **Last Updated** | 2026-02-20 |
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-Browser → Nginx (443/80) → Next.js (3010) → Python API (8000)
-                                          ↓
-                                      Database
+Browser → Nginx (443/80) → Next.js (3010) → Python API (8000) → MySQL
 ```
 
 ### Directory Structure
 ```
 /var/www/apppatrol-admin/
 ├── src/                    # Source code
-│   ├── app/               # Next.js app directory
-│   ├── components/        # React components
-│   └── lib/              # Utilities & API client
-├── public/               # Static assets
-├── .next/                # Build output (generated)
-├── node_modules/         # Dependencies
-├── package.json          # Dependencies & scripts
-├── next.config.ts        # Next.js configuration
-└── .env.local           # Environment variables
+│   ├── app/               # Next.js app directory (pages & routes)
+│   ├── components/        # Reusable React components
+│   ├── contexts/          # React Context (Permissions, etc.)
+│   ├── hoc/               # Higher-Order Components (withPermission)
+│   └── lib/               # Utilities & API client (apiClient.ts)
+├── public/                # Static assets
+├── .next/                 # Build output (auto-generated, DO NOT edit)
+├── node_modules/          # Dependencies
+├── package.json           # Scripts & dependencies
+├── next.config.ts         # Next.js configuration
+└── .env.local            # Environment variables (DO NOT commit)
 ```
 
 ---
 
-## 🚀 Deployment Steps
+## 🚀 Deployment Steps (Standard Flow)
 
-### 1. Initial Setup
+### 1. Install Dependencies (First time only)
+```bash
+cd /var/www/apppatrol-admin
+npm install
+```
+
+### 2. Configure Environment
+```bash
+cp .env.example .env.local
+# Edit .env.local:
+#   NEXT_PUBLIC_API_URL=https://frontend.k3guard.com/api-py
+```
+
+### 3. Build for Production
+
+> ⚠️ **PENTING — Baca ini sebelum build!**
+>
+> Next.js 16 menggunakan **Turbopack** yang membagi proses build menjadi dua fase:
+> 1. **Fase 1 — Compile**: Muncul pesan `✓ Compiled successfully` → **BELUM SELESAI**, jangan restart!
+> 2. **Fase 2 — Static generation**: Muncul `✓ Generating static pages` → **Ini proses asli build**
+>
+> Build baru selesai saat muncul **tabel Route (app)** di akhir output.
+> Tanda sukses: file `.next/BUILD_ID` terbuat.
 
 ```bash
 cd /var/www/apppatrol-admin
 
-# Install dependencies
-npm install
-
-# Create environment file
-cp .env.example .env.local
-```
-
-### 2. Environment Configuration
-
-Edit `.env.local`:
-```env
-NEXT_PUBLIC_API_URL=https://frontend.k3guard.com/api-py
-PORT=3010
-NODE_ENV=production
-```
-
-### 3. Build Application
-
-```bash
-# Clean previous build
+# Bersihkan build lama
 rm -rf .next
 
-# Build for production
+# Build (tunggu hingga tabel Route (app) tampil di output)
 npm run build
 
-# Verify build success - should show 52 pages
-# Look for: "✓ Compiled successfully"
+# Verifikasi build berhasil — harus ada file ini:
+ls .next/BUILD_ID
+# Output: .next/BUILD_ID  ✅ Sukses
+# Jika file tidak ada: build belum selesai, ulangi
 ```
 
-### 4. PM2 Configuration
+**Contoh output sukses:**
+```
+✓ Generating static pages (59/59) in 575ms
+✓ Finalizing page optimization
+
+Route (app)
+┌ ○ /
+├ ○ /dashboard
+├ ○ /presensi
+... (daftar semua route)
+└ ○ /utilities/users
+
+EXIT: 0
+```
+
+### 4. Fix Permissions (Setelah Build)
+```bash
+chown -R www-data:www-data /var/www/apppatrol-admin/.next
+chmod -R 755 /var/www/apppatrol-admin/.next
+```
+
+### 5. Restart PM2
+```bash
+pm2 restart patrol-frontend
+
+# Verifikasi running:
+pm2 logs patrol-frontend --lines 5 --nostream
+# Output harus ada: ✓ Ready in Xms
+```
+
+---
+
+## 🔄 Update Code (Routine Workflow)
+
+Setiap kali ada perubahan kode frontend:
 
 ```bash
-# Start with PM2
 cd /var/www/apppatrol-admin
-chown -R www-data:www-data .next
-chmod -R 755 .next
-PORT=3010 pm2 start npm --name patrol-frontend -- start
 
-# Save PM2 configuration
-pm2 save
+# 1. Build (tunggu sampai tabel Route muncul)
+npm run build
 
-# Enable PM2 startup on boot
-pm2 startup
+# 2. Cek BUILD_ID ada
+ls .next/BUILD_ID
+
+# 3. Fix permissions
+chown -R www-data:www-data .next && chmod -R 755 .next
+
+# 4. Restart
+pm2 restart patrol-frontend
+
+# 5. Verifikasi
+pm2 logs patrol-frontend --lines 5 --nostream | grep "Ready"
 ```
 
-### 5. Nginx Configuration
+---
 
-File: `/etc/nginx/sites-enabled/frontend.k3guard.com`
+## ⚙️ PM2 Management
+
+### Lihat Status
+```bash
+pm2 list
+pm2 describe patrol-frontend
+```
+
+### Logs
+```bash
+pm2 logs patrol-frontend          # Live tail
+pm2 logs patrol-frontend --lines 50 --nostream  # Last 50 lines
+pm2 logs patrol-frontend --err    # Error logs saja
+```
+
+### Restart / Stop
+```bash
+pm2 restart patrol-frontend
+pm2 stop patrol-frontend
+pm2 start patrol-frontend
+```
+
+### Setup dari Nol (jika PM2 tidak ada)
+```bash
+cd /var/www/apppatrol-admin
+PORT=3010 pm2 start npm --name patrol-frontend -- start
+pm2 save
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### ❌ Error: `Could not find a production build in the '.next' directory`
+
+**Penyebab:** Build belum selesai — PM2 di-restart saat build masih di fase compile (Turbopack), sebelum static generation selesai.
+
+**Solusi:**
+```bash
+cd /var/www/apppatrol-admin
+rm -rf .next
+npm run build
+# Tunggu hingga tabel Route (app) muncul dan ada "EXIT: 0"
+ls .next/BUILD_ID   # Pastikan file ini ada
+chown -R www-data:www-data .next
+chmod -R 755 .next
+pm2 restart patrol-frontend
+```
+
+---
+
+### ❌ Error: `502 Bad Gateway` (dari browser)
+
+**Penyebab:** Next.js tidak running di port 3010.
+
+**Diagnosis:**
+```bash
+curl -I http://localhost:3010         # Cek Next.js
+pm2 list                               # Cek status PM2
+tail -30 /var/log/nginx/error.log    # Cek Nginx error
+```
+
+**Solusi:**
+```bash
+pm2 restart patrol-frontend
+nginx -t && systemctl reload nginx
+```
+
+---
+
+### ❌ Halaman Tidak Update (Browser menampilkan cache lama)
+
+**Solusi:**
+1. Hard refresh: `Ctrl + Shift + R`
+2. Gunakan incognito mode
+3. Verifikasi build: `stat .next/BUILD_ID` → timestamp harus baru
+
+---
+
+### ❌ Build Terlalu Lama / Tidak Selesai
+
+**Build normal memakan waktu 2–5 menit.** Jika lebih dari 10 menit:
+
+```bash
+# Cek apakah ada proses build yang hang
+ps aux | grep "next build" | grep -v grep
+
+# Kill jika perlu
+pkill -f "next build"
+
+# Coba lagi dengan memory lebih
+NODE_OPTIONS="--max-old-space-size=4096" npm run build
+```
+
+---
+
+### ❌ TypeScript / Compile Error saat Build
+
+```bash
+# Cek error spesifik
+npm run build 2>&1 | grep -E "Error|error" | head -20
+
+# Cek type errors saja (tanpa build penuh)
+npx tsc --noEmit
+```
+
+---
+
+### ❌ Port 3010 Already in Use
+
+```bash
+lsof -i :3010
+kill <PID>
+pm2 restart patrol-frontend
+```
+
+---
+
+## 📊 Monitoring
+
+```bash
+# Real-time monitor semua proses
+pm2 monit
+
+# Health check
+curl -I https://frontend.k3guard.com
+
+# Test frontend lokal
+curl -I http://localhost:3010
+
+# Test backend API
+curl -s https://frontend.k3guard.com/api-py/
+```
+
+---
+
+## 🆘 Emergency Recovery (Jika semua rusak)
+
+```bash
+# 1. Stop PM2
+pm2 stop patrol-frontend
+
+# 2. Clean build + reinstall
+cd /var/www/apppatrol-admin
+rm -rf .next node_modules
+npm install
+
+# 3. Rebuild (tunggu sampai selesai!)
+npm run build
+
+# Verifikasi
+ls .next/BUILD_ID   # Harus ada!
+
+# 4. Fix permissions
+chown -R www-data:www-data .next
+chmod -R 755 .next
+
+# 5. Restart PM2 (delete + create baru)
+pm2 delete patrol-frontend
+PORT=3010 pm2 start npm --name patrol-frontend -- start
+pm2 save
+
+# 6. Test
+curl -I http://localhost:3010         # Harus: 200 OK
+curl -I https://frontend.k3guard.com  # Harus: 200 OK
+```
+
+---
+
+## 📝 File Penting
+
+| File | Keterangan |
+|------|------------|
+| `/var/www/apppatrol-admin/.env.local` | Environment variables (API URL, dll) |
+| `/var/www/apppatrol-admin/package.json` | Scripts & dependencies |
+| `/var/www/apppatrol-admin/next.config.ts` | Konfigurasi Next.js |
+| `/etc/nginx/sites-enabled/frontend.k3guard.com` | Konfigurasi Nginx |
+| `/root/.pm2/dump.pm2` | PM2 saved processes |
+| `/root/.pm2/logs/patrol-frontend-out.log` | Output logs |
+| `/root/.pm2/logs/patrol-frontend-error.log` | Error logs |
+
+---
+
+## 🔑 Nginx Configuration (Referensi)
 
 ```nginx
 server {
@@ -102,7 +331,6 @@ server {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
     # Next.js frontend
@@ -112,346 +340,34 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 60s;
     }
 
     client_max_body_size 10M;
-
     listen 443 ssl;
-    ssl_certificate /etc/letsencrypt/live/frontend.k3guard.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/frontend.k3guard.com/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-}
-
-server {
-    listen 80;
-    server_name frontend.k3guard.com;
-    return 301 https://$host$request_uri;
+    # ... SSL config ...
 }
 ```
 
-Test and reload Nginx:
+Reload Nginx:
 ```bash
-nginx -t
-systemctl reload nginx
-```
-
----
-
-## 🔧 Common Operations
-
-### Update Code & Redeploy
-
-```bash
-cd /var/www/apppatrol-admin
-
-# Pull latest changes
-git pull
-
-# Install new dependencies (if any)
-npm install
-
-# Rebuild
-npm run build
-
-# Restart PM2
-pm2 restart patrol-frontend
-
-# Check logs
-pm2 logs patrol-frontend --lines 50
-```
-
-### Check Application Status
-
-```bash
-# PM2 status
-pm2 list
-
-# Check specific process
-pm2 describe patrol-frontend
-
-# View logs
-pm2 logs patrol-frontend
-
-# Monitor in real-time
-pm2 monit
-```
-
-### Test Endpoints
-
-```bash
-# Test frontend locally
-curl -I http://localhost:3010
-
-# Test through Nginx
-curl -I https://frontend.k3guard.com
-
-# Test API proxy
-curl -I https://frontend.k3guard.com/api-py/
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Issue: Browser Shows Old Page
-
-**Symptoms**: Changes not visible in browser
-
-**Solutions**:
-1. **Hard refresh browser**: `Ctrl + Shift + R` (Windows/Linux) or `Cmd + Shift + R` (Mac)
-2. **Clear browser cache**: DevTools → Network → Disable cache
-3. **Use incognito mode** to test
-4. **Verify build**: Check `.next/` directory has recent timestamp
-5. **Check PM2**: `pm2 logs patrol-frontend`
-
-### Issue: 502 Bad Gateway
-
-**Symptoms**: Nginx returns 502 error
-
-**Diagnosis**:
-```bash
-# Check if Next.js is running
-curl -I http://localhost:3010
-
-# Check PM2 status
-pm2 list
-
-# Check nginx error log
-tail -50 /var/log/nginx/error.log
-
-# Check nginx config
-nginx -t
-```
-
-**Solutions**:
-1. **Restart PM2**: `pm2 restart patrol-frontend`
-2. **Check port**: Ensure PM2 runs on port 3010
-3. **Verify Nginx config**: `proxy_pass http://127.0.0.1:3010;`
-4. **Reload Nginx**: `systemctl reload nginx`
-
-### Issue: Port Already in Use
-
-**Symptoms**: `EADDRINUSE: address already in use :::3010`
-
-**Solutions**:
-```bash
-# Find process using port 3010
-netstat -tulpn | grep 3010
-# or
-lsof -i :3010
-
-# Kill the process
-kill <PID>
-
-# Restart PM2
-pm2 restart patrol-frontend
-```
-
-### Issue: Build Fails
-
-**Symptoms**: TypeScript errors, compilation errors
-
-**Common Fixes**:
-
-1. **TypeScript errors**:
-   ```bash
-   # Check for type errors
-   npm run build
-   
-   # Common fixes:
-   # - Add proper type casting: `as HTMLInputElement`
-   # - Fix import statements
-   # - Update type definitions
-   ```
-
-2. **SSR errors (window/document not defined)**:
-   ```typescript
-   // Use dynamic import with ssr: false
-   const Component = dynamic(() => import('./Component'), { ssr: false });
-   
-   // Or check for window
-   if (typeof window !== 'undefined') {
-     // Client-side only code
-   }
-   ```
-
-3. **Memory issues**:
-   ```bash
-   # Increase Node memory
-   NODE_OPTIONS="--max-old-space-size=4096" npm run build
-   ```
-
-### Issue: PM2 Process Crashes
-
-**Diagnosis**:
-```bash
-pm2 logs patrol-frontend --err --lines 100
-```
-
-**Solutions**:
-1. **Check error logs** for specific error
-2. **Verify environment variables**: `pm2 env 8`
-3. **Restart with fresh config**:
-   ```bash
-   pm2 delete patrol-frontend
-   cd /var/www/apppatrol-admin
-   PORT=3010 pm2 start npm --name patrol-frontend -- start
-   pm2 save
-   ```
-
----
-
-## 📊 Monitoring
-
-### PM2 Monitoring
-
-```bash
-# Real-time monitoring
-pm2 monit
-
-# Process info
-pm2 info patrol-frontend
-
-# Logs
-pm2 logs patrol-frontend --lines 100
-
-# Flush logs
-pm2 flush
-```
-
-### Nginx Logs
-
-```bash
-# Access logs
-tail -f /var/log/nginx/access.log | grep frontend.k3guard.com
-
-# Error logs
-tail -f /var/log/nginx/error.log
-
-# Search for specific errors
-grep "frontend.k3guard.com" /var/log/nginx/error.log | tail -50
-```
-
-### Application Logs
-
-```bash
-# PM2 logs location
-/root/.pm2/logs/patrol-frontend-out.log
-/root/.pm2/logs/patrol-frontend-error.log
-
-# View logs
-tail -f /root/.pm2/logs/patrol-frontend-out.log
-```
-
----
-
-## 🔐 Security Checklist
-
-- ✅ SSL certificate configured (Let's Encrypt)
-- ✅ HTTPS redirect enabled
-- ✅ Environment variables in `.env.local` (not committed to git)
-- ✅ File upload size limited (10M)
-- ✅ Proxy headers configured
-- ✅ PM2 running as root (consider using dedicated user)
-
----
-
-## 📝 Important Files
-
-| File | Purpose |
-|------|---------|
-| `/etc/nginx/sites-enabled/frontend.k3guard.com` | Nginx configuration |
-| `/var/www/apppatrol-admin/.env.local` | Environment variables |
-| `/var/www/apppatrol-admin/package.json` | Dependencies & scripts |
-| `/root/.pm2/dump.pm2` | PM2 saved processes |
-| `/root/.pm2/logs/patrol-frontend-*.log` | Application logs |
-
----
-
-## 🆘 Emergency Recovery
-
-If everything is broken:
-
-```bash
-# 1. Stop PM2
-pm2 stop patrol-frontend
-
-# 2. Clean build
-cd /var/www/apppatrol-admin
-rm -rf .next node_modules
-
-# 3. Reinstall
-npm install
-
-# 4. Rebuild
-npm run build
-
-# 5. Restart PM2
-pm2 delete patrol-frontend
-PORT=3010 pm2 start npm --name patrol-frontend -- start
-pm2 save
-
-# 6. Reload Nginx
 nginx -t && systemctl reload nginx
-
-# 7. Test
-curl -I https://frontend.k3guard.com
 ```
 
 ---
 
-## 📞 Quick Reference
+## ⚡ Quick Reference Card
 
-```bash
-# Build
-npm run build
-
-# Start PM2
-PORT=3010 pm2 start npm --name patrol-frontend -- start
-
-# Restart
-pm2 restart patrol-frontend
-
-# Logs
-pm2 logs patrol-frontend
-
-# Nginx reload
-nginx -t && systemctl reload nginx
-
-# Test
-curl -I https://frontend.k3guard.com
 ```
-
----
-
-**Last Updated**: 2026-02-17  
-**Maintainer**: DevOps Team
-
-### Issue: 500 Internal Server Error (Static Assets)
-
-**Symptoms**: `net::ERR_ABORTED 500` when loading JS/CSS chunks.
-
-**Cause**: 
-- File permission issues on `.next` directory.
-- `optimizeCss` experimental feature failing.
-- Browser caching old file hashes.
-
-**Solutions**:
-1. **Fix Permissions**:
-   ```bash
-   chown -R www-data:www-data .next
-   chmod -R 755 .next
-   ```
-2. **Disable optimizeCss**:
-   In `next.config.ts`:
-   ```typescript
-   experimental: {
-     optimizeCss: false, // Set to false
-   },
-   ```
-3. **Hard Refresh Browser**.
+╔════════════════════════════════════════════╗
+║          FRONTEND QUICK COMMANDS           ║
+╠════════════════════════════════════════════╣
+║ Build:    npm run build                    ║
+║           (tunggu tabel Route (app)!)      ║
+║ Verify:   ls .next/BUILD_ID               ║
+║ Perms:    chown -R www-data .next          ║
+║ Restart:  pm2 restart patrol-frontend      ║
+║ Logs:     pm2 logs patrol-frontend         ║
+║ Check:    curl -I http://localhost:3010    ║
+╚════════════════════════════════════════════╝
+```

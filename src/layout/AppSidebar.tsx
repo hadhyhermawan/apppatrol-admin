@@ -16,6 +16,7 @@ import {
   Package,
   Mail,
   UserCheck,
+  AlertTriangle,
   MapPin,
   Sparkles,
   Car,
@@ -135,6 +136,11 @@ const navItems: NavItem[] = [
     path: '/security/map-tracking',
     icon: <MapPin size={20} />
   },
+  {
+    name: 'Pelanggaran',
+    path: '/security/violations',
+    icon: <AlertTriangle size={20} />
+  },
   // Cleaning Service
   {
     name: 'Tugas Kebersihan',
@@ -175,7 +181,7 @@ const navItems: NavItem[] = [
     icon: <Settings size={20} />,
     subItems: [
       { name: 'General Setting', path: '/settings/general' },
-      { name: 'Landing Page', path: '/settings/landing-page' },
+      { name: 'Pengaturan Reminder', path: '/settings/reminder' },
       { name: 'Denda', path: '/settings/denda' },
       { name: 'Hari Libur', path: '/settings/hari-libur' },
       { name: 'Jam Kerja Departemen', path: '/settings/jam-kerja-dept' },
@@ -187,7 +193,7 @@ const navItems: NavItem[] = [
     subItems: [
       { name: 'Laporan Presensi', path: '/reports/presensi' },
       { name: 'Laporan Gaji', path: '/reports/salary' },
-      { name: 'Monitoring Patroli', path: '/reports/patrol-monitoring' },
+      { name: 'Laporan Tugas', path: '/reports/tugas-monitoring' },
       { name: 'Statistik Kinerja', path: '/reports/performance' },
     ]
   },
@@ -198,6 +204,7 @@ const navItems: NavItem[] = [
       { name: 'User', path: '/utilities/users' },
       { name: 'Role', path: '/utilities/roles' },
       { name: 'Permission', path: '/utilities/permissions' },
+      { name: 'Role & Permission', path: '/utilities/role-permission' },
       { name: 'Group Permission', path: '/utilities/group-permissions' },
       { name: 'Login Logs', path: '/utilities/logs' },
       { name: 'Laporan Keamanan', path: '/utilities/security-reports' },
