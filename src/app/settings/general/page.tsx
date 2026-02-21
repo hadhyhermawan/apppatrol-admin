@@ -387,6 +387,35 @@ function GeneralSettingPage() {
                             </div>
                         </div>
 
+                        {/* Google Console Cloud & Service */}
+                        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+                            <div className="border-b border-stroke py-4 px-6.5 dark:border-strokedark">
+                                <h3 className="font-medium text-black dark:text-white">Google Console API (Service Keys)</h3>
+                            </div>
+                            <div className="p-6.5 flex flex-col gap-5">
+                                <div>
+                                    <label className="mb-2.5 block text-black dark:text-white">Google Maps API Key (Lokasi)</label>
+                                    <Input
+                                        type="text"
+                                        name="google_maps_api_key"
+                                        defaultValue={formData.google_maps_api_key}
+                                        onChange={handleInputChange}
+                                        placeholder="AIzaSy..."
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-2.5 block text-black dark:text-white">Firebase Server Key (Push Notif)</label>
+                                    <Input
+                                        type="text"
+                                        name="firebase_server_key"
+                                        defaultValue={formData.firebase_server_key}
+                                        onChange={handleInputChange}
+                                        placeholder="AAAA..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Face Recognition Settings */}
                         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
                             <div className="border-b border-stroke py-4 px-6.5 dark:border-strokedark">
