@@ -416,6 +416,35 @@ function GeneralSettingPage() {
                             </div>
                         </div>
 
+                        {/* Walkie Talkie & WebRTC URL Settings */}
+                        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+                            <div className="border-b border-stroke py-4 px-6.5 dark:border-strokedark">
+                                <h3 className="font-medium text-black dark:text-white">Standar Komunikasi Media (HT & Video)</h3>
+                            </div>
+                            <div className="p-6.5 flex flex-col gap-5">
+                                <div>
+                                    <label className="mb-2.5 block text-black dark:text-white">Walkie Talkie Audio WS URL</label>
+                                    <Input
+                                        type="text"
+                                        name="walkie_ws_url"
+                                        defaultValue={formData.walkie_ws_url}
+                                        onChange={handleInputChange}
+                                        placeholder="wss://frontend.k3guard.com/walkie-ws"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-2.5 block text-black dark:text-white">Video Call/WebRTC Socket URL</label>
+                                    <Input
+                                        type="text"
+                                        name="webrtc_ws_url"
+                                        defaultValue={formData.webrtc_ws_url}
+                                        onChange={handleInputChange}
+                                        placeholder="http://72.60.77.149:3000"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Face Recognition Settings */}
                         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
                             <div className="border-b border-stroke py-4 px-6.5 dark:border-strokedark">
