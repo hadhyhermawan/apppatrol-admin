@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 import Label from './Label';
@@ -33,6 +33,12 @@ export default function DatePicker({
   allowInput = true,
   staticDisplay = true,
 }: PropsType) {
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
   useEffect(() => {
     const flatPickr = flatpickr(`#${id}`, {
       mode: mode || "single",
@@ -41,10 +47,18 @@ export default function DatePicker({
       dateFormat,
       enableTime,
       defaultDate,
-      onChange,
       allowInput,
       time_24hr: true,
       minuteIncrement: 1,
+      onChange: (selectedDates, dateStr, instance) => {
+        if (onChangeRef.current) {
+          if (Array.isArray(onChangeRef.current)) {
+            onChangeRef.current.forEach(fn => fn(selectedDates, dateStr, instance));
+          } else {
+            (onChangeRef.current as Function)(selectedDates, dateStr, instance);
+          }
+        }
+      }
     });
 
     return () => {
@@ -52,7 +66,16 @@ export default function DatePicker({
         flatPickr.destroy();
       }
     };
-  }, [mode, onChange, id, defaultDate]);
+  }, [id, mode, staticDisplay, dateFormat, enableTime, allowInput]);
+
+  useEffect(() => {
+    const el = document.getElementById(id) as any;
+    if (el && el._flatpickr && defaultDate) {
+      if (el._flatpickr.input.value !== defaultDate) {
+        el._flatpickr.setDate(defaultDate, false);
+      }
+    }
+  }, [defaultDate, id]);
 
   return (
     <div>
