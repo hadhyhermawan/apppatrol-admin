@@ -352,7 +352,7 @@ function SecuritySuratPage() {
                                                 >
                                                     <Eye className="h-5 w-5" />
                                                 </button>
-                                                {canUpdate && (
+                                                {canUpdate('surat') && (
                                                     <button
                                                         onClick={() => handleEdit(item)}
                                                         className="inline-flex items-center justify-center p-2 rounded-full hover:bg-blue-100 text-blue-500 dark:hover:bg-meta-4 transition"
@@ -361,7 +361,7 @@ function SecuritySuratPage() {
                                                         <Edit className="h-5 w-5" />
                                                     </button>
                                                 )}
-                                                {canDelete && (
+                                                {canDelete('surat') && (
                                                     <button
                                                         onClick={() => handleDelete(item.id)}
                                                         className="inline-flex items-center justify-center p-2 rounded-full hover:bg-red-100 text-red-500 dark:hover:bg-meta-4 transition"
