@@ -43,6 +43,8 @@ export default function DatePicker({
       defaultDate,
       onChange,
       allowInput,
+      time_24hr: true,
+      minuteIncrement: 1,
     });
 
     return () => {
