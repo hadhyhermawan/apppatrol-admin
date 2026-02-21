@@ -338,7 +338,21 @@ function SecuritySuratPage() {
                                                         />
                                                     </div>
                                                 )}
-                                                {!item.foto && (
+                                                {item.foto_penerima && (
+                                                    <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Penerima">
+                                                        <Image
+                                                            src={item.foto_penerima}
+                                                            alt="Foto Penerima"
+                                                            width={40}
+                                                            height={40}
+                                                            className="h-full w-full object-cover cursor-pointer hover:opacity-80 transition"
+                                                            unoptimized
+                                                            onClick={() => setPreviewImage(item.foto_penerima || null)}
+                                                            onError={(e: any) => e.target.style.display = 'none'}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {!item.foto && !item.foto_penerima && (
                                                     <span className="text-xs text-gray-400">-</span>
                                                 )}
                                             </div>
