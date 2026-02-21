@@ -170,14 +170,20 @@ function SecurityTurlalinPage() {
     const handleOpenEdit = (item: TurlalinItem) => {
         setErrorMsg('');
         setModalMode('edit');
+        const formatDbDate = (dbDate: string | null | undefined) => {
+            if (!dbDate) return '';
+            // dbDate "2024-02-28 10:00:00" -> "2024-02-28 10:00"
+            return dbDate.replace('T', ' ').substring(0, 16);
+        };
+
         setFormData({
             id: item.id,
             nomor_polisi: item.nomor_polisi,
-            jam_masuk: item.jam_masuk ? new Date(item.jam_masuk).toISOString().slice(0, 16) : '',
+            jam_masuk: formatDbDate(item.jam_masuk),
             nik: item.nik,
             keterangan: item.keterangan || '',
             foto: item.foto || '',
-            jam_keluar: item.jam_keluar ? new Date(item.jam_keluar).toISOString().slice(0, 16) : '',
+            jam_keluar: formatDbDate(item.jam_keluar),
             nik_keluar: item.nik_keluar || '',
             foto_keluar: item.foto_keluar || ''
         });
@@ -200,9 +206,15 @@ function SecurityTurlalinPage() {
 
         setIsSubmitting(true);
         try {
+            const fixSubmitDate = (dt: string | null | undefined) => {
+                if (!dt) return null;
+                return dt.replace('T', ' ') + (dt.length === 16 ? ':00' : '');
+            };
+
             const payload = {
                 ...formData,
-                jam_keluar: formData.jam_keluar || null,
+                jam_masuk: fixSubmitDate(formData.jam_masuk),
+                jam_keluar: fixSubmitDate(formData.jam_keluar) || null,
                 nik_keluar: formData.nik_keluar || null,
                 foto: formData.foto || null,
                 foto_keluar: formData.foto_keluar || null,
