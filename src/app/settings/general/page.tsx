@@ -246,6 +246,27 @@ function GeneralSettingPage() {
                                     />
                                 </div>
 
+                                <div className="flex gap-4">
+                                    <div className="w-1/2">
+                                        <label className="mb-2.5 block text-black dark:text-white">Toleransi Awal Shift Malam</label>
+                                        <Input
+                                            type="time"
+                                            name="toleransi_shift_malam_mulai"
+                                            defaultValue={formData.toleransi_shift_malam_mulai}
+                                            onChange={handleInputChange}
+                                        />
+                                    </div>
+                                    <div className="w-1/2">
+                                        <label className="mb-2.5 block text-black dark:text-white">Batas Jam Pagi (Shift Dini Hari)</label>
+                                        <Input
+                                            type="time"
+                                            name="toleransi_shift_malam_batas"
+                                            defaultValue={formData.toleransi_shift_malam_batas}
+                                            onChange={handleInputChange}
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="flex flex-col gap-4 pt-2">
                                     <Switch
                                         label="Aktifkan Denda Keterlambatan"
