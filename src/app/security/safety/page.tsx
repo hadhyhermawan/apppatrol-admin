@@ -145,11 +145,16 @@ function SecuritySafetyBriefingPage() {
     const handleOpenEdit = (item: SafetyBriefingItem) => {
         setErrorMsg('');
         setModalMode('edit');
+        const formatDbDate = (dbDate: string | null | undefined) => {
+            if (!dbDate) return '';
+            return dbDate.replace('T', ' ').substring(0, 16);
+        };
+
         setFormData({
             id: item.id,
             nik: item.nik,
             keterangan: item.keterangan || '',
-            tanggal_jam: item.tanggal_jam ? new Date(item.tanggal_jam).toISOString().slice(0, 16) : '',
+            tanggal_jam: formatDbDate(item.tanggal_jam),
             foto: item.foto || ''
         });
         setEditingId(item.id);
@@ -171,8 +176,14 @@ function SecuritySafetyBriefingPage() {
 
         setIsSubmitting(true);
         try {
+            const fixSubmitDate = (dt: string | null | undefined) => {
+                if (!dt) return null;
+                return dt.replace('T', ' ') + (dt.length === 16 ? ':00' : '');
+            };
+
             const payload = {
                 ...formData,
+                tanggal_jam: fixSubmitDate(formData.tanggal_jam),
                 foto: formData.foto || null
             };
 
