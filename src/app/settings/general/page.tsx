@@ -262,6 +262,25 @@ function GeneralSettingPage() {
                                         defaultChecked={formData.multi_lokasi === 1}
                                         onChange={(checked) => handleSwitchChange('multi_lokasi', checked)}
                                     />
+                                    <Switch
+                                        label="Batasi Jumlah Hari Izin Berbayar"
+                                        defaultChecked={formData.batasi_hari_izin === 1}
+                                        onChange={(checked) => handleSwitchChange('batasi_hari_izin', checked)}
+                                    />
+                                    {formData.batasi_hari_izin === 1 && (
+                                        <div className="mt-2 pl-2">
+                                            <label className="mb-2.5 block text-black dark:text-white text-sm">
+                                                Maksimal Hari Izin (Per Tahun)
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="jml_hari_izin_max"
+                                                defaultValue={formData.jml_hari_izin_max}
+                                                onChange={handleInputChange}
+                                                placeholder="Contoh: 12"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
