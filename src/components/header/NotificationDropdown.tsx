@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import apiClient from "@/lib/api";
-import { Bell, AlertTriangle, Lock, MapPin, UserX, FileText, CheckCircle, ShieldAlert } from "lucide-react";
+import { Bell, AlertTriangle, Lock, MapPin, UserX, FileText, CheckCircle, ShieldAlert, WifiOff, Smartphone } from "lucide-react";
 
 type NotificationSummary = {
   ajuan_absen: number;
@@ -32,6 +32,8 @@ type AlertDetailsResponse = {
   radius_violations: AlertDetail[];
   device_locks: AlertDetail[];
   member_expiring: AlertDetail[];
+  force_closes: AlertDetail[];
+  face_verify_fails: AlertDetail[];
 };
 
 export default function NotificationDropdown() {
@@ -189,6 +191,52 @@ export default function NotificationDropdown() {
                     <div className="block">
                       <span className="block font-medium text-black dark:text-white text-sm">
                         Device Terkunci: {alert.nama}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {alert.cabang}
+                      </span>
+                    </div>
+                  </DropdownItem>
+                </li>
+              ))}
+
+              {/* Force Close Details */}
+              {details?.force_closes?.map((alert, idx) => (
+                <li key={`fc-${idx}`}>
+                  <DropdownItem
+                    onItemClick={closeDropdown}
+                    className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
+                    href="/security/violations"
+                  >
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400 shrink-0">
+                      <WifiOff size={20} />
+                    </div>
+                    <div className="block">
+                      <span className="block font-medium text-black dark:text-white text-sm">
+                        Force Close App: {alert.nama}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {alert.cabang}
+                      </span>
+                    </div>
+                  </DropdownItem>
+                </li>
+              ))}
+
+              {/* Face Verify Fails Details */}
+              {details?.face_verify_fails?.map((alert, idx) => (
+                <li key={`fv-${idx}`}>
+                  <DropdownItem
+                    onItemClick={closeDropdown}
+                    className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
+                    href="/security/violations"
+                  >
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-pink-100 text-pink-600 dark:bg-pink-900/20 dark:text-pink-400 shrink-0">
+                      <Smartphone size={20} />
+                    </div>
+                    <div className="block">
+                      <span className="block font-medium text-black dark:text-white text-sm">
+                        Gagal Wajah: {alert.nama}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {alert.cabang}

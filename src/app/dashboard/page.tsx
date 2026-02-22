@@ -7,6 +7,8 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { TrendingUp, TrendingDown, Users, Shield, Clock, MapPin, Briefcase, UserCheck, AlertCircle, Activity, Calendar } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import Swal from 'sweetalert2';
+import { useRouter } from 'next/navigation';
 
 import apiClient from '@/lib/api';
 
@@ -37,13 +39,76 @@ type DashboardData = {
 };
 
 export default function DashboardPage() {
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [stockData, setStockData] = useState<StockCard[]>([]);
     const [dashData, setDashData] = useState<DashboardData | null>(null);
 
     useEffect(() => {
         fetchDashboardData();
+
+        // Start polling security alerts
+        const loadAlerts = async () => {
+            await pollSecurityAlerts();
+        };
+        loadAlerts();
+        const intervalId = setInterval(loadAlerts, 20000); // Check every 20s
+        return () => clearInterval(intervalId);
     }, []);
+
+    const pollSecurityAlerts = async () => {
+        try {
+            // Pre-check if sweetalert is currently active so we don't stack it
+            if (Swal.isVisible()) return;
+
+            const res: any = await apiClient.get('/security/notifications/security-alerts');
+
+            // Check priorities
+            const alerts = [...(res?.radius_bypass_requests || []), ...(res?.fake_gps_alerts || []), ...(res?.force_closes || []), ...(res?.face_verify_fails || [])];
+            if (alerts.length > 0) {
+                const alert = alerts[0]; // grab the most recent one
+
+                const titleMap: any = {
+                    'FAKE_GPS_ALERT': '🚨 Peringatan Fake GPS!',
+                    'APP_FORCE_CLOSE': '⚠️ Aplikasi Ditutup Paksa!',
+                    'FACE_VERIFY_FAIL': '🚫 Gagal Pindai Wajah!',
+                    'RADIUS_BYPASS': '🚧 Permintaan Izin Luar Tapak'
+                };
+
+                const typeMap: any = {
+                    'FAKE_GPS_ALERT': 'sistem mendeteksi adanya penggunaan aplikasi Fake GPS',
+                    'APP_FORCE_CLOSE': 'sistem mendeteksi bahwa aplikasi dipaksa berhenti (Force Close)',
+                    'FACE_VERIFY_FAIL': 'sistem mendeteksi kegagalan verifikasi wajah secara berulang',
+                    'RADIUS_BYPASS': alert.detail ? `mengajukan izin bypass radius karena: <b>${alert.detail}</b>` : 'mengajukan izin absen di luar batas tapak/radius yang ditentukan'
+                }
+
+                const result = await Swal.fire({
+                    title: titleMap[alert.type] || 'Peringatan Keamanan',
+                    html: `Personel <b>${alert.nama}</b> (${alert.nik}) di <b>${alert.cabang}</b>.<br/><br/>${typeMap[alert.type]}.`,
+                    icon: alert.type === 'RADIUS_BYPASS' ? 'info' : 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: alert.type === 'RADIUS_BYPASS' ? 'Setujui & Izinkan' : 'Tandai Sudah Dilihat',
+                    cancelButtonText: 'Lihat Daftar Lengkap',
+                    allowOutsideClick: false,
+                });
+
+                if (result.isConfirmed) {
+                    if (alert.type === 'RADIUS_BYPASS') {
+                        await apiClient.post('/security/notifications/approve-bypass', { id: alert.id });
+                    } else {
+                        await apiClient.post('/security/notifications/mark-read', { id: alert.id });
+                    }
+                    pollSecurityAlerts(); // Check if there's more!
+                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                    router.push('/security/violations');
+                }
+            }
+        } catch (error) {
+            console.error("Failed to poll security alerts", error);
+        }
+    };
 
     const fetchDashboardData = async () => {
         try {

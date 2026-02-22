@@ -439,16 +439,20 @@ function PresensiPage() {
                                         <td className="px-4 py-4">
                                             {item.jam_out === '-' || !item.jam_out ? (
                                                 <div className="flex flex-col gap-1.5">
-                                                    <span
-                                                        title="Karyawan ini belum melakukan absen pulang"
-                                                        className="inline-flex items-center gap-1.5 rounded-full bg-red-100 dark:bg-red-900/30 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400 w-fit"
-                                                    >
-                                                        <span className="relative flex h-2 w-2">
-                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                                    {item.status_kehadiran?.toUpperCase() === 'TA' ? (
+                                                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">— (Ditutup Otomatis)</span>
+                                                    ) : (
+                                                        <span
+                                                            title="Karyawan ini belum melakukan absen pulang"
+                                                            className="inline-flex items-center gap-1.5 rounded-full bg-red-100 dark:bg-red-900/30 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400 w-fit"
+                                                        >
+                                                            <span className="relative flex h-2 w-2">
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                                            </span>
+                                                            Belum Pulang
                                                         </span>
-                                                        Belum Pulang
-                                                    </span>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col gap-1">
