@@ -49,6 +49,8 @@ type KaryawanOption = {
     jabatan?: string;
 };
 
+type OptionItem = { value: string; label: string };
+
 const VIOLATION_TYPES = [
     { id: 'all', label: 'Semua', icon: List },
     { id: 'absent', label: 'Tidak Hadir (Alpha)', icon: UserX },
@@ -83,6 +85,12 @@ function ViolationPage() {
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
+
+    // Dynamic Filter states
+    const [filterDept, setFilterDept] = useState('');
+    const [filterCabang, setFilterCabang] = useState('');
+    const [deptOptions, setDeptOptions] = useState<OptionItem[]>([]);
+    const [cabangOptions, setCabangOptions] = useState<OptionItem[]>([]);
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -125,6 +133,8 @@ function ViolationPage() {
             if (dateStart) url += `date_start=${dateStart}&`;
             if (dateEnd) url += `date_end=${dateEnd}&`;
             if (filterType !== 'all') url += `type=${filterType}&`;
+            if (filterCabang) url += `kode_cabang=${filterCabang}&`;
+            if (filterDept) url += `kode_dept=${filterDept}&`;
 
             try {
                 const response: any = await apiClient.get(url);
@@ -167,6 +177,25 @@ function ViolationPage() {
     }
 
     useEffect(() => {
+        const fetchOptions = async () => {
+            try {
+                const [deptRes, cabangRes] = await Promise.all([
+                    apiClient.get('/master/departemen/options'),
+                    apiClient.get('/master/cabang/options')
+                ]);
+
+                if (Array.isArray(deptRes)) {
+                    setDeptOptions(deptRes.map((d: any) => ({ value: d.kode_dept, label: d.nama_dept })));
+                }
+
+                if (Array.isArray(cabangRes)) {
+                    setCabangOptions(cabangRes.map((c: any) => ({ value: c.kode_cabang, label: c.nama_cabang })));
+                }
+            } catch (e) {
+                console.error("Failed load options", e);
+            }
+        };
+        fetchOptions();
         fetchKaryawan();
         fetchData();
     }, []);
@@ -174,9 +203,10 @@ function ViolationPage() {
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchData();
+            setCurrentPage(1);
         }, 800);
         return () => clearTimeout(timer);
-    }, [searchTerm, dateStart, dateEnd, filterType]);
+    }, [searchTerm, dateStart, dateEnd, filterType, filterCabang, filterDept]);
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -361,34 +391,54 @@ function ViolationPage() {
                             </div>
                         </div>
 
-                        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-                            <div className="relative col-span-2">
-                                <input
-                                    type="text"
-                                    placeholder="Cari NIK, Nama, atau Keterangan..."
-                                    value={searchTerm}
-                                    onChange={e => {
-                                        setSearchTerm(e.target.value);
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                                />
-                                <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
+                        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
+                            <div className="relative col-span-1">
+                                <label className="mb-1 block text-sm font-medium text-black dark:text-white">Cari Kata Kunci</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Cari NIK, Nama..."
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        className="w-full rounded border-[1.5px] border-stroke bg-transparent px-4 py-2 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                                    />
+                                    <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                                </div>
                             </div>
-                            <div>
+                            <div className="col-span-1">
+                                <label className="mb-1 block text-sm font-medium text-black dark:text-white">Dari Tanggal</label>
                                 <DatePicker
                                     id="date-start"
-                                    placeholder="Dari Tanggal"
+                                    placeholder="Semua"
                                     defaultDate={dateStart}
                                     onChange={(dates: Date[], dateStr: string) => setDateStart(dateStr)}
                                 />
                             </div>
-                            <div>
+                            <div className="col-span-1">
+                                <label className="mb-1 block text-sm font-medium text-black dark:text-white">Sampai Tanggal</label>
                                 <DatePicker
                                     id="date-end"
-                                    placeholder="Sampai Tanggal"
+                                    placeholder="Semua"
                                     defaultDate={dateEnd}
                                     onChange={(dates: Date[], dateStr: string) => setDateEnd(dateStr)}
+                                />
+                            </div>
+                            <div className="col-span-1">
+                                <label className="mb-1 block text-sm font-medium text-black dark:text-white">Cabang</label>
+                                <SearchableSelect
+                                    options={[{ value: "", label: "Semua Cabang" }, ...cabangOptions]}
+                                    value={filterCabang}
+                                    onChange={(val) => setFilterCabang(val)}
+                                    placeholder="Semua Cabang"
+                                />
+                            </div>
+                            <div className="col-span-1">
+                                <label className="mb-1 block text-sm font-medium text-black dark:text-white">Departemen</label>
+                                <SearchableSelect
+                                    options={[{ value: "", label: "Semua Dept" }, ...deptOptions]}
+                                    value={filterDept}
+                                    onChange={(val) => setFilterDept(val)}
+                                    placeholder="Semua Dept"
                                 />
                             </div>
                         </div>
