@@ -62,8 +62,8 @@ function UserAgreementsPage() {
             if (selectedDepartment) params.append('department_id', selectedDepartment);
 
             const res = await apiClient.get(`/compliance/agreements?${params.toString()}`);
-            if (Array.isArray(res.data)) {
-                setData(res.data);
+            if (Array.isArray(res)) {
+                setData(res);
             } else {
                 setData([]);
             }
