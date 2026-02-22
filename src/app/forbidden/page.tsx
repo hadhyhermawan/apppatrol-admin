@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ShieldX, Home, ArrowLeft } from 'lucide-react';
+import { ShieldX, Home, ArrowLeft, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function ForbiddenPage() {
@@ -46,6 +46,19 @@ export default function ForbiddenPage() {
                         <Home className="h-4 w-4" />
                         Go to Dashboard
                     </Link>
+                    <button
+                        onClick={() => {
+                            if (typeof window !== 'undefined') {
+                                localStorage.removeItem('patrol_token');
+                                localStorage.removeItem('patrol_user');
+                                window.location.href = '/';
+                            }
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/50 bg-transparent px-6 py-3 text-sm font-medium text-red-500 transition-colors hover:bg-red-500/10"
+                    >
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                    </button>
                 </div>
 
                 {/* Additional Info */}

@@ -282,9 +282,9 @@ export default function NotificationDropdown() {
               {/* Absen / Izin */}
               {(summary?.ajuan_absen || 0) > 0 && (
                 <li>
-                  <DropdownItem tag="a"
-                    onItemClick={closeDropdown}
-                    className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
+                  <Link
+                    onClick={closeDropdown}
+                    className="block w-full text-left flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
                     href="/izin"
                   >
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 shrink-0">
@@ -298,16 +298,16 @@ export default function NotificationDropdown() {
                         Menunggu persetujuan
                       </span>
                     </div>
-                  </DropdownItem>
+                  </Link>
                 </li>
               )}
 
               {/* Lembur */}
               {(summary?.lembur || 0) > 0 && (
                 <li>
-                  <DropdownItem tag="a"
-                    onItemClick={closeDropdown}
-                    className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
+                  <Link
+                    onClick={closeDropdown}
+                    className="block w-full text-left flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
                     href="/lembur"
                   >
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400 shrink-0">
@@ -321,7 +321,7 @@ export default function NotificationDropdown() {
                         Menunggu persetujuan
                       </span>
                     </div>
-                  </DropdownItem>
+                  </Link>
                 </li>
               )}
             </>
