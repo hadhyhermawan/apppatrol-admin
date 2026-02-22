@@ -186,6 +186,8 @@ const navItems: NavItem[] = [
       { name: 'Denda', path: '/settings/denda' },
       { name: 'Hari Libur', path: '/settings/hari-libur' },
       { name: 'Jam Kerja Departemen', path: '/settings/jam-kerja-dept' },
+      { name: 'Syarat & Ketentuan', path: '/settings/terms' },
+      { name: 'Kebijakan Privasi', path: '/settings/privacy' },
     ]
   },
   {
