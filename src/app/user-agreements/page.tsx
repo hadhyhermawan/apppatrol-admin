@@ -47,7 +47,7 @@ function UserAgreementsPage() {
 
     const fetchDepartments = async () => {
         try {
-            const res = await apiClient.get('/api/master/departemen');
+            const res = await apiClient.get('/master/departemen');
             setDepartments(res.data.data || res.data || []);
         } catch (error) {
             console.error('Failed to fetch departments:', error);
@@ -61,7 +61,7 @@ function UserAgreementsPage() {
             if (searchTerm) params.append('search', searchTerm);
             if (selectedDepartment) params.append('department_id', selectedDepartment);
 
-            const res = await apiClient.get(`/api/compliance/agreements?${params.toString()}`);
+            const res = await apiClient.get(`/compliance/agreements?${params.toString()}`);
             if (Array.isArray(res.data)) {
                 setData(res.data);
             } else {
