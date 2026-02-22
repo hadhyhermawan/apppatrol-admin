@@ -134,7 +134,7 @@ export default function NotificationDropdown() {
               {/* Mock Location Details */}
               {details?.mock_locations?.map((alert, idx) => (
                 <li key={`mock-${idx}`}>
-                  <DropdownItem
+                  <DropdownItem tag="a"
                     onItemClick={closeDropdown}
                     className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
                     href="/security/violations"
@@ -157,7 +157,7 @@ export default function NotificationDropdown() {
               {/* Radius Violation Details */}
               {details?.radius_violations?.map((alert, idx) => (
                 <li key={`radius-${idx}`}>
-                  <DropdownItem
+                  <DropdownItem tag="a"
                     onItemClick={closeDropdown}
                     className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
                     href="/security/violations"
@@ -180,7 +180,7 @@ export default function NotificationDropdown() {
               {/* Device Lock Details */}
               {details?.device_locks?.map((alert, idx) => (
                 <li key={`device-${idx}`}>
-                  <DropdownItem
+                  <DropdownItem tag="a"
                     onItemClick={closeDropdown}
                     className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
                     href="/master/karyawan"
@@ -203,7 +203,7 @@ export default function NotificationDropdown() {
               {/* Force Close Details */}
               {details?.force_closes?.map((alert, idx) => (
                 <li key={`fc-${idx}`}>
-                  <DropdownItem
+                  <DropdownItem tag="a"
                     onItemClick={closeDropdown}
                     className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
                     href="/security/violations"
@@ -226,7 +226,7 @@ export default function NotificationDropdown() {
               {/* Face Verify Fails Details */}
               {details?.face_verify_fails?.map((alert, idx) => (
                 <li key={`fv-${idx}`}>
-                  <DropdownItem
+                  <DropdownItem tag="a"
                     onItemClick={closeDropdown}
                     className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
                     href="/security/violations"
@@ -249,7 +249,7 @@ export default function NotificationDropdown() {
               {/* Member Expiring Details */}
               {details?.member_expiring?.map((alert, idx) => (
                 <li key={`expiring-${idx}`}>
-                  <DropdownItem
+                  <DropdownItem tag="a"
                     onItemClick={closeDropdown}
                     className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
                     href="/master/karyawan"
@@ -282,7 +282,7 @@ export default function NotificationDropdown() {
               {/* Absen / Izin */}
               {(summary?.ajuan_absen || 0) > 0 && (
                 <li>
-                  <DropdownItem
+                  <DropdownItem tag="a"
                     onItemClick={closeDropdown}
                     className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
                     href="/izin"
@@ -305,7 +305,7 @@ export default function NotificationDropdown() {
               {/* Lembur */}
               {(summary?.lembur || 0) > 0 && (
                 <li>
-                  <DropdownItem
+                  <DropdownItem tag="a"
                     onItemClick={closeDropdown}
                     className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
                     href="/lembur"

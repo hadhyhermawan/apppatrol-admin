@@ -147,6 +147,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
         const fetchSummary = async () => {
             try {
                 const res: any = await apiClient.get('/security/notifications/summary');
+                console.log("[Sidebar] Notification Summary Fetched:", res);
                 if (res && res.ajuan_absen) {
                     setIzinCount(res.ajuan_absen);
                 } else {
