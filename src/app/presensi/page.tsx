@@ -440,7 +440,12 @@ function PresensiPage() {
                                             {item.jam_out === '-' || !item.jam_out ? (
                                                 <div className="flex flex-col gap-1.5">
                                                     {item.status_kehadiran?.toUpperCase() === 'TA' ? (
-                                                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">— (Ditutup Otomatis)</span>
+                                                        <span
+                                                            title="Sesi absensi ditutup oleh sistem (Lupa absen pulang)"
+                                                            className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 dark:bg-orange-500/20 px-2.5 py-1 text-xs font-semibold text-orange-700 dark:text-orange-400 w-fit"
+                                                        >
+                                                            Ditutup Otomatis
+                                                        </span>
                                                     ) : (
                                                         <span
                                                             title="Karyawan ini belum melakukan absen pulang"
