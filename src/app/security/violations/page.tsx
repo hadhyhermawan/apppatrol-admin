@@ -120,7 +120,7 @@ function ViolationPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            let url = '/security/violations?';
+            let url = '/security/violations?per_page=5000&';
             if (searchTerm) url += `search=${searchTerm}&`;
             if (dateStart) url += `date_start=${dateStart}&`;
             if (dateEnd) url += `date_end=${dateEnd}&`;
