@@ -146,7 +146,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
     useEffect(() => {
         const fetchSummary = async () => {
             try {
-                const res: any = await apiClient.get('/security/notifications/summary');
+                const res: any = await apiClient.get(`/security/notifications/summary?t=${Date.now()}`);
                 console.log("[Sidebar] Notification Summary Fetched:", res);
                 if (res && res.ajuan_absen) {
                     setIzinCount(res.ajuan_absen);
@@ -271,9 +271,9 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
                                                 <item.icon className={clsx("w-[18px] h-[18px]", isActive ? "text-[#fbbf24]" : "text-slate-400 group-hover:text-slate-200")} />
                                                 <span>{item.name}</span>
                                             </div>
-                                            {item.name === 'Pengajuan Izin' && izinCount > 0 && (
+                                            {item.name === 'Pengajuan Izin' && (
                                                 <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
-                                                    {izinCount}
+                                                    {izinCount !== undefined ? izinCount : '?'}
                                                 </span>
                                             )}
                                         </Link>
