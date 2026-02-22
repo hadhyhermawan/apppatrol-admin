@@ -56,6 +56,7 @@ function PengajuanIzinPage() {
     const [searchStatus, setSearchStatus] = useState('');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
+    const [badgeCounts, setBadgeCounts] = useState({ absen: 0, sakit: 0, cuti: 0, dinas: 0 });
 
     const [currentPage, setCurrentPage] = useState(1);
     const [perPage] = useState(10);
@@ -106,10 +107,13 @@ function PengajuanIzinPage() {
 
     useEffect(() => {
         fetchData();
+        fetchBadges();
     }, [activeTab, searchCabang, searchDept, searchStatus, dateFrom, dateTo]);
 
     useEffect(() => {
         fetchOptions();
+        const interval = setInterval(fetchBadges, 60000);
+        return () => clearInterval(interval);
     }, []);
 
     const fetchData = async () => {
@@ -149,6 +153,17 @@ function PengajuanIzinPage() {
             setDeptOptions(deptRes as any);
         } catch (error) {
             console.error("Failed options", error);
+        }
+    };
+
+    const fetchBadges = async () => {
+        try {
+            const res: any = await apiClient.get(`/security/notifications/summary?t=${Date.now()}`);
+            if (res && res.detail_izin) {
+                setBadgeCounts(res.detail_izin);
+            }
+        } catch (err) {
+            console.error("Failed to fetch notification badges:", err);
         }
     };
 
@@ -337,6 +352,11 @@ function PengajuanIzinPage() {
                             <div className="flex items-center gap-2">
                                 <FileText className="w-4 h-4" />
                                 Izin Absen
+                                {badgeCounts.absen > 0 && (
+                                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center ml-1">
+                                        {badgeCounts.absen}
+                                    </span>
+                                )}
                             </div>
                         </button>
                         <button
@@ -352,6 +372,11 @@ function PengajuanIzinPage() {
                             <div className="flex items-center gap-2">
                                 <FileText className="w-4 h-4" />
                                 Izin Sakit
+                                {badgeCounts.sakit > 0 && (
+                                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center ml-1">
+                                        {badgeCounts.sakit}
+                                    </span>
+                                )}
                             </div>
                         </button>
                         <button
@@ -367,6 +392,11 @@ function PengajuanIzinPage() {
                             <div className="flex items-center gap-2">
                                 <FileText className="w-4 h-4" />
                                 Izin Cuti
+                                {badgeCounts.cuti > 0 && (
+                                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center ml-1">
+                                        {badgeCounts.cuti}
+                                    </span>
+                                )}
                             </div>
                         </button>
                         <button
@@ -382,6 +412,11 @@ function PengajuanIzinPage() {
                             <div className="flex items-center gap-2">
                                 <FileText className="w-4 h-4" />
                                 Izin Dinas
+                                {badgeCounts.dinas > 0 && (
+                                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center ml-1">
+                                        {badgeCounts.dinas}
+                                    </span>
+                                )}
                             </div>
                         </button>
                     </div>
