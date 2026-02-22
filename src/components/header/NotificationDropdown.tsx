@@ -285,7 +285,7 @@ export default function NotificationDropdown() {
                   <DropdownItem
                     onItemClick={closeDropdown}
                     className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
-                    href="/pengajuan-izin"
+                    href="/izin"
                   >
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 shrink-0">
                       <FileText size={20} />

@@ -3,9 +3,10 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, Users, User, Settings, Shield, Bell, Wrench, Menu, X, ChevronDown, ChevronRight, FileText, Smartphone, Briefcase, Database, Clock, ShieldCheck, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { usePermissions } from '@/contexts/PermissionContext';
+import apiClient from '@/lib/api';
 
 type MenuItem = {
     name: string;
@@ -140,6 +141,26 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
     const pathname = usePathname();
     const { hasAnyPermission, isSuperAdmin, loading } = usePermissions();
     const [openMenus, setOpenMenus] = useState<string[]>([]);
+    const [izinCount, setIzinCount] = useState<number>(0);
+
+    useEffect(() => {
+        const fetchSummary = async () => {
+            try {
+                const res: any = await apiClient.get('/security/notifications/summary');
+                if (res && res.ajuan_absen) {
+                    setIzinCount(res.ajuan_absen);
+                } else {
+                    setIzinCount(0);
+                }
+            } catch (err) {
+                console.error("Failed to fetch notification summary for sidebar:", err);
+            }
+        };
+
+        fetchSummary();
+        const interval = setInterval(fetchSummary, 60000);
+        return () => clearInterval(interval);
+    }, []);
 
     const toggleMenu = (name: string) => {
         setOpenMenus(prev =>
@@ -245,8 +266,15 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
                                                     : "hover:bg-white/5 text-slate-300"
                                             )}
                                         >
-                                            <item.icon className={clsx("w-[18px] h-[18px]", isActive ? "text-[#fbbf24]" : "text-slate-400 group-hover:text-slate-200")} />
-                                            <span>{item.name}</span>
+                                            <div className="flex items-center gap-2.5 flex-1">
+                                                <item.icon className={clsx("w-[18px] h-[18px]", isActive ? "text-[#fbbf24]" : "text-slate-400 group-hover:text-slate-200")} />
+                                                <span>{item.name}</span>
+                                            </div>
+                                            {item.name === 'Pengajuan Izin' && izinCount > 0 && (
+                                                <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                                                    {izinCount}
+                                                </span>
+                                            )}
                                         </Link>
                                     )}
 
