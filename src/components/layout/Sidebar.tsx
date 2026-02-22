@@ -82,6 +82,7 @@ const menuItems: MenuItem[] = [
             { name: 'Group Permissions', href: '/utilities/group-permissions', permissions: ['permissiongroups.index'] },
             { name: 'Role & Permission', href: '/utilities/role-permission', permissions: ['roles.index', 'permissions.index'] },
             { name: 'Logs', href: '/utilities/logs', permissions: ['logs.index'] },
+            { name: 'User Agreements', href: '/user-agreements', permissions: ['users.index'] },
             { name: 'Security Reports', href: '/utilities/security-reports', permissions: ['securityreports.index'] },
             { name: 'Multi Device', href: '/utilities/multi-device', permissions: ['multidevice.index'] },
             { name: 'Chat Management', href: '/utilities/chat-management', permissions: ['chat.index'] },

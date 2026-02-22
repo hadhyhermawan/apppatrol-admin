@@ -116,4 +116,4 @@ function UserAgreementsPage() {
     );
 }
 
-export default withPermission(UserAgreementsPage, { permissions: ['utilities.users.view'] });
+export default withPermission(UserAgreementsPage, { permissions: ['users.index'] });
