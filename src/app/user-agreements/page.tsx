@@ -7,8 +7,9 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import FilterBar from '@/components/user-agreements/FilterBar';
 import AgreementTable, { AgreementRow } from '@/components/user-agreements/AgreementTable';
 import { ShieldCheck } from 'lucide-react';
+import { withPermission } from '@/hoc/withPermission';
 
-export default function UserAgreementsPage() {
+function UserAgreementsPage() {
     const [data, setData] = useState<AgreementRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [departments, setDepartments] = useState<{ id: number; nama_dept: string }[]>([]);
@@ -114,3 +115,5 @@ export default function UserAgreementsPage() {
         </MainLayout>
     );
 }
+
+export default withPermission(UserAgreementsPage, { permissions: ['utilities.users.view'] });
