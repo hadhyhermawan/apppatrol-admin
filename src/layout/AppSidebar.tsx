@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
+import apiClient from "@/lib/api";
 import {
   LayoutDashboard,
   Database,
@@ -223,6 +224,27 @@ const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
 
+  const [izinCount, setIzinCount] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const res: any = await apiClient.get(`/security/notifications/summary?t=${Date.now()}`);
+        if (res && res.ajuan_absen) {
+          setIzinCount(res.ajuan_absen);
+        } else {
+          setIzinCount(0);
+        }
+      } catch (err) {
+        console.error("Failed to fetch notification summary for sidebar:", err);
+      }
+    };
+
+    fetchSummary();
+    const interval = setInterval(fetchSummary, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main";
     index: number;
@@ -338,7 +360,12 @@ const AppSidebar: React.FC = () => {
                     {nav.icon}
                   </span>
                   {(isExpanded || isHovered || isMobileOpen) && (
-                    <span className={`menu-item-text`}>{nav.name}</span>
+                    <span className={`menu-item-text flex-1`}>{nav.name}</span>
+                  )}
+                  {nav.name === 'Pengajuan Absen' && izinCount > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center ml-auto">
+                      {izinCount}
+                    </span>
                   )}
                 </Link>
               )
