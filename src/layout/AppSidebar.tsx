@@ -210,6 +210,7 @@ const navItems: NavItem[] = [
       { name: 'Role & Permission', path: '/utilities/role-permission' },
       { name: 'Group Permission', path: '/utilities/group-permissions' },
       { name: 'Login Logs', path: '/utilities/logs' },
+      { name: 'User Agreements', path: '/user-agreements' },
       { name: 'Laporan Keamanan', path: '/utilities/security-reports' },
       { name: 'Multi Device Login', path: '/utilities/multi-device' },
       { name: 'Management Obrolan', path: '/utilities/chat-management' },
