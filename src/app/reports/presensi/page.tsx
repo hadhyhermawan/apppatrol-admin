@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
 import { Search, Calendar, MapPin, ArrowLeft, ArrowRight, RefreshCw, Download, Printer, X, Eye } from 'lucide-react';
@@ -69,6 +69,24 @@ function LaporanPresensiPage() {
 
     const [startDate, setStartDate] = useState(formatDate(firstDay));
     const [endDate, setEndDate] = useState(formatDate(lastDay));
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [perPage] = useState(10);
+
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * perPage;
+        return data.slice(start, start + perPage);
+    }, [data, currentPage, perPage]);
+
+    const totalPages = Math.ceil(data.length / perPage);
+
+    const paginatedRekapData = useMemo(() => {
+        const start = (currentPage - 1) * perPage;
+        return rekapData.slice(start, start + perPage);
+    }, [rekapData, currentPage, perPage]);
+
+    const totalRekapPages = Math.ceil(rekapData.length / perPage);
 
     // Fetch Options
     useEffect(() => {
@@ -147,15 +165,14 @@ function LaporanPresensiPage() {
         }
     };
 
-    // Auto fetch when filters change (debounced for search?)
-    // For reports, maybe better to have a "Tampilkan" button to avoid heavy queries while typing?
-    // But monitoring uses auto-fetch. Let's use auto-fetch for now, but maybe debounce search.
+    // Auto fetch when filters change
     useEffect(() => {
         const timer = setTimeout(() => {
+            setCurrentPage(1);
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [dateRange, filterDept, filterCabang, searchTerm, viewMode]);
+    }, [dateRange, filterDept, filterCabang, searchTerm, viewMode, startDate, endDate]);
 
     const getStatusBadge = (status: string) => {
         const s = status ? status.toLowerCase() : '';
@@ -376,15 +393,15 @@ function LaporanPresensiPage() {
                                     <tr>
                                         <td colSpan={8} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
                                     </tr>
-                                ) : data.length === 0 ? (
+                                ) : paginatedData.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan</td>
                                     </tr>
                                 ) : (
-                                    data.map((item, idx) => (
+                                    paginatedData.map((item, idx) => (
                                         <tr key={idx} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/10">
                                             <td className="px-4 py-4 text-center">
-                                                <p className="text-black dark:text-white text-sm">{idx + 1}</p>
+                                                <p className="text-black dark:text-white text-sm">{(currentPage - 1) * perPage + idx + 1}</p>
                                             </td>
                                             <td className="px-4 py-4">
                                                 <span className="text-black dark:text-white text-sm font-medium">{item.tanggal}</span>
@@ -474,14 +491,14 @@ function LaporanPresensiPage() {
                                     <tr>
                                         <td colSpan={rekapDates.length + 7} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
                                     </tr>
-                                ) : rekapData.length === 0 ? (
+                                ) : paginatedRekapData.length === 0 ? (
                                     <tr>
                                         <td colSpan={rekapDates.length + 7} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan</td>
                                     </tr>
                                 ) : (
-                                    rekapData.map((emp, idx) => (
+                                    paginatedRekapData.map((emp, idx) => (
                                         <tr key={emp.nik} className="hover:bg-gray-50 dark:hover:bg-meta-4/10">
-                                            <td className="px-2 py-2 border border-gray-200 dark:border-gray-700 text-center sticky left-0 bg-white dark:bg-boxdark">{idx + 1}</td>
+                                            <td className="px-2 py-2 border border-gray-200 dark:border-gray-700 text-center sticky left-0 bg-white dark:bg-boxdark">{(currentPage - 1) * perPage + idx + 1}</td>
                                             <td className="px-2 py-2 border border-gray-200 dark:border-gray-700 sticky left-[50px] bg-white dark:bg-boxdark">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-black dark:text-white">{emp.nama_karyawan}</span>
@@ -539,6 +556,56 @@ function LaporanPresensiPage() {
                         </table>
                     </div>
                 )}
+
+                {/* Pagination Components */}
+                {viewMode === 'list' && data.length > 0 && (
+                    <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-stroke pt-4 dark:border-strokedark">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                            Menampilkan {(currentPage - 1) * perPage + 1} - {Math.min(currentPage * perPage, data.length)} dari {data.length} data
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4"
+                            >
+                                <ArrowRight className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {viewMode === 'rekap' && rekapData.length > 0 && (
+                    <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-stroke pt-4 dark:border-strokedark">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                            Menampilkan {(currentPage - 1) * perPage + 1} - {Math.min(currentPage * perPage, rekapData.length)} dari {rekapData.length} data
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalRekapPages, p + 1))}
+                                disabled={currentPage === totalRekapPages}
+                                className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4"
+                            >
+                                <ArrowRight className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
             </div>
         </MainLayout >
     );
