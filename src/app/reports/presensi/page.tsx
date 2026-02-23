@@ -303,13 +303,12 @@ function LaporanPresensiPage() {
                         <label className="mb-2 block text-sm font-medium text-black dark:text-white">
                             Dari Tanggal
                         </label>
-                        <div className="relative h-[42px]">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="h-full w-full rounded-lg border-[1.5px] border-stroke bg-transparent pl-10 pr-4 text-sm font-medium outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                        <div>
+                            <DatePicker
+                                id="date-start"
+                                placeholder="Dari Tanggal"
+                                defaultDate={startDate}
+                                onChange={(dates: Date[], dateStr: string) => setStartDate(dateStr)}
                             />
                         </div>
                     </div>
@@ -319,13 +318,12 @@ function LaporanPresensiPage() {
                         <label className="mb-2 block text-sm font-medium text-black dark:text-white">
                             Sampai Tanggal
                         </label>
-                        <div className="relative h-[42px]">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="h-full w-full rounded-lg border-[1.5px] border-stroke bg-transparent pl-10 pr-4 text-sm font-medium outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                        <div>
+                            <DatePicker
+                                id="date-end"
+                                placeholder="Sampai Tanggal"
+                                defaultDate={endDate}
+                                onChange={(dates: Date[], dateStr: string) => setEndDate(dateStr)}
                             />
                         </div>
                     </div>
