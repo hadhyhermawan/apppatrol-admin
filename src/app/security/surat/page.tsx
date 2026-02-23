@@ -32,6 +32,7 @@ type SuratItem = {
     status_surat?: string;
     status_penerimaan?: string;
     tanggal_diterima?: string;
+    nama_satpam_pengantar?: string;
 };
 
 function SecuritySuratPage() {
@@ -348,6 +349,16 @@ function SecuritySuratPage() {
                                         </td>
                                         <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
                                             {item.perihal}
+                                            <div className="mt-2 text-xs">
+                                                <div className="text-gray-500">
+                                                    Penjaga Pos: <span className="font-medium text-black dark:text-white">{item.nama_satpam || item.nik_satpam}</span>
+                                                </div>
+                                                {item.nama_satpam_pengantar && (
+                                                    <div className="text-gray-500 mt-0.5">
+                                                        Pengantar: <span className="font-medium text-black dark:text-white">{item.nama_satpam_pengantar}</span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-4 py-4 text-center text-sm">
                                             <div className="flex items-center justify-center -space-x-2">
@@ -493,10 +504,18 @@ function SecuritySuratPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-xs text-gray-500 uppercase font-bold tracking-wider">Petugas</label>
+                                    <label className="text-xs text-gray-500 uppercase font-bold tracking-wider">Petugas Pos</label>
                                     <p className="font-medium text-black dark:text-white mt-1">
                                         {selectedItem.nama_satpam || selectedItem.nik_satpam}
                                     </p>
+                                    {selectedItem.nama_satpam_pengantar && (
+                                        <div className="mt-2">
+                                            <label className="text-xs text-brand-500 uppercase font-bold tracking-wider">Pengantar</label>
+                                            <p className="font-medium text-brand-600 dark:text-brand-400 mt-1">
+                                                {selectedItem.nama_satpam_pengantar}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="text-xs text-gray-500 uppercase font-bold tracking-wider">Penerima</label>
