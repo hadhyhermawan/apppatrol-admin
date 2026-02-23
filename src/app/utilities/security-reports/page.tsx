@@ -64,8 +64,12 @@ export default function UtilitiesSecurityReportsPage() {
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        const timer = setTimeout(() => {
+            setCurrentPage(1);
+            fetchData();
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [keyword, nikFilter, kodeCabang, kodeDept]);
 
     // Client-side pagination
     const paginatedData = useMemo(() => {
@@ -150,7 +154,7 @@ export default function UtilitiesSecurityReportsPage() {
                             />
                             <MapPin className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                         </div>
-                        <div className="flex gap-2">
+                        <div className="relative">
                             <input
                                 type="text"
                                 placeholder="Keyword (Tipe...)"
@@ -158,9 +162,7 @@ export default function UtilitiesSecurityReportsPage() {
                                 onChange={(e) => setKeyword(e.target.value)}
                                 className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                             />
-                            <button onClick={() => { setCurrentPage(1); fetchData(); }} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                                <Search className="h-4 w-4" />
-                            </button>
+                            <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                         </div>
                     </div>
                 </div>
@@ -211,8 +213,8 @@ export default function UtilitiesSecurityReportsPage() {
                                         </td>
                                         <td className="px-4 py-4">
                                             <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${item.type === 'FACE_LIVENESS_LOCK'
-                                                    ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                                                ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
                                                 }`}>
                                                 {item.type}
                                             </span>
