@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import flatpickr from "flatpickr";
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
 import "flatpickr/dist/flatpickr.min.css";
 
 type GajiPokokItem = {
@@ -27,11 +28,23 @@ type EmployeeOption = {
     nama_karyawan: string;
 };
 
+type CabangOption = {
+    kode_cabang: string;
+    nama_cabang: string;
+};
+
+type DeptOption = {
+    kode_dept: string;
+    nama_dept: string;
+};
+
 function PayrollGajiPokokPage() {
     const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<GajiPokokItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+    const [cabangList, setCabangList] = useState<CabangOption[]>([]);
+    const [deptList, setDeptList] = useState<DeptOption[]>([]);
 
     // Filters
     const [keyword, setKeyword] = useState('');
@@ -72,10 +85,32 @@ function PayrollGajiPokokPage() {
         }
     };
 
+    const fetchOptions = async () => {
+        try {
+            const [cabangRes, deptRes] = await Promise.all([
+                apiClient.get('/master/cabang/options'),
+                apiClient.get('/master/departemen/options')
+            ]);
+
+            if (Array.isArray(cabangRes)) setCabangList(cabangRes);
+            if (Array.isArray(deptRes)) setDeptList(deptRes);
+        } catch (error) {
+            console.error("Failed to fetch options", error);
+        }
+    };
+
     useEffect(() => {
         fetchData();
         fetchEmployees();
+        fetchOptions();
     }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchData();
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [keyword, kodeCabang, kodeDept]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -246,24 +281,20 @@ function PayrollGajiPokokPage() {
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Kode Cabang..."
+                    <div>
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Cabang' }, ...cabangList.map(cab => ({ value: cab.kode_cabang, label: cab.nama_cabang }))]}
                             value={kodeCabang}
-                            onChange={(e) => setKodeCabang(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                            onChange={(val) => setKodeCabang(val)}
+                            placeholder="Semua Cabang"
                         />
                     </div>
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Kode Dept..."
+                    <div>
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Dept' }, ...deptList.map(dept => ({ value: dept.kode_dept, label: dept.nama_dept }))]}
                             value={kodeDept}
-                            onChange={(e) => setKodeDept(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                            onChange={(val) => setKodeDept(val)}
+                            placeholder="Semua Dept"
                         />
                     </div>
                 </div>
