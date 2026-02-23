@@ -84,14 +84,17 @@ function LegacyMonitoringView() {
     const [selectedCabang, setSelectedCabang] = useState('');
     const [deptOptions, setDeptOptions] = useState<{ kode_dept: string; nama_dept: string }[]>([]);
     const [selectedDept, setSelectedDept] = useState('');
+    const [shiftOptions, setShiftOptions] = useState<{ kode_jam_kerja: string; nama_jam_kerja: string }[]>([]);
+    const [selectedShift, setSelectedShift] = useState('');
 
     useEffect(() => {
         // Fetch Options
         const fetchOptions = async () => {
             try {
-                const [resCabang, resDept] = await Promise.all([
+                const [resCabang, resDept, resShift] = await Promise.all([
                     apiClient.get('/master/cabang'),
-                    apiClient.get('/master/departemen')
+                    apiClient.get('/master/departemen'),
+                    apiClient.get('/master/jam-kerja-options')
                 ]);
 
                 if (Array.isArray(resCabang)) {
@@ -99,6 +102,11 @@ function LegacyMonitoringView() {
                 }
                 if (Array.isArray(resDept)) {
                     setDeptOptions(resDept as any);
+                }
+                if (resShift && Array.isArray((resShift as any).data)) {
+                    setShiftOptions((resShift as any).data.map((s: any) => ({ kode_jam_kerja: s.kode, nama_jam_kerja: s.nama })));
+                } else if (Array.isArray(resShift)) {
+                    setShiftOptions((resShift as any).map((s: any) => ({ kode_jam_kerja: s.kode_jam_kerja || s.kode, nama_jam_kerja: s.nama_jam_kerja || s.nama })));
                 }
             } catch (error) {
                 console.error("Failed to fetch filter options", error);
@@ -113,6 +121,7 @@ function LegacyMonitoringView() {
             let url = `/monitoring-regu?tanggal=${monitorDate}`;
             if (selectedCabang) url += `&kode_cabang=${selectedCabang}`;
             if (selectedDept) url += `&kode_dept=${selectedDept}`;
+            if (selectedShift) url += `&kode_jam_kerja=${selectedShift}`;
 
             const response: any = await apiClient.get(url);
             if (response && response.regu_groups) {
@@ -135,7 +144,7 @@ function LegacyMonitoringView() {
         fetchData();
         const interval = setInterval(fetchData, 60000); // Auto refresh every minute
         return () => clearInterval(interval);
-    }, [monitorDate, selectedCabang, selectedDept]);
+    }, [monitorDate, selectedCabang, selectedDept, selectedShift]);
 
     return (
         <div>
@@ -178,6 +187,21 @@ function LegacyMonitoringView() {
                                     ...deptOptions.map(opt => ({ value: opt.kode_dept, label: opt.nama_dept }))
                                 ]}
                                 placeholder="Pilih Dept..."
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 min-w-[200px] flex-1 xl:flex-none">
+                        <label className="text-sm font-medium text-black dark:text-white hidden sm:block">Shift:</label>
+                        <div className="w-full">
+                            <SearchableSelect
+                                value={selectedShift}
+                                onChange={setSelectedShift}
+                                options={[
+                                    { value: '', label: 'Semua Shift' },
+                                    ...shiftOptions.map(opt => ({ value: opt.kode_jam_kerja, label: opt.nama_jam_kerja }))
+                                ]}
+                                placeholder="Pilih Shift..."
                             />
                         </div>
                     </div>
@@ -245,10 +269,10 @@ function LegacyMonitoringView() {
                                         key={slot.jam_ke}
                                         title={`Jam ke-${slot.jam_ke}: ${slot.rentang} (${slot.jumlah_event} kegiatan)`}
                                         className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold cursor-help transition hover:scale-110 ${slot.terpenuhi
-                                                ? 'bg-success text-white'
-                                                : group.shift_timing_status === 'sudah_berlalu' || (group.shift_timing_status === 'sedang_berlangsung' && slot.jam_ke === 1) // Logic Simplified
-                                                    ? 'bg-danger text-white'
-                                                    : 'bg-gray-200 dark:bg-meta-4 text-gray-400'
+                                            ? 'bg-success text-white'
+                                            : group.shift_timing_status === 'sudah_berlalu' || (group.shift_timing_status === 'sedang_berlangsung' && slot.jam_ke === 1) // Logic Simplified
+                                                ? 'bg-danger text-white'
+                                                : 'bg-gray-200 dark:bg-meta-4 text-gray-400'
                                             }`}
                                     >
                                         {slot.jam_ke}

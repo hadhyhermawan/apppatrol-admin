@@ -1,3 +1,10 @@
+# AppPatrol Admin Panel
+> ⚠️ **PERHATIAN (CRITICAL WARNING)** ⚠️
+> **SISTEM INI (FRONTEND & BACKEND) TELAH PUBLISH DAN LIVE DI PRODUCTION.**  
+> **Aplikasi Handphone Android "GuardSystemApp" (K3Guard) SAAT INI SUDAH LISTING DI PLAY STORE!**
+> Perubahan sekecil apapun di kode sumber, database, atau pengiriman notifikasi FCM akan langsung ter-broadcast dan dirasakan oleh seluruh Satpam dan Karyawan di seluruh Cabang di Indonesia.
+> **MOHON BERHATI-HATI. SELALU UJI COBA MENGGUNAKAN DOKUMEN /var/www/TESTING_STRATEGY.md SEBELUM MENYENTUH KODE PRODUKSI.**
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

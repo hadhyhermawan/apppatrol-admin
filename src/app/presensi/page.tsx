@@ -24,6 +24,7 @@ type PresensiItem = {
     nik: string;
     nama_karyawan: string;
     nama_dept: string;
+    nama_cabang?: string;
     nama_jam_kerja: string;
     jam_in: string;
     jam_out: string;
@@ -38,7 +39,7 @@ type PresensiItem = {
 
 type JamKerjaOption = { kode: string; nama: string; jam_masuk: string | null; jam_pulang: string | null };
 type OptionItem = { code: string; name: string };
-type MasterOptions = { departemen: OptionItem[] };
+type MasterOptions = { departemen: OptionItem[]; cabang: OptionItem[] };
 
 const STATUS_OPTIONS = [
     { value: 'H', label: 'Hadir' },
@@ -57,7 +58,9 @@ function PresensiPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [filterDept, setFilterDept] = useState('');
-    const [options, setOptions] = useState<MasterOptions>({ departemen: [] });
+    const [filterCabang, setFilterCabang] = useState('');
+    const [filterShift, setFilterShift] = useState('');
+    const [options, setOptions] = useState<MasterOptions>({ departemen: [], cabang: [] });
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -74,7 +77,10 @@ function PresensiPage() {
 
     useEffect(() => {
         apiClient.get('/master/options').then((res: any) => {
-            setOptions({ departemen: res?.departemen || [] });
+            setOptions({
+                departemen: res?.departemen || [],
+                cabang: res?.cabang || []
+            });
         }).catch(() => { });
 
         apiClient.get('/monitoring/jam-kerja-options').then((res: any) => {
@@ -88,6 +94,8 @@ function PresensiPage() {
             let url = `/monitoring/presensi?page=${currentPage}&per_page=${perPage}`;
             if (dateFilter) url += `&date=${dateFilter}`;
             if (filterDept) url += `&dept_code=${filterDept}`;
+            if (filterCabang) url += `&cabang_code=${filterCabang}`;
+            if (filterShift) url += `&kode_jam_kerja=${filterShift}`;
             if (debouncedSearch) url += `&search=${encodeURIComponent(debouncedSearch)}`;
 
             const response: any = await apiClient.get(url);
@@ -112,8 +120,8 @@ function PresensiPage() {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    useEffect(() => { fetchData(); }, [dateFilter, currentPage, filterDept, debouncedSearch]);
-    useEffect(() => { setCurrentPage(1); }, [dateFilter, filterDept, debouncedSearch]);
+    useEffect(() => { fetchData(); }, [dateFilter, currentPage, filterDept, filterCabang, filterShift, debouncedSearch]);
+    useEffect(() => { setCurrentPage(1); }, [dateFilter, filterDept, filterCabang, filterShift, debouncedSearch]);
 
     // ─── Edit handlers ─────────────────────────────────────────────────────────
     const openEdit = (item: PresensiItem) => {
@@ -350,7 +358,7 @@ function PresensiPage() {
                 </div>
 
                 {/* Filters */}
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6">
                     <div className="relative col-span-1 md:col-span-2">
                         <input
                             type="text"
@@ -361,18 +369,38 @@ function PresensiPage() {
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
-                    <DatePicker
-                        id="date-filter"
-                        placeholder="Filter Tanggal"
-                        defaultDate={dateFilter}
-                        onChange={(dates: Date[], dateStr: string) => setDateFilter(dateStr)}
-                    />
-                    <SearchableSelect
-                        options={[{ value: '', label: 'Semua Departemen' }, ...options.departemen.map(o => ({ value: o.code, label: o.name }))]}
-                        value={filterDept}
-                        onChange={val => setFilterDept(val)}
-                        placeholder="Semua Departemen"
-                    />
+                    <div>
+                        <DatePicker
+                            id="date-filter"
+                            placeholder="Filter Tanggal"
+                            defaultDate={dateFilter}
+                            onChange={(dates: Date[], dateStr: string) => setDateFilter(dateStr)}
+                        />
+                    </div>
+                    <div>
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Departemen' }, ...options.departemen.map(o => ({ value: o.code, label: o.name }))]}
+                            value={filterDept}
+                            onChange={val => setFilterDept(val)}
+                            placeholder="Semua Departemen"
+                        />
+                    </div>
+                    <div>
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Cabang' }, ...options.cabang.map(o => ({ value: o.code, label: o.name }))]}
+                            value={filterCabang}
+                            onChange={val => setFilterCabang(val)}
+                            placeholder="Semua Cabang"
+                        />
+                    </div>
+                    <div>
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Shift' }, ...jamKerjaOptions.map(o => ({ value: o.kode, label: o.nama }))]}
+                            value={filterShift}
+                            onChange={val => setFilterShift(val)}
+                            placeholder="Semua Shift"
+                        />
+                    </div>
                 </div>
 
                 {/* Table */}
@@ -413,6 +441,9 @@ function PresensiPage() {
                                                 </div>
                                                 <div>
                                                     <h5 className="font-medium text-black dark:text-white text-sm">{item.nama_karyawan}</h5>
+                                                    <div className="flex items-center gap-1 text-xs text-brand-500 font-medium my-0.5">
+                                                        <span>{item.nama_cabang || '-'}</span>
+                                                    </div>
                                                     <div className="flex items-center gap-1 text-xs text-gray-500">
                                                         <span>{item.nik}</span>
                                                         <span>•</span>

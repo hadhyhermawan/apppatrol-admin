@@ -7,6 +7,7 @@ import { Search, RefreshCw, ShieldCheck, Download, ArrowLeft, ArrowRight, CheckC
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { withPermission } from '@/hoc/withPermission';
 import { format } from 'date-fns';
+import SearchableSelect from '@/components/form/SearchableSelect';
 
 export type AgreementRow = {
     id: number;
@@ -29,13 +30,29 @@ function UserAgreementsPage() {
     // Filters State
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDepartment, setSelectedDepartment] = useState('');
+    const [selectedBranch, setSelectedBranch] = useState('');
+    const [cabangOptions, setCabangOptions] = useState<{ code: string; name: string }[]>([]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
 
     useEffect(() => {
-        fetchDepartments();
+        const fetchOptions = async () => {
+            try {
+                const [deptRes, optsRes] = await Promise.all([
+                    apiClient.get('/master/departemen'),
+                    apiClient.get('/master/options')
+                ]);
+                setDepartments((deptRes as any).data?.data || (deptRes as any).data || []);
+                if ((optsRes as any)?.cabang) {
+                    setCabangOptions((optsRes as any).cabang);
+                }
+            } catch (error) {
+                console.error('Failed to fetch filter options:', error);
+            }
+        };
+        fetchOptions();
     }, []);
 
     useEffect(() => {
@@ -43,16 +60,7 @@ function UserAgreementsPage() {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchTerm, selectedDepartment]);
-
-    const fetchDepartments = async () => {
-        try {
-            const res = await apiClient.get('/master/departemen');
-            setDepartments(res.data.data || res.data || []);
-        } catch (error) {
-            console.error('Failed to fetch departments:', error);
-        }
-    };
+    }, [searchTerm, selectedDepartment, selectedBranch]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -60,6 +68,7 @@ function UserAgreementsPage() {
             const params = new URLSearchParams();
             if (searchTerm) params.append('search', searchTerm);
             if (selectedDepartment) params.append('department_id', selectedDepartment);
+            if (selectedBranch) params.append('branch_id', selectedBranch);
 
             const res = await apiClient.get(`/compliance/agreements?${params.toString()}`);
             if (Array.isArray(res)) {
@@ -139,8 +148,8 @@ function UserAgreementsPage() {
                     </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-                    <div className="relative col-span-2 md:col-span-2">
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
+                    <div className="relative col-span-2">
                         <input
                             type="text"
                             placeholder="Cari nama, email, NIK..."
@@ -152,6 +161,17 @@ function UserAgreementsPage() {
                             className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 pl-11 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                         />
                         <Search className="absolute left-4 top-3 h-5 w-5 text-gray-400" />
+                    </div>
+                    <div>
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Cabang' }, ...cabangOptions.map(c => ({ value: c.code, label: c.name }))]}
+                            value={selectedBranch}
+                            onChange={val => {
+                                setSelectedBranch(val);
+                                setCurrentPage(1);
+                            }}
+                            placeholder="Pilih Cabang"
+                        />
                     </div>
                     <div className="col-span-2 md:col-span-2">
                         <select

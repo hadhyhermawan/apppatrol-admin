@@ -63,8 +63,8 @@ export default function DashboardPage() {
 
             const res: any = await apiClient.get('/security/notifications/security-alerts');
 
-            // Check priorities
-            const alerts = [...(res?.radius_bypass_requests || []), ...(res?.fake_gps_alerts || []), ...(res?.force_closes || []), ...(res?.face_verify_fails || [])];
+            // Check priorities. Force Closes removed to avoid dashboard spam (only via notifications icon now)
+            const alerts = [...(res?.radius_bypass_requests || []), ...(res?.fake_gps_alerts || []), ...(res?.face_verify_fails || [])];
             if (alerts.length > 0) {
                 const alert = alerts[0]; // grab the most recent one
 

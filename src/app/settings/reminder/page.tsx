@@ -198,6 +198,7 @@ function ReminderSettingPage() {
                 target_role: form.target_role || null,
                 target_dept: form.target_dept || null,
                 target_cabang: form.target_cabang || null,
+                target_shift: form.target_shift || null,
             };
             if (editId) {
                 await apiClient.put(`/reminder-settings/${editId}`, payload);
@@ -399,7 +400,12 @@ function ReminderSettingPage() {
                                                 <Building2 size={11} /> {r.target_dept}
                                             </span>
                                         )}
-                                        {!r.target_role && !r.target_dept && (
+                                        {((r as any).target_shift) && (
+                                            <span className="flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded-lg">
+                                                <Clock size={11} /> Shift: {(r as any).target_shift}
+                                            </span>
+                                        )}
+                                        {!r.target_role && !r.target_dept && !(r as any).target_shift && (
                                             <span className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2 py-1 rounded-lg">
                                                 <Users size={11} /> Semua Karyawan
                                             </span>

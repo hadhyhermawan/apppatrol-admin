@@ -29,11 +29,23 @@ type PatrolItem = {
     created_at?: string;
     updated_at?: string;
     nama_petugas?: string;
+    kode_cabang?: string;
+    nama_cabang?: string;
 };
 
 type KaryawanOption = {
     nik: string;
     nama_karyawan: string;
+};
+
+type CabangOption = {
+    kode_cabang: string;
+    nama_cabang: string;
+};
+
+type JamKerjaOption = {
+    kode_jam_kerja: string;
+    nama_jam_kerja: string;
 };
 
 function SecurityPatrolPage() {
@@ -44,8 +56,12 @@ function SecurityPatrolPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [dateStart, setDateStart] = useState('');
     const [dateEnd, setDateEnd] = useState('');
+    const [kodeCabangFilter, setKodeCabangFilter] = useState('');
+    const [kodeJamKerjaFilter, setKodeJamKerjaFilter] = useState('');
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [karyawanList, setKaryawanList] = useState<KaryawanOption[]>([]);
+    const [cabangList, setCabangList] = useState<CabangOption[]>([]);
+    const [jamKerjaList, setJamKerjaList] = useState<JamKerjaOption[]>([]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -91,13 +107,33 @@ function SecurityPatrolPage() {
         }
     };
 
+    const fetchCabang = async () => {
+        try {
+            const response: any = await apiClient.get('/master/cabang/options');
+            setCabangList(response);
+        } catch (error) {
+            console.error("Failed to fetch cabang options", error);
+        }
+    };
+
+    const fetchJamKerjaOptions = async () => {
+        try {
+            const response: any = await apiClient.get('/master/jam-kerja-options');
+            setJamKerjaList(response);
+        } catch (error) {
+            console.error("Failed to fetch jam kerja options", error);
+        }
+    };
+
     const fetchData = async () => {
         setLoading(true);
         try {
             let url = '/security/patrol?';
             if (searchTerm) url += `search=${searchTerm}&`;
             if (dateStart) url += `date_start=${dateStart}&`;
-            if (dateEnd) url += `date_end=${dateEnd}`;
+            if (dateEnd) url += `date_end=${dateEnd}&`;
+            if (kodeCabangFilter) url += `kode_cabang=${kodeCabangFilter}&`;
+            if (kodeJamKerjaFilter) url += `kode_jam_kerja=${kodeJamKerjaFilter}&`;
 
             const response: any = await apiClient.get(url);
             if (Array.isArray(response)) {
@@ -114,6 +150,8 @@ function SecurityPatrolPage() {
 
     useEffect(() => {
         fetchKaryawan();
+        fetchCabang();
+        fetchJamKerjaOptions();
         fetchData();
     }, []);
 
@@ -122,7 +160,7 @@ function SecurityPatrolPage() {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchTerm, dateStart, dateEnd]);
+    }, [searchTerm, dateStart, dateEnd, kodeCabangFilter, kodeJamKerjaFilter]);
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -286,7 +324,7 @@ function SecurityPatrolPage() {
                     </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-6">
                     <div className="relative col-span-2">
                         <input
                             type="text"
@@ -299,6 +337,28 @@ function SecurityPatrolPage() {
                             className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
+                    </div>
+                    <div>
+                        <SearchableSelect
+                            options={cabangList.map(cab => ({ value: cab.kode_cabang, label: cab.nama_cabang }))}
+                            value={kodeCabangFilter}
+                            onChange={(val) => {
+                                setKodeCabangFilter(val);
+                                setCurrentPage(1);
+                            }}
+                            placeholder="Semua Cabang"
+                        />
+                    </div>
+                    <div>
+                        <SearchableSelect
+                            options={jamKerjaList.map(jk => ({ value: jk.kode_jam_kerja, label: jk.nama_jam_kerja }))}
+                            value={kodeJamKerjaFilter}
+                            onChange={(val) => {
+                                setKodeJamKerjaFilter(val);
+                                setCurrentPage(1);
+                            }}
+                            placeholder="Semua Shift"
+                        />
                     </div>
                     <div>
                         <DatePicker
@@ -349,6 +409,7 @@ function SecurityPatrolPage() {
                                                 </div>
                                                 <div>
                                                     <h5 className="font-semibold text-black dark:text-white text-sm">{item.nama_petugas || item.nik}</h5>
+                                                    <p className="text-xs text-brand-500 font-medium">{item.nama_cabang || item.kode_cabang || '-'}</p>
                                                     <p className="text-xs text-gray-500">NIK: {item.nik}</p>
                                                 </div>
                                             </div>

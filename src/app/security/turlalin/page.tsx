@@ -54,6 +54,8 @@ function SecurityTurlalinPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [dateStart, setDateStart] = useState('');
     const [dateEnd, setDateEnd] = useState('');
+    const [filterCabang, setFilterCabang] = useState('');
+    const [cabangOptions, setCabangOptions] = useState<{ kode_cabang: string; nama_cabang: string }[]>([]);
     const [karyawanList, setKaryawanList] = useState<KaryawanOption[]>([]);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -89,17 +91,24 @@ function SecurityTurlalinPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
-    // Fetch Karyawan for dropdown
-    const fetchKaryawan = async () => {
+    const fetchOptions = async () => {
         try {
-            const response: any = await apiClient.get('/master/karyawan?per_page=10000');
-            if (response && response.data && Array.isArray(response.data)) {
-                setKaryawanList(response.data);
-            } else if (Array.isArray(response)) {
-                setKaryawanList(response);
+            const [karyawanRes, cabangRes] = await Promise.all([
+                apiClient.get('/master/karyawan?per_page=10000'),
+                apiClient.get('/master/cabang')
+            ]);
+
+            if (karyawanRes && (karyawanRes as any).data && Array.isArray((karyawanRes as any).data)) {
+                setKaryawanList((karyawanRes as any).data);
+            } else if (Array.isArray(karyawanRes)) {
+                setKaryawanList(karyawanRes);
+            }
+
+            if (Array.isArray(cabangRes)) {
+                setCabangOptions(cabangRes as any);
             }
         } catch (error) {
-            console.error("Failed to fetch karyawan options", error);
+            console.error("Failed to fetch options", error);
         }
     };
 
@@ -109,7 +118,8 @@ function SecurityTurlalinPage() {
             let url = '/security/turlalin?';
             if (searchTerm) url += `search=${searchTerm}&`;
             if (dateStart) url += `date_start=${dateStart}&`;
-            if (dateEnd) url += `date_end=${dateEnd}`;
+            if (dateEnd) url += `date_end=${dateEnd}&`;
+            if (filterCabang) url += `kode_cabang=${filterCabang}`;
 
             const response: any = await apiClient.get(url);
             if (Array.isArray(response)) {
@@ -126,7 +136,7 @@ function SecurityTurlalinPage() {
     };
 
     useEffect(() => {
-        fetchKaryawan();
+        fetchOptions();
         fetchData();
     }, []);
 
@@ -135,7 +145,7 @@ function SecurityTurlalinPage() {
             fetchData();
         }, 800);
         return () => clearTimeout(timer);
-    }, [searchTerm, dateStart, dateEnd]);
+    }, [searchTerm, dateStart, dateEnd, filterCabang]);
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -333,7 +343,7 @@ function SecurityTurlalinPage() {
                 </div>
 
                 {/* FILTERS */}
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
                     <div className="relative">
                         <input
                             type="text"
@@ -346,6 +356,17 @@ function SecurityTurlalinPage() {
                             className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
+                    </div>
+                    <div>
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Cabang' }, ...cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))]}
+                            value={filterCabang}
+                            onChange={val => {
+                                setFilterCabang(val);
+                                setCurrentPage(1);
+                            }}
+                            placeholder="Pilih Cabang"
+                        />
                     </div>
                     <div>
                         <DatePicker

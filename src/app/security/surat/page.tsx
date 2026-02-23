@@ -8,6 +8,7 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Image from 'next/image';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
 import dynamic from 'next/dynamic';
 import Swal from 'sweetalert2';
 
@@ -41,6 +42,8 @@ function SecuritySuratPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [dateStart, setDateStart] = useState('');
     const [dateEnd, setDateEnd] = useState('');
+    const [filterCabang, setFilterCabang] = useState('');
+    const [cabangOptions, setCabangOptions] = useState<{ code: string; name: string }[]>([]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -58,6 +61,7 @@ function SecuritySuratPage() {
             if (searchTerm) url += `search=${searchTerm}&`;
             if (dateStart) url += `date_start=${dateStart}&`;
             if (dateEnd) url += `date_end=${dateEnd}&`;
+            if (filterCabang) url += `kode_cabang=${filterCabang}`;
 
             const response: any = await apiClient.get(url);
             if (Array.isArray(response)) {
@@ -73,8 +77,20 @@ function SecuritySuratPage() {
         }
     };
 
+    const fetchOptions = async () => {
+        try {
+            const resOpts: any = await apiClient.get('/master/options');
+            if (resOpts && resOpts.cabang) {
+                setCabangOptions(resOpts.cabang);
+            }
+        } catch (error) {
+            console.error("Failed to fetch options", error);
+        }
+    };
+
     useEffect(() => {
         setCurrentPage(1);
+        fetchOptions();
         fetchData();
     }, [activeTab]);
 
@@ -83,7 +99,7 @@ function SecuritySuratPage() {
             fetchData();
         }, 800);
         return () => clearTimeout(timer);
-    }, [searchTerm, dateStart, dateEnd]);
+    }, [searchTerm, dateStart, dateEnd, filterCabang]);
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -235,7 +251,7 @@ function SecuritySuratPage() {
                     </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
                     <div className="relative col-span-2">
                         <input
                             type="text"
@@ -248,6 +264,17 @@ function SecuritySuratPage() {
                             className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
+                    </div>
+                    <div>
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Cabang' }, ...cabangOptions.map(c => ({ value: c.code, label: c.name }))]}
+                            value={filterCabang}
+                            onChange={val => {
+                                setFilterCabang(val);
+                                setCurrentPage(1);
+                            }}
+                            placeholder="Pilih Cabang"
+                        />
                     </div>
                     <div>
                         <DatePicker

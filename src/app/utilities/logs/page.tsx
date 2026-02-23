@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import flatpickr from "flatpickr";
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
 import "flatpickr/dist/flatpickr.min.css";
 
 type LogItem = {
@@ -34,6 +35,12 @@ function UtilitiesLogsPage() {
     const [deviceFilter, setDeviceFilter] = useState('');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
+    const [filterCabang, setFilterCabang] = useState('');
+    const [filterDept, setFilterDept] = useState('');
+
+    // Options
+    const [cabangOptions, setCabangOptions] = useState<{ code: string; name: string }[]>([]);
+    const [deptOptions, setDeptOptions] = useState<{ code: string; name: string }[]>([]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -45,10 +52,24 @@ function UtilitiesLogsPage() {
             allowInput: true,
             onChange: (selectedDates, dateStr, instance) => {
                 const inputElement = instance.element as HTMLInputElement;
-                if (inputElement.name === "from") setFromDate(dateStr);
-                if (inputElement.name === "to") setToDate(dateStr);
+                if (inputElement.name === "from") { setFromDate(dateStr); setCurrentPage(1); }
+                if (inputElement.name === "to") { setToDate(dateStr); setCurrentPage(1); }
             }
         });
+
+        const fetchOptions = async () => {
+            try {
+                const resOpts: any = await apiClient.get('/master/options');
+                if (resOpts) {
+                    if (resOpts.cabang) setCabangOptions(resOpts.cabang);
+                    if (resOpts.dept) setDeptOptions(resOpts.dept);
+                }
+            } catch (error) {
+                console.error("Failed to fetch options", error);
+            }
+        };
+
+        fetchOptions();
     }, []);
 
     const fetchData = async () => {
@@ -60,6 +81,8 @@ function UtilitiesLogsPage() {
             if (deviceFilter) params.append('device', deviceFilter);
             if (fromDate) params.append('from', fromDate);
             if (toDate) params.append('to', toDate);
+            if (filterCabang) params.append('kode_cabang', filterCabang);
+            if (filterDept) params.append('kode_dept', filterDept);
             params.append('limit', '100');
 
             const response: any = await apiClient.get(`/utilities/logs?${params.toString()}`);
@@ -77,8 +100,11 @@ function UtilitiesLogsPage() {
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        const timer = setTimeout(() => {
+            fetchData();
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [userFilter, ipFilter, deviceFilter, fromDate, toDate, filterCabang, filterDept]);
 
     // Client-side pagination for the fetched batch
     const paginatedData = useMemo(() => {
@@ -131,13 +157,16 @@ function UtilitiesLogsPage() {
 
                 {/* Filter Section */}
                 <div className="mb-6">
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
                         <div className="relative">
                             <input
                                 type="text"
                                 placeholder="Cari User..."
                                 value={userFilter}
-                                onChange={(e) => setUserFilter(e.target.value)}
+                                onChange={(e) => {
+                                    setUserFilter(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                                 className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                             />
                             <User className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
@@ -147,7 +176,10 @@ function UtilitiesLogsPage() {
                                 type="text"
                                 placeholder="Cari IP Address..."
                                 value={ipFilter}
-                                onChange={(e) => setIpFilter(e.target.value)}
+                                onChange={(e) => {
+                                    setIpFilter(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                                 className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                             />
                             <Monitor className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
@@ -157,10 +189,35 @@ function UtilitiesLogsPage() {
                                 type="text"
                                 placeholder="Cari Device..."
                                 value={deviceFilter}
-                                onChange={(e) => setDeviceFilter(e.target.value)}
+                                onChange={(e) => {
+                                    setDeviceFilter(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                                 className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                             />
                             <Smartphone className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
+                        </div>
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Cabang' }, ...cabangOptions.map(c => ({ value: c.code, label: c.name }))]}
+                                value={filterCabang}
+                                onChange={val => {
+                                    setFilterCabang(val);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Pilih Cabang"
+                            />
+                        </div>
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Departemen' }, ...deptOptions.map(d => ({ value: d.code, label: d.name }))]}
+                                value={filterDept}
+                                onChange={val => {
+                                    setFilterDept(val);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Pilih Departemen"
+                            />
                         </div>
                         <div className="relative">
                             <input
@@ -171,16 +228,14 @@ function UtilitiesLogsPage() {
                             />
                             <Calendar className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                         </div>
-                        <div className="flex gap-2">
+                        <div className="relative">
                             <input
                                 name="to"
                                 type="text"
                                 placeholder="Tanggal Sampai"
                                 className="flatpickr-date w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                             />
-                            <button onClick={() => { setCurrentPage(1); fetchData(); }} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                                <Search className="h-4 w-4" />
-                            </button>
+                            <Calendar className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                         </div>
                     </div>
                 </div>
@@ -234,14 +289,14 @@ function UtilitiesLogsPage() {
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             {canDelete('logs') && (
-                                                    <button
-                                                onClick={() => handleDelete(item.id)}
-                                                className="hover:text-red-500 text-gray-500 dark:text-gray-400 transition-colors"
-                                                title="Hapus Log"
-                                            >
-                                                <Trash2 className="h-5 w-5" />
-                                            </button>
-                                                )}
+                                                <button
+                                                    onClick={() => handleDelete(item.id)}
+                                                    className="hover:text-red-500 text-gray-500 dark:text-gray-400 transition-colors"
+                                                    title="Hapus Log"
+                                                >
+                                                    <Trash2 className="h-5 w-5" />
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))

@@ -40,6 +40,7 @@ function SecurityBarangPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [dateStart, setDateStart] = useState('');
     const [dateEnd, setDateEnd] = useState('');
+    const [filterCabang, setFilterCabang] = useState('');
     const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     const [cabangOptions, setCabangOptions] = useState<CabangOption[]>([]);
@@ -91,7 +92,8 @@ function SecurityBarangPage() {
             let url = '/security/barang?';
             if (searchTerm) url += `search=${searchTerm}&`;
             if (dateStart) url += `date_start=${dateStart}&`;
-            if (dateEnd) url += `date_end=${dateEnd}`;
+            if (dateEnd) url += `date_end=${dateEnd}&`;
+            if (filterCabang) url += `kode_cabang=${filterCabang}`;
 
             const response: any = await apiClient.get(url);
             if (Array.isArray(response)) {
@@ -117,7 +119,7 @@ function SecurityBarangPage() {
             fetchData();
         }, 800);
         return () => clearTimeout(timer);
-    }, [searchTerm, dateStart, dateEnd]);
+    }, [searchTerm, dateStart, dateEnd, filterCabang]);
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -279,7 +281,7 @@ function SecurityBarangPage() {
                     </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
                     <div className="relative col-span-2">
                         <input
                             type="text"
@@ -292,6 +294,17 @@ function SecurityBarangPage() {
                             className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
+                    </div>
+                    <div>
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Cabang' }, ...cabangOptions.map(c => ({ value: c.code, label: c.name }))]}
+                            value={filterCabang}
+                            onChange={val => {
+                                setFilterCabang(val);
+                                setCurrentPage(1);
+                            }}
+                            placeholder="Pilih Cabang"
+                        />
                     </div>
                     <div>
                         <DatePicker
