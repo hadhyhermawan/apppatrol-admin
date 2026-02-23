@@ -175,29 +175,30 @@ function LaporanPresensiPage() {
     }, [dateRange, filterDept, filterCabang, searchTerm, viewMode, startDate, endDate]);
 
     const getStatusBadge = (status: string) => {
-        const s = status ? status.toLowerCase() : '';
-        let badgeClass = "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400";
-        let label = status;
-
-        if (s === 'h' || s === 'hadir') {
-            badgeClass = "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400";
-            label = "Hadir";
-        } else if (s === 'i' || s === 'izin') {
-            badgeClass = "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400";
-            label = "Izin";
-        } else if (s === 's' || s === 'sakit') {
-            badgeClass = "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400";
-            label = "Sakit";
-        } else if (s === 'a' || s === 'alpha') {
-            badgeClass = "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400";
-            label = "Alpha";
-        } else if (s === 'c' || s === 'cuti') {
-            badgeClass = "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400";
-            label = "Cuti";
-        }
-
+        const s = status ? status.toUpperCase().trim() : '';
+        const map: Record<string, { cls: string; label: string }> = {
+            'H': { cls: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400', label: 'Hadir' },
+            'HADIR': { cls: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400', label: 'Hadir' },
+            'I': { cls: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400', label: 'Izin' },
+            'IZIN': { cls: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400', label: 'Izin' },
+            'S': { cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400', label: 'Sakit' },
+            'SAKIT': { cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400', label: 'Sakit' },
+            'A': { cls: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400', label: 'Alpha' },
+            'ALPHA': { cls: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400', label: 'Alpha' },
+            'TA': { cls: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400', label: 'Tdk Absen Pulang' },
+            'TL': { cls: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400', label: 'Terlambat' },
+            'CT': { cls: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400', label: 'Cuti' },
+            'DL': { cls: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-400', label: 'Dinas Luar' },
+            'LB': { cls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400', label: 'Lembur' },
+        };
+        const found = map[s];
+        const cls = found?.cls ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400';
+        const label = found?.label ?? (status || '-');
         return (
-            <span className={clsx("inline-flex rounded-full px-3 py-1 text-xs font-medium", badgeClass)}>
+            <span
+                title={`Status: ${label} (${status})`}
+                className={clsx("inline-flex rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap", cls)}
+            >
                 {label}
             </span>
         );
@@ -512,29 +513,46 @@ function LaporanPresensiPage() {
                                                 let textClass = "text-black dark:text-white";
                                                 let content = "-";
 
-                                                if (cell) {
-                                                    if (cell.status === 'h') {
+                                                if (cell && cell.status !== '-') {
+                                                    const s = cell.status.toLowerCase();
+                                                    if (s === 'h') {
                                                         content = "H";
-                                                        // Check late? The backend 'status' doesn't explicitly say late unless we check logic.
-                                                        // But we can rely on simple color for now.
                                                         bgClass = "bg-green-100 dark:bg-green-900/30";
                                                         textClass = "text-green-700 dark:text-green-400";
-                                                    } else if (cell.status === 'i') {
+                                                    } else if (s === 'i') {
                                                         content = "I";
                                                         bgClass = "bg-blue-100 dark:bg-blue-900/30";
                                                         textClass = "text-blue-700 dark:text-blue-400";
-                                                    } else if (cell.status === 's') {
+                                                    } else if (s === 's') {
                                                         content = "S";
                                                         bgClass = "bg-yellow-100 dark:bg-yellow-900/30";
                                                         textClass = "text-yellow-700 dark:text-yellow-400";
-                                                    } else if (cell.status === 'c') {
-                                                        content = "C";
+                                                    } else if (s === 'c' || s === 'ct') {
+                                                        content = "CT";
                                                         bgClass = "bg-purple-100 dark:bg-purple-900/30";
                                                         textClass = "text-purple-700 dark:text-purple-400";
-                                                    } else if (cell.status === 'a') {
+                                                    } else if (s === 'a') {
                                                         content = "A";
                                                         bgClass = "bg-red-100 dark:bg-red-900/30";
                                                         textClass = "text-red-700 dark:text-red-400";
+                                                    } else if (s === 'ta') {
+                                                        content = "TA";
+                                                        bgClass = "bg-orange-100 dark:bg-orange-900/30";
+                                                        textClass = "text-orange-700 dark:text-orange-400";
+                                                    } else if (s === 'tl') {
+                                                        content = "TL";
+                                                        bgClass = "bg-amber-100 dark:bg-amber-900/30";
+                                                        textClass = "text-amber-700 dark:text-amber-400";
+                                                    } else if (s === 'dl') {
+                                                        content = "DL";
+                                                        bgClass = "bg-cyan-100 dark:bg-cyan-900/30";
+                                                        textClass = "text-cyan-700 dark:text-cyan-400";
+                                                    } else if (s === 'lb') {
+                                                        content = "LB";
+                                                        bgClass = "bg-indigo-100 dark:bg-indigo-900/30";
+                                                        textClass = "text-indigo-700 dark:text-indigo-400";
+                                                    } else {
+                                                        content = s.toUpperCase();
                                                     }
                                                 }
 
