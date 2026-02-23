@@ -3,14 +3,18 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { RefreshCw, Plus, Edit, Trash2, Search, Calendar, Building2 } from 'lucide-react';
+import { RefreshCw, Plus, Edit, Trash2, Search, Building2, X, Save } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
-import flatpickr from "flatpickr";
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
 import SearchableSelect from '@/components/form/SearchableSelect';
-import "flatpickr/dist/flatpickr.min.css";
+import dynamic from 'next/dynamic';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 
 type GajiPokokItem = {
     kode_gaji: string;
@@ -50,6 +54,24 @@ function PayrollGajiPokokPage() {
     const [keyword, setKeyword] = useState('');
     const [kodeCabang, setKodeCabang] = useState('');
     const [kodeDept, setKodeDept] = useState('');
+
+    // Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+    const [formData, setFormData] = useState<{
+        kode_gaji: string;
+        nik: string;
+        jumlah: number | '';
+        tanggal_berlaku: string;
+    }>({
+        kode_gaji: '',
+        nik: '',
+        jumlah: '',
+        tanggal_berlaku: '',
+    });
+    const [editingKode, setEditingKode] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
     const fetchData = async () => {
         setLoading(true);
@@ -116,113 +138,80 @@ function PayrollGajiPokokPage() {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
     };
 
-    const handleCreate = () => {
-        const employeeOptions = employees.map(e => `<option value="${e.nik}">${e.nama_karyawan} (${e.nik})</option>`).join('');
+    const handleOpenCreate = () => {
+        setErrorMsg('');
+        setModalMode('create');
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10);
 
-        Swal.fire({
-            title: 'Tambah Gaji Pokok',
-            html: `
-                <div class="flex flex-col gap-3 text-left">
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Karyawan</label>
-                        <select id="swal-nik" class="swal2-select w-full m-0 text-base">
-                            <option value="">Pilih Karyawan</option>
-                            ${employeeOptions}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Jumlah Gaji Pokok</label>
-                        <input id="swal-jumlah" type="number" class="swal2-input w-full m-0" placeholder="Rp 0">
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Tanggal Berlaku</label>
-                        <input id="swal-tanggal" class="swal2-input w-full m-0 flatpickr-date" placeholder="YYYY-MM-DD">
-                    </div>
-                </div>
-            `,
-            width: '600px',
-            focusConfirm: false,
-            didOpen: () => {
-                flatpickr("#swal-tanggal", {
-                    dateFormat: "Y-m-d",
-                    allowInput: true,
-                    defaultDate: new Date()
-                });
-            },
-            preConfirm: () => {
-                const nik = (document.getElementById('swal-nik') as HTMLSelectElement).value;
-                const jumlah = (document.getElementById('swal-jumlah') as HTMLInputElement).value;
-                const tanggal = (document.getElementById('swal-tanggal') as HTMLInputElement).value;
-
-                if (!nik || !jumlah || !tanggal) {
-                    Swal.showValidationMessage('Semua field harus diisi');
-                }
-                return { nik, jumlah: parseInt(jumlah), tanggal_berlaku: tanggal };
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await apiClient.post('/payroll/gaji-pokok', result.value);
-                    Swal.fire('Berhasil!', 'Data telah disimpan.', 'success');
-                    fetchData();
-                } catch (error: any) {
-                    Swal.fire('Gagal!', error.response?.data?.detail || 'Gagal menyimpan data.', 'error');
-                }
-            }
+        setFormData({
+            kode_gaji: '',
+            nik: '',
+            jumlah: '',
+            tanggal_berlaku: dateStr,
         });
+        setIsModalOpen(true);
     };
 
-    const handleEdit = (item: GajiPokokItem) => {
-        Swal.fire({
-            title: 'Edit Gaji Pokok',
-            html: `
-                <div class="flex flex-col gap-3 text-left">
-                    <div class="p-3 bg-gray-100 rounded-lg">
-                        <p class="text-sm text-gray-500">Karyawan</p>
-                        <p class="font-semibold">${item.nama_karyawan} (${item.nik})</p>
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Jumlah Gaji Pokok</label>
-                        <input id="swal-jumlah" type="number" class="swal2-input w-full m-0" placeholder="Rp 0" value="${item.jumlah}">
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Tanggal Berlaku</label>
-                        <input id="swal-tanggal" class="swal2-input w-full m-0 flatpickr-date" placeholder="YYYY-MM-DD" value="${item.tanggal_berlaku}">
-                    </div>
-                </div>
-            `,
-            width: '500px',
-            focusConfirm: false,
-            didOpen: () => {
-                flatpickr("#swal-tanggal", {
-                    dateFormat: "Y-m-d",
-                    allowInput: true
-                });
-            },
-            preConfirm: () => {
-                const jumlah = (document.getElementById('swal-jumlah') as HTMLInputElement).value;
-                const tanggal = (document.getElementById('swal-tanggal') as HTMLInputElement).value;
-
-                if (!jumlah || !tanggal) {
-                    Swal.showValidationMessage('Semua field harus diisi');
-                }
-                return { jumlah: parseInt(jumlah), tanggal_berlaku: tanggal };
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await apiClient.put(`/payroll/gaji-pokok/${item.kode_gaji}`, result.value);
-                    Swal.fire('Berhasil!', 'Data telah diperbarui.', 'success');
-                    fetchData();
-                } catch (error: any) {
-                    Swal.fire('Gagal!', error.response?.data?.detail || 'Gagal memperbarui data.', 'error');
-                }
-            }
+    const handleOpenEdit = (item: GajiPokokItem) => {
+        setErrorMsg('');
+        setModalMode('edit');
+        setFormData({
+            kode_gaji: item.kode_gaji,
+            nik: item.nik,
+            jumlah: item.jumlah,
+            tanggal_berlaku: item.tanggal_berlaku,
         });
+        setEditingKode(item.kode_gaji);
+        setIsModalOpen(true);
     };
 
-    const handleDelete = (kode: string) => {
-        Swal.fire({
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setErrorMsg('');
+
+        if (!formData.nik || formData.jumlah === '' || !formData.tanggal_berlaku) {
+            setErrorMsg('Harap isi Karyawan, Jumlah Gaji, dan Tanggal.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                nik: formData.nik,
+                jumlah: Number(formData.jumlah),
+                tanggal_berlaku: formData.tanggal_berlaku
+            };
+
+            if (modalMode === 'create') {
+                await apiClient.post('/payroll/gaji-pokok', payload);
+            } else {
+                await apiClient.put(`/payroll/gaji-pokok/${editingKode}`, payload);
+            }
+            setIsModalOpen(false);
+            fetchData();
+            Swal.fire({
+                title: 'Berhasil!',
+                text: modalMode === 'create' ? 'Data berhasil disimpan.' : 'Data berhasil diperbarui.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } catch (error: any) {
+            console.error(error);
+            const msg = error.response?.data?.detail || 'Terjadi kesalahan saat menyimpan.';
+            setErrorMsg(msg);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (kode: string) => {
+        const result = await Swal.fire({
             title: 'Hapus Data?',
             text: "Data akan dihapus permanen!",
             icon: 'warning',
@@ -231,17 +220,24 @@ function PayrollGajiPokokPage() {
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Ya, hapus!',
             cancelButtonText: 'Batal'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await apiClient.delete(`/payroll/gaji-pokok/${kode}`);
-                    Swal.fire('Terhapus!', 'Data berhasil dihapus.', 'success');
-                    fetchData();
-                } catch (error) {
-                    Swal.fire('Gagal!', 'Gagal menghapus data.', 'error');
-                }
-            }
         });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            await apiClient.delete(`/payroll/gaji-pokok/${kode}`);
+            Swal.fire({
+                title: 'Terhapus!',
+                text: 'Data berhasil dihapus.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            fetchData();
+        } catch (error: any) {
+            console.error(error);
+            Swal.fire('Gagal!', error.response?.data?.detail || "Gagal menghapus data.", 'error');
+        }
     };
 
     return (
@@ -260,7 +256,7 @@ function PayrollGajiPokokPage() {
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
                         {canCreate('gajipokok') && (
-                            <button onClick={handleCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
+                            <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
                                 <Plus className="h-4 w-4" />
                                 <span>Tambah Data</span>
                             </button>
@@ -342,9 +338,11 @@ function PayrollGajiPokokPage() {
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => handleEdit(item)} className="hover:text-brand-500 text-gray-500 transition-colors" title="Edit">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
+                                                {canUpdate('gajipokok') && (
+                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 transition-colors" title="Edit">
+                                                        <Edit className="h-4 w-4" />
+                                                    </button>
+                                                )}
                                                 {canDelete('gajipokok') && (
                                                     <button onClick={() => handleDelete(item.kode_gaji)} className="hover:text-red-500 text-gray-500 transition-colors" title="Hapus">
                                                         <Trash2 className="h-4 w-4" />
@@ -362,6 +360,81 @@ function PayrollGajiPokokPage() {
                     * Menampilkan 50 data terakhir yang diinput/update. Gunakan pencarian untuk menemukan data spesifik.
                 </div>
             </div>
+
+            {/* MODAL */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-boxdark rounded-lg shadow-xl w-full max-w-lg overflow-hidden transform transition-all scale-100 max-h-[90vh] overflow-y-auto">
+                        <div className="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center bg-white dark:bg-boxdark sticky top-0 z-10">
+                            <h3 className="text-lg font-bold text-black dark:text-white">
+                                {modalMode === 'create' ? 'Tambah Gaji Pokok' : 'Edit Gaji Pokok'}
+                            </h3>
+                            <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit}>
+                            <div className="px-6 py-5 space-y-4">
+                                {errorMsg && (
+                                    <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100">
+                                        {errorMsg}
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">Karyawan</label>
+                                    {modalMode === 'create' ? (
+                                        <SearchableSelect
+                                            options={employees.map(k => ({ value: k.nik, label: `${k.nama_karyawan} (${k.nik})` }))}
+                                            value={formData.nik}
+                                            onChange={(val) => setFormData({ ...formData, nik: val })}
+                                            placeholder="Pilih Karyawan"
+                                        />
+                                    ) : (
+                                        <div className="p-3 bg-gray-100 dark:bg-meta-4 rounded-lg">
+                                            <p className="font-semibold text-black dark:text-white">
+                                                {employees.find(e => e.nik === formData.nik)?.nama_karyawan || formData.nik}
+                                            </p>
+                                            <p className="text-sm text-gray-500">{formData.nik}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">Jumlah Gaji Pokok (Rp)</label>
+                                    <input
+                                        type="number"
+                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
+                                        placeholder="0"
+                                        value={formData.jumlah}
+                                        onChange={e => setFormData({ ...formData, jumlah: e.target.value === '' ? '' : Number(e.target.value) })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">Tanggal Berlaku</label>
+                                    <DatePicker
+                                        id="form-tanggal"
+                                        placeholder="Pilih Tanggal"
+                                        defaultDate={formData.tanggal_berlaku}
+                                        onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, tanggal_berlaku: dateStr })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="px-6 py-4 bg-gray-50 dark:bg-meta-4/30 flex justify-end gap-3 border-t border-stroke dark:border-strokedark sticky bottom-0 z-10">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium text-black bg-white border border-stroke rounded-lg hover:bg-gray-50 dark:bg-meta-4 dark:text-white dark:border-strokedark">
+                                    Batal
+                                </button>
+                                <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-opacity-90 flex items-center">
+                                    {isSubmitting ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-2" /> Simpan</>}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </MainLayout>
     );
 }
