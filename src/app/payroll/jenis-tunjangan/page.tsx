@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { RefreshCw, Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, Trash2 } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
@@ -19,6 +19,24 @@ function PayrollJenisTunjanganPage() {
     const [data, setData] = useState<JenistunjanganItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [perPage, setPerPage] = useState(10);
+
+    // Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+    const [formData, setFormData] = useState<{
+        kode_jenis_tunjangan: string;
+        jenis_tunjangan: string;
+    }>({
+        kode_jenis_tunjangan: '',
+        jenis_tunjangan: '',
+    });
+    const [editingKode, setEditingKode] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
     const fetchData = async () => {
         setLoading(true);
@@ -46,67 +64,76 @@ function PayrollJenisTunjanganPage() {
         item.jenis_tunjangan.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleCreate = () => {
-        // ... (keep existing handleCreate logic, but I can't partially edit well with replace_file_content so I will just return the full logic or use multi_replace if I wanted to be surgical, but replacing the whole block is easier for context)
-        Swal.fire({
-            title: 'Tambah Jenis Tunjangan',
-            html: `
-                <input id="swal-kode" class="swal2-input" placeholder="Kode Jenis Tunjangan (Max 4)" maxlength="4">
-                <input id="swal-jenis" class="swal2-input" placeholder="Jenis Tunjangan">
-            `,
-            focusConfirm: false,
-            preConfirm: () => {
-                const kode = (document.getElementById('swal-kode') as HTMLInputElement).value;
-                const jenis = (document.getElementById('swal-jenis') as HTMLInputElement).value;
-                if (!kode || !jenis) {
-                    Swal.showValidationMessage('Kode dan Jenis Tunjangan harus diisi');
-                }
-                return { kode_jenis_tunjangan: kode, jenis_tunjangan: jenis };
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await apiClient.post('/payroll/jenis-tunjangan', result.value);
-                    Swal.fire('Berhasil!', 'Data telah disimpan.', 'success');
-                    fetchData();
-                } catch (error: any) {
-                    Swal.fire('Gagal!', error.response?.data?.detail || 'Gagal menyimpan data.', 'error');
-                }
-            }
+    // Pagination Logic
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * perPage;
+        return filteredData.slice(start, start + perPage);
+    }, [filteredData, currentPage, perPage]);
+
+    const totalPages = Math.ceil(filteredData.length / perPage);
+
+    // Handlers
+    const handleOpenCreate = () => {
+        setErrorMsg('');
+        setModalMode('create');
+        setFormData({
+            kode_jenis_tunjangan: '',
+            jenis_tunjangan: '',
         });
+        setIsModalOpen(true);
     };
 
-    const handleEdit = (item: JenistunjanganItem) => {
-        Swal.fire({
-            title: 'Edit Jenis Tunjangan',
-            html: `
-                <input id="swal-kode" class="swal2-input" placeholder="Kode Jenis Tunjangan" value="${item.kode_jenis_tunjangan}" maxlength="4">
-                <input id="swal-jenis" class="swal2-input" placeholder="Jenis Tunjangan" value="${item.jenis_tunjangan}">
-            `,
-            focusConfirm: false,
-            preConfirm: () => {
-                const kode = (document.getElementById('swal-kode') as HTMLInputElement).value;
-                const jenis = (document.getElementById('swal-jenis') as HTMLInputElement).value;
-                if (!kode || !jenis) {
-                    Swal.showValidationMessage('Kode dan Jenis Tunjangan harus diisi');
-                }
-                return { kode_jenis_tunjangan: kode, jenis_tunjangan: jenis };
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await apiClient.put(`/payroll/jenis-tunjangan/${item.kode_jenis_tunjangan}`, result.value);
-                    Swal.fire('Berhasil!', 'Data telah diperbarui.', 'success');
-                    fetchData();
-                } catch (error: any) {
-                    Swal.fire('Gagal!', error.response?.data?.detail || 'Gagal memperbarui data.', 'error');
-                }
-            }
+    const handleOpenEdit = (item: JenistunjanganItem) => {
+        setErrorMsg('');
+        setModalMode('edit');
+        setFormData({
+            kode_jenis_tunjangan: item.kode_jenis_tunjangan,
+            jenis_tunjangan: item.jenis_tunjangan,
         });
+        setEditingKode(item.kode_jenis_tunjangan);
+        setIsModalOpen(true);
     };
 
-    const handleDelete = (kode: string) => {
-        Swal.fire({
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setErrorMsg('');
+
+        if (!formData.kode_jenis_tunjangan || !formData.jenis_tunjangan) {
+            setErrorMsg('Harap isi Kode dan Jenis Tunjangan.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            if (modalMode === 'create') {
+                await apiClient.post('/payroll/jenis-tunjangan', formData);
+            } else {
+                await apiClient.put(`/payroll/jenis-tunjangan/${editingKode}`, formData);
+            }
+            setIsModalOpen(false);
+            fetchData();
+            Swal.fire({
+                title: 'Berhasil!',
+                text: modalMode === 'create' ? 'Data berhasil disimpan.' : 'Data berhasil diperbarui.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } catch (error: any) {
+            console.error(error);
+            const msg = error.response?.data?.detail || 'Terjadi kesalahan saat menyimpan.';
+            setErrorMsg(msg);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (kode: string) => {
+        const result = await Swal.fire({
             title: 'Hapus Data?',
             text: "Data akan dihapus permanen!",
             icon: 'warning',
@@ -115,17 +142,24 @@ function PayrollJenisTunjanganPage() {
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Ya, hapus!',
             cancelButtonText: 'Batal'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await apiClient.delete(`/payroll/jenis-tunjangan/${kode}`);
-                    Swal.fire('Terhapus!', 'Data berhasil dihapus.', 'success');
-                    fetchData();
-                } catch (error) {
-                    Swal.fire('Gagal!', 'Gagal menghapus data.', 'error');
-                }
-            }
         });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            await apiClient.delete(`/payroll/jenis-tunjangan/${kode}`);
+            Swal.fire({
+                title: 'Terhapus!',
+                text: 'Data berhasil dihapus.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            fetchData();
+        } catch (error: any) {
+            console.error(error);
+            Swal.fire('Gagal!', error.response?.data?.detail || "Gagal menghapus data.", 'error');
+        }
     };
 
     return (
@@ -141,72 +175,72 @@ function PayrollJenisTunjanganPage() {
                         </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="relative">
-                            <input
-                                type="text"
-                                placeholder="Cari Jenis Tunjangan..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 bg-transparent py-2 pl-4 pr-10 text-black shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white dark:focus:border-brand-500 sm:w-64"
-                            />
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                <svg
-                                    className="h-5 w-5 text-gray-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                    ></path>
-                                </svg>
-                            </div>
-                        </div>
-
-                        {canCreate('jenistunjangan') && (
-                            <button onClick={handleCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm whitespace-nowrap">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Baru</span>
+                    <div className="flex gap-3">
+                        <button onClick={() => fetchData()} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
+                            <RefreshCw className="h-4 w-4" />
+                            <span className="hidden sm:inline">Refresh</span>
                         </button>
+                        {canCreate('jenistunjangan') && (
+                            <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm whitespace-nowrap">
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Baru</span>
+                            </button>
                         )}
+                    </div>
+                </div>
+
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <div className="relative col-span-1 md:col-span-2">
+                        <input
+                            type="text"
+                            placeholder="Cari Kode atau Jenis Tunjangan..."
+                            value={searchTerm}
+                            onChange={e => {
+                                setSearchTerm(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                        />
+                        <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
                 </div>
 
                 <div className="max-w-full overflow-x-auto">
                     <table className="w-full table-auto">
                         <thead>
-                            <tr className="bg-gray-100 text-left dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-                                <th className="min-w-[150px] px-4 py-4 font-semibold text-gray-900 dark:text-white">Kode</th>
-                                <th className="min-w-[200px] px-4 py-4 font-semibold text-gray-900 dark:text-white">Jenis Tunjangan</th>
-                                <th className="px-4 py-4 font-semibold text-gray-900 dark:text-white text-center">Aksi</th>
+                            <tr className="bg-gray-100 text-left dark:bg-gray-800">
+                                <th className="min-w-[50px] px-4 py-4 font-semibold text-black dark:text-white text-center">No</th>
+                                <th className="min-w-[150px] px-4 py-4 font-semibold text-black dark:text-white">Kode</th>
+                                <th className="min-w-[200px] px-4 py-4 font-semibold text-black dark:text-white">Jenis Tunjangan</th>
+                                <th className="px-4 py-4 font-semibold text-black dark:text-white text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
-                            ) : filteredData.length === 0 ? (
-                                <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500">
+                                <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
+                            ) : paginatedData.length === 0 ? (
+                                <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500">
                                     {searchTerm ? `Tidak ditemukan data untuk "${searchTerm}"` : 'Tidak ada data ditemukan.'}
                                 </td></tr>
                             ) : (
-                                filteredData.map((item) => (
+                                paginatedData.map((item, idx) => (
                                     <tr key={item.kode_jenis_tunjangan} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors">
+                                        <td className="px-4 py-4 text-center">
+                                            <p className="text-black dark:text-white text-sm">{(currentPage - 1) * perPage + idx + 1}</p>
+                                        </td>
                                         <td className="px-4 py-4 text-black dark:text-white font-medium">{item.kode_jenis_tunjangan}</td>
                                         <td className="px-4 py-4 text-black dark:text-white">{item.jenis_tunjangan}</td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-3">
-                                                <button onClick={() => handleEdit(item)} className="hover:text-brand-500 text-gray-500 transition-colors" title="Edit">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
+                                                {canUpdate('jenistunjangan') && (
+                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-yellow-400 transition-colors" title="Edit">
+                                                        <Edit className="h-5 w-5" />
+                                                    </button>
+                                                )}
                                                 {canDelete('jenistunjangan') && (
-                                                    <button onClick={() => handleDelete(item.kode_jenis_tunjangan)} className="hover:text-red-500 text-gray-500 transition-colors" title="Hapus">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                    <button onClick={() => handleDelete(item.kode_jenis_tunjangan)} className="hover:text-red-500 text-red-500 transition-colors" title="Hapus">
+                                                        <Trash className="h-5 w-5" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -216,7 +250,92 @@ function PayrollJenisTunjanganPage() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                {filteredData.length > 0 && (
+                    <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-stroke pt-4 dark:border-strokedark">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                            Menampilkan <span className="font-medium text-black dark:text-white">{(currentPage - 1) * perPage + 1}</span> - <span className="font-medium text-black dark:text-white">{Math.min(currentPage * perPage, filteredData.length)}</span> dari <span className="font-medium text-black dark:text-white">{filteredData.length}</span> data
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4"
+                            >
+                                <ArrowRight className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
+
+            {/* MODAL */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-boxdark rounded-lg shadow-xl w-full max-w-lg overflow-hidden transform transition-all scale-100 max-h-[90vh] overflow-y-auto">
+                        <div className="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center sticky top-0 bg-white dark:bg-boxdark z-10">
+                            <h3 className="text-lg font-bold text-black dark:text-white">
+                                {modalMode === 'create' ? 'Tambah Jenis Tunjangan' : 'Edit Jenis Tunjangan'}
+                            </h3>
+                            <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit}>
+                            <div className="px-6 py-5 space-y-4">
+                                {errorMsg && (
+                                    <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100">
+                                        {errorMsg}
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">Kode Jenis Tunjangan</label>
+                                    <input
+                                        type="text"
+                                        maxLength={4}
+                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
+                                        placeholder="Maks 4 Karakter (e.g., T001)"
+                                        value={formData.kode_jenis_tunjangan}
+                                        onChange={e => setFormData({ ...formData, kode_jenis_tunjangan: e.target.value })}
+                                        disabled={modalMode === 'edit'}
+                                    />
+                                    {modalMode === 'edit' && <p className="text-xs text-gray-400 mt-1">Kode tidak dapat diubah saat mengedit.</p>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">Jenis Tunjangan</label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white"
+                                        placeholder="Nama Tunjangan"
+                                        value={formData.jenis_tunjangan}
+                                        onChange={e => setFormData({ ...formData, jenis_tunjangan: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="px-6 py-4 bg-gray-50 dark:bg-meta-4/30 flex justify-end gap-3 border-t border-stroke dark:border-strokedark sticky bottom-0 z-10">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium text-black bg-white border border-stroke rounded-lg hover:bg-gray-50 dark:bg-meta-4 dark:text-white dark:border-strokedark">
+                                    Batal
+                                </button>
+                                <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-opacity-90 flex items-center">
+                                    {isSubmitting ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-2" /> Simpan</>}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </MainLayout>
     );
 }
