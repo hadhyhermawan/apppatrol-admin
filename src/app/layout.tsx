@@ -6,6 +6,8 @@ import { SidebarProvider } from "@/context/SidebarContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { PermissionProvider } from "@/contexts/PermissionContext";
 
+import FaviconProvider from "@/components/common/FaviconProvider";
+
 const outfit = Outfit({
   subsets: ["latin"],
 });
@@ -23,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.className} dark:bg-gray-900 overflow-x-hidden`} suppressHydrationWarning={true}>
+        <FaviconProvider />
         <ThemeProvider>
           <PermissionProvider>
             <SidebarProvider>{children}</SidebarProvider>
