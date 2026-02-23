@@ -226,9 +226,9 @@ function PayrollGajiPokokPage() {
                         </button>
                         {canCreate('gajipokok') && (
                             <button onClick={handleCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Data</span>
-                        </button>
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Data</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -242,9 +242,9 @@ function PayrollGajiPokokPage() {
                             value={keyword}
                             onChange={(e) => setKeyword(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 pl-10"
+                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                         />
-                        <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                        <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
                     <div className="relative">
                         <input
@@ -256,7 +256,7 @@ function PayrollGajiPokokPage() {
                             className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                         />
                     </div>
-                    <div className="relative flex gap-2">
+                    <div className="relative">
                         <input
                             type="text"
                             placeholder="Kode Dept..."
@@ -265,9 +265,6 @@ function PayrollGajiPokokPage() {
                             onKeyDown={(e) => e.key === 'Enter' && fetchData()}
                             className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                         />
-                        <button onClick={fetchData} className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-opacity-90">
-                            <Search className="h-4 w-4" />
-                        </button>
                     </div>
                 </div>
 
@@ -319,8 +316,8 @@ function PayrollGajiPokokPage() {
                                                 </button>
                                                 {canDelete('gajipokok') && (
                                                     <button onClick={() => handleDelete(item.kode_gaji)} className="hover:text-red-500 text-gray-500 transition-colors" title="Hapus">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
