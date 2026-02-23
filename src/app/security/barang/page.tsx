@@ -29,6 +29,8 @@ type BarangItem = {
     foto_keluar: string | null;
     created_at?: string;
     updated_at?: string;
+    petugas_penerima?: string;
+    petugas_keluar?: string;
 };
 
 type CabangOption = { code: string; name: string };
@@ -375,7 +377,17 @@ function SecurityBarangPage() {
                                             </div>
                                             {item.penerima && (
                                                 <div className="text-xs text-brand-600 font-medium mt-1">
-                                                    Penerima: {item.penerima}
+                                                    Penerima (Tujuan): {item.penerima}
+                                                </div>
+                                            )}
+                                            {item.petugas_penerima && (
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Penjaga Masuk: <span className="text-black dark:text-white font-medium">{item.petugas_penerima}</span>
+                                                </div>
+                                            )}
+                                            {item.petugas_keluar && (
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Penjaga Keluar: <span className="text-black dark:text-white font-medium">{item.petugas_keluar}</span>
                                                 </div>
                                             )}
                                         </td>
