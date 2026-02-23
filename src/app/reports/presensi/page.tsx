@@ -484,6 +484,7 @@ function LaporanPresensiPage() {
                                     <th className="px-2 py-2 font-medium text-black dark:text-white border border-gray-200 dark:border-gray-700 text-center w-[80px] bg-blue-50 dark:bg-blue-900/20">Izin</th>
                                     <th className="px-2 py-2 font-medium text-black dark:text-white border border-gray-200 dark:border-gray-700 text-center w-[80px] bg-yellow-50 dark:bg-yellow-900/20">Sakit</th>
                                     <th className="px-2 py-2 font-medium text-black dark:text-white border border-gray-200 dark:border-gray-700 text-center w-[80px] bg-red-50 dark:bg-red-900/20">Alpha</th>
+                                    <th className="px-2 py-2 font-medium text-black dark:text-white border border-gray-200 dark:border-gray-700 text-center w-[80px] bg-orange-50 dark:bg-orange-900/20">TA</th>
                                     <th className="px-2 py-2 font-medium text-black dark:text-white border border-gray-200 dark:border-gray-700 text-center w-[80px]">Telat</th>
                                 </tr>
                             </thead>
@@ -566,6 +567,7 @@ function LaporanPresensiPage() {
                                             <td className="px-2 py-2 border border-gray-200 dark:border-gray-700 text-center font-bold">{emp.summary.izin}</td>
                                             <td className="px-2 py-2 border border-gray-200 dark:border-gray-700 text-center font-bold">{emp.summary.sakit}</td>
                                             <td className="px-2 py-2 border border-gray-200 dark:border-gray-700 text-center font-bold">{emp.summary.alpha}</td>
+                                            <td className="px-2 py-2 border border-gray-200 dark:border-gray-700 text-center font-bold text-orange-500">{emp.summary.ta || 0}</td>
                                             <td className="px-2 py-2 border border-gray-200 dark:border-gray-700 text-center font-bold text-red-500">{emp.summary.terlambat}</td>
                                         </tr>
                                     ))
