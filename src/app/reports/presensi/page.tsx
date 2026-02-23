@@ -254,45 +254,27 @@ function LaporanPresensiPage() {
                     </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Cari Nama / NIK..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                        />
-                        <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
-                    </div>
-
-                    <div className="flex gap-4">
-                        <div className="flex-1">
-                            <label className="mb-2.5 block font-medium text-black dark:text-white">
-                                Dari Tanggal
-                            </label>
+                <div className="mb-6 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+                    {/* Search Field */}
+                    <div className="flex flex-col">
+                        <label className="mb-2 block text-sm font-medium text-black dark:text-white">
+                            Pencarian
+                        </label>
+                        <div className="relative h-[42px]">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                             <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="w-full rounded border-[1.5px] border-stroke bg-transparent px-5 py-3 font-medium outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-form-strokedark dark:bg-form-input dark:focus:border-brand-500"
-                            />
-                        </div>
-                        <div className="flex-1">
-                            <label className="mb-2.5 block font-medium text-black dark:text-white">
-                                Sampai Tanggal
-                            </label>
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="w-full rounded border-[1.5px] border-stroke bg-transparent px-5 py-3 font-medium outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-form-strokedark dark:bg-form-input dark:focus:border-brand-500"
+                                type="text"
+                                placeholder="Cari Nama / NIK..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="h-full w-full rounded-lg border-[1.5px] border-stroke bg-transparent pl-10 pr-4 text-sm outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                             />
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-4">
-                        <label className="mb-2.5 block font-medium text-black dark:text-white">
+                    {/* Cabang Filter */}
+                    <div className="flex flex-col">
+                        <label className="mb-2 block text-sm font-medium text-black dark:text-white">
                             Cabang
                         </label>
                         <SearchableSelect
@@ -303,8 +285,9 @@ function LaporanPresensiPage() {
                         />
                     </div>
 
-                    <div className="flex flex-col gap-4">
-                        <label className="mb-2.5 block font-medium text-black dark:text-white">
+                    {/* Departemen Filter */}
+                    <div className="flex flex-col">
+                        <label className="mb-2 block text-sm font-medium text-black dark:text-white">
                             Departemen
                         </label>
                         <SearchableSelect
@@ -313,6 +296,38 @@ function LaporanPresensiPage() {
                             onChange={(val) => setFilterDept(val)}
                             placeholder="Semua Departemen"
                         />
+                    </div>
+
+                    {/* Dari Tanggal */}
+                    <div className="flex flex-col">
+                        <label className="mb-2 block text-sm font-medium text-black dark:text-white">
+                            Dari Tanggal
+                        </label>
+                        <div className="relative h-[42px]">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="h-full w-full rounded-lg border-[1.5px] border-stroke bg-transparent pl-10 pr-4 text-sm font-medium outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Sampai Tanggal */}
+                    <div className="flex flex-col">
+                        <label className="mb-2 block text-sm font-medium text-black dark:text-white">
+                            Sampai Tanggal
+                        </label>
+                        <div className="relative h-[42px]">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="h-full w-full rounded-lg border-[1.5px] border-stroke bg-transparent pl-10 pr-4 text-sm font-medium outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                            />
+                        </div>
                     </div>
                 </div>
 
