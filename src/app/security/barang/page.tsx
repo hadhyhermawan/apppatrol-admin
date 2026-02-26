@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
 import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, Package, Calendar } from 'lucide-react';
@@ -44,6 +44,7 @@ function SecurityBarangPage() {
     const [dateEnd, setDateEnd] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const isFirstRender = useRef(true);
 
     const [cabangOptions, setCabangOptions] = useState<CabangOption[]>([]);
 
@@ -113,7 +114,6 @@ function SecurityBarangPage() {
 
     useEffect(() => {
         fetchOptions();
-        fetchData();
     }, []);
 
     useEffect(() => {

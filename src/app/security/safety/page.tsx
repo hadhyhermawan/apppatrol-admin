@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
 import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, User, Eye, Calendar, Clock, MapPin } from 'lucide-react';
@@ -45,6 +45,7 @@ function SecuritySafetyBriefingPage() {
     const [cabangOptions, setCabangOptions] = useState<{ kode_cabang: string; nama_cabang: string }[]>([]);
     const [karyawanList, setKaryawanList] = useState<KaryawanOption[]>([]);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const isFirstRender = useRef(true);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -116,7 +117,6 @@ function SecuritySafetyBriefingPage() {
 
     useEffect(() => {
         fetchOptions();
-        fetchData();
     }, []);
 
     useEffect(() => {

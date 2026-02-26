@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
 import { RefreshCw, Search, X, Eye, FileText, ArrowUpRight, ArrowDownLeft, Calendar, ArrowLeft, ArrowRight, Mail, Trash2, Edit, Save } from 'lucide-react';
@@ -45,6 +45,7 @@ function SecuritySuratPage() {
     const [dateEnd, setDateEnd] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
     const [cabangOptions, setCabangOptions] = useState<{ code: string; name: string }[]>([]);
+    const isFirstRender = useRef(true);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -93,9 +94,11 @@ function SecuritySuratPage() {
         setCurrentPage(1);
         fetchOptions();
         fetchData();
+        isFirstRender.current = false;
     }, [activeTab]);
 
     useEffect(() => {
+        if (isFirstRender.current) return;
         const timer = setTimeout(() => {
             fetchData();
         }, 800);

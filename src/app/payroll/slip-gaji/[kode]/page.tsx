@@ -153,17 +153,17 @@ export default function DetailSlipGajiPage() {
                 </div>
 
                 <div className="max-w-full overflow-x-auto">
-                    <table className="w-full table-auto text-sm border-collapse">
+                    <table className="w-full table-auto text-sm print:border-collapse print:border print:border-black">
                         <thead>
-                            <tr className="bg-gray-100 text-left dark:bg-gray-800 print:bg-gray-200 print:text-black">
-                                <th className="px-3 py-3 font-medium text-black dark:text-white border border-gray-300">NIK</th>
-                                <th className="px-3 py-3 font-medium text-black dark:text-white border border-gray-300">Nama</th>
-                                <th className="px-3 py-3 font-medium text-black dark:text-white border border-gray-300 text-right">Gaji Pokok</th>
-                                <th className="px-3 py-3 font-medium text-black dark:text-white border border-gray-300 text-right">Tunjangan</th>
-                                <th className="px-3 py-3 font-medium text-black dark:text-white border border-gray-300 text-right">BPJS (-)</th>
-                                <th className="px-3 py-3 font-medium text-black dark:text-white border border-gray-300 text-right">Penyesuaian (+/-)</th>
-                                <th className="px-3 py-3 font-medium text-black dark:text-white border border-gray-300 text-right font-bold">Gaji Bersih</th>
-                                <th className="px-3 py-3 font-medium text-black dark:text-white border border-gray-300 text-center print:hidden">Aksi</th>
+                            <tr className="bg-gray-100 text-left dark:bg-gray-800 print:bg-transparent print:text-black">
+                                <th className="px-4 py-4 font-medium text-black dark:text-white print:border print:border-gray-800 print:py-2 print:px-2">NIK</th>
+                                <th className="px-4 py-4 font-medium text-black dark:text-white print:border print:border-gray-800 print:py-2 print:px-2">Nama</th>
+                                <th className="px-4 py-4 font-medium text-black dark:text-white text-right print:border print:border-gray-800 print:py-2 print:px-2">Gaji Pokok</th>
+                                <th className="px-4 py-4 font-medium text-black dark:text-white text-right print:border print:border-gray-800 print:py-2 print:px-2">Tunjangan</th>
+                                <th className="px-4 py-4 font-medium text-black dark:text-white text-right print:border print:border-gray-800 print:py-2 print:px-2">BPJS (-)</th>
+                                <th className="px-4 py-4 font-medium text-black dark:text-white text-right print:border print:border-gray-800 print:py-2 print:px-2">Penyesuaian (+/-)</th>
+                                <th className="px-4 py-4 font-medium text-black dark:text-white text-right font-bold print:border print:border-gray-800 print:py-2 print:px-2">Gaji Bersih</th>
+                                <th className="px-4 py-4 font-medium text-black dark:text-white text-center print:hidden">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -173,38 +173,42 @@ export default function DetailSlipGajiPage() {
                                 <tr><td colSpan={8} className="px-3 py-8 text-center text-gray-500 border border-gray-300">Tidak ada karyawan ditemukan.</td></tr>
                             ) : (
                                 data.map((item) => (
-                                    <tr key={item.nik}>
-                                        <td className="px-3 py-2 text-black dark:text-white font-mono text-xs border border-gray-200 dark:border-gray-700">
-                                            {item.nik}
+                                    <tr key={item.nik} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20 align-top">
+                                        <td className="px-4 py-4 text-black dark:text-white print:border print:border-gray-800 print:px-2 print:py-2">
+                                            <span className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded print:bg-transparent print:p-0">{item.nik}</span>
                                         </td>
-                                        <td className="px-3 py-2 text-black dark:text-white border border-gray-200 dark:border-gray-700">
-                                            <div className="font-semibold">{item.nama_karyawan}</div>
-                                            <div className="text-xs text-gray-500">{item.jabatan}</div>
+                                        <td className="px-4 py-4 print:border print:border-gray-800 print:px-2 print:py-2">
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold text-black dark:text-white">{item.nama_karyawan}</span>
+                                                <span className="text-xs text-gray-500 mt-0.5">{item.jabatan}</span>
+                                            </div>
                                         </td>
-                                        <td className="px-3 py-2 text-right text-black dark:text-white border border-gray-200 dark:border-gray-700">
+                                        <td className="px-4 py-4 text-right font-medium text-gray-600 dark:text-gray-300 print:border print:border-gray-800 print:px-2 print:py-2">
                                             {formatCurrency(item.gaji_pokok)}
                                         </td>
-                                        <td className="px-3 py-2 text-right text-black dark:text-white border border-gray-200 dark:border-gray-700">
+                                        <td className="px-4 py-4 text-right font-medium text-gray-600 dark:text-gray-300 print:border print:border-gray-800 print:px-2 print:py-2">
                                             {formatCurrency(item.tunjangan)}
                                         </td>
-                                        <td className="px-3 py-2 text-right text-red-600 border border-gray-200 dark:border-gray-700">
+                                        <td className="px-4 py-4 text-right font-medium text-red-600 dark:text-red-400 print:border print:border-gray-800 print:px-2 print:py-2">
                                             {formatCurrency(item.bpjs_kesehatan + item.bpjs_tenagakerja)}
                                         </td>
-                                        <td className="px-3 py-2 text-right text-black dark:text-white border border-gray-200 dark:border-gray-700">
+                                        <td className="px-4 py-4 text-right font-medium text-gray-600 dark:text-gray-300 print:border print:border-gray-800 print:px-2 print:py-2">
                                             {formatCurrency(item.penambah - item.pengurang)}
                                         </td>
-                                        <td className="px-3 py-2 text-right font-bold text-green-700 dark:text-green-400 border border-gray-200 dark:border-gray-700 bg-green-50/50 dark:bg-green-900/10">
+                                        <td className="px-4 py-4 text-right font-bold text-green-700 dark:text-green-400 bg-green-50/30 dark:bg-green-900/10 print:bg-transparent print:border print:border-gray-800 print:px-2 print:py-2">
                                             {formatCurrency(item.gaji_bersih)}
                                         </td>
-                                        <td className="px-3 py-2 text-center border border-gray-200 dark:border-gray-700 print:hidden">
-                                            <Link
-                                                href={`/payroll/slip-gaji/${kode}/cetak/${item.nik}`}
-                                                target="_blank"
-                                                className="inline-flex items-center justify-center p-2 rounded-lg bg-brand-500 text-white hover:bg-opacity-90 transition"
-                                                title="Cetak Slip"
-                                            >
-                                                <Printer className="w-4 h-4" />
-                                            </Link>
+                                        <td className="px-4 py-4 text-center print:hidden">
+                                            <div className="flex items-center justify-center">
+                                                <Link
+                                                    href={`/payroll/slip-gaji/${kode}/cetak/${item.nik}`}
+                                                    target="_blank"
+                                                    className="inline-flex items-center justify-center p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 transition-colors"
+                                                    title="Cetak Slip"
+                                                >
+                                                    <Printer className="w-4 h-4" />
+                                                </Link>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -212,14 +216,14 @@ export default function DetailSlipGajiPage() {
                         </tbody>
                         {data.length > 0 && (
                             <tfoot>
-                                <tr className="bg-gray-50 dark:bg-gray-800/50 font-bold text-black dark:text-white print:bg-gray-100">
-                                    <td colSpan={2} className="px-3 py-3 text-right border border-gray-200">Total:</td>
-                                    <td className="px-3 py-3 text-right border border-gray-200">{formatCurrency(data.reduce((s, i) => s + i.gaji_pokok, 0))}</td>
-                                    <td className="px-3 py-3 text-right border border-gray-200">{formatCurrency(data.reduce((s, i) => s + i.tunjangan, 0))}</td>
-                                    <td className="px-3 py-3 text-right border border-gray-200 text-red-600">{formatCurrency(data.reduce((s, i) => s + i.bpjs_kesehatan + i.bpjs_tenagakerja, 0))}</td>
-                                    <td className="px-3 py-3 text-right border border-gray-200">{formatCurrency(data.reduce((s, i) => s + i.penambah - i.pengurang, 0))}</td>
-                                    <td className="px-3 py-3 text-right border border-gray-200 text-green-700">{formatCurrency(data.reduce((s, i) => s + i.gaji_bersih, 0))}</td>
-                                    <td className="print:hidden border border-gray-200"></td>
+                                <tr className="bg-gray-100 dark:bg-gray-800 font-bold text-black dark:text-white print:bg-transparent">
+                                    <td colSpan={2} className="px-4 py-4 text-right print:border print:border-gray-800 print:px-2 print:py-2">Total Karyawan ({data.length}):</td>
+                                    <td className="px-4 py-4 text-right print:border print:border-gray-800 print:px-2 print:py-2">{formatCurrency(data.reduce((s, i) => s + i.gaji_pokok, 0))}</td>
+                                    <td className="px-4 py-4 text-right print:border print:border-gray-800 print:px-2 print:py-2">{formatCurrency(data.reduce((s, i) => s + i.tunjangan, 0))}</td>
+                                    <td className="px-4 py-4 text-right text-red-600 print:border print:border-gray-800 print:px-2 print:py-2">{formatCurrency(data.reduce((s, i) => s + i.bpjs_kesehatan + i.bpjs_tenagakerja, 0))}</td>
+                                    <td className="px-4 py-4 text-right print:border print:border-gray-800 print:px-2 print:py-2">{formatCurrency(data.reduce((s, i) => s + i.penambah - i.pengurang, 0))}</td>
+                                    <td className="px-4 py-4 text-right text-green-700 print:border print:border-gray-800 print:px-2 print:py-2">{formatCurrency(data.reduce((s, i) => s + i.gaji_bersih, 0))}</td>
+                                    <td className="print:hidden"></td>
                                 </tr>
                             </tfoot>
                         )}

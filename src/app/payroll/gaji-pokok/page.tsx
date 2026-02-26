@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { RefreshCw, Plus, Edit, Trash2, Search, Building2, X, Save } from 'lucide-react';
+import { RefreshCw, Plus, Edit, Trash2, Search, Building2, X, Save, ArrowLeft, ArrowRight } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
@@ -55,6 +55,12 @@ function PayrollGajiPokokPage() {
     const [kodeCabang, setKodeCabang] = useState('');
     const [kodeDept, setKodeDept] = useState('');
 
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [perPage] = useState(20);
+    const [totalItems, setTotalItems] = useState(0);
+
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -80,10 +86,18 @@ function PayrollGajiPokokPage() {
             if (keyword) params.append('keyword', keyword);
             if (kodeCabang) params.append('kode_cabang', kodeCabang);
             if (kodeDept) params.append('kode_dept', kodeDept);
-            params.append('limit', '50');
+            params.append('page', currentPage.toString());
+            params.append('per_page', perPage.toString());
 
             const response: any = await apiClient.get(`/payroll/gaji-pokok?${params.toString()}`);
-            if (Array.isArray(response)) {
+            if (response.status) {
+                setData(response.data);
+                if (response.meta) {
+                    setTotalPages(response.meta.total_pages);
+                    setTotalItems(response.meta.total_items);
+                }
+            } else if (Array.isArray(response)) {
+                // Backward compatibility just in case
                 setData(response);
             } else {
                 setData([]);
@@ -122,7 +136,6 @@ function PayrollGajiPokokPage() {
     };
 
     useEffect(() => {
-        fetchData();
         fetchEmployees();
         fetchOptions();
     }, []);
@@ -132,7 +145,7 @@ function PayrollGajiPokokPage() {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [keyword, kodeCabang, kodeDept]);
+    }, [keyword, kodeCabang, kodeDept, currentPage, perPage]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -271,7 +284,10 @@ function PayrollGajiPokokPage() {
                             type="text"
                             placeholder="Cari Karyawan..."
                             value={keyword}
-                            onChange={(e) => setKeyword(e.target.value)}
+                            onChange={(e) => {
+                                setKeyword(e.target.value);
+                                setCurrentPage(1);
+                            }}
                             onKeyDown={(e) => e.key === 'Enter' && fetchData()}
                             className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                         />
@@ -281,7 +297,10 @@ function PayrollGajiPokokPage() {
                         <SearchableSelect
                             options={[{ value: '', label: 'Semua Cabang' }, ...cabangList.map(cab => ({ value: cab.kode_cabang, label: cab.nama_cabang }))]}
                             value={kodeCabang}
-                            onChange={(val) => setKodeCabang(val)}
+                            onChange={(val) => {
+                                setKodeCabang(val);
+                                setCurrentPage(1);
+                            }}
                             placeholder="Semua Cabang"
                         />
                     </div>
@@ -289,7 +308,10 @@ function PayrollGajiPokokPage() {
                         <SearchableSelect
                             options={[{ value: '', label: 'Semua Dept' }, ...deptList.map(dept => ({ value: dept.kode_dept, label: dept.nama_dept }))]}
                             value={kodeDept}
-                            onChange={(val) => setKodeDept(val)}
+                            onChange={(val) => {
+                                setKodeDept(val);
+                                setCurrentPage(1);
+                            }}
                             placeholder="Semua Dept"
                         />
                     </div>
@@ -299,6 +321,7 @@ function PayrollGajiPokokPage() {
                     <table className="w-full table-auto text-sm">
                         <thead>
                             <tr className="bg-gray-100 text-left dark:bg-gray-800">
+                                <th className="px-4 py-4 font-medium text-black dark:text-white w-[50px] text-center">No</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white">Kode Gaji</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white">Nama Karyawan</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white">Cabang/Dept</th>
@@ -309,12 +332,15 @@ function PayrollGajiPokokPage() {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
+                                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
                             ) : data.length === 0 ? (
-                                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan.</td></tr>
+                                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan.</td></tr>
                             ) : (
-                                data.map((item) => (
+                                data.map((item, index) => (
                                     <tr key={item.kode_gaji} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20 align-top">
+                                        <td className="px-4 py-4 text-center">
+                                            <span className="text-black dark:text-white text-sm">{(currentPage - 1) * perPage + index + 1}</span>
+                                        </td>
                                         <td className="px-4 py-4 text-black dark:text-white">
                                             <span className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{item.kode_gaji}</span>
                                         </td>
@@ -356,9 +382,30 @@ function PayrollGajiPokokPage() {
                         </tbody>
                     </table>
                 </div>
-                <div className="mt-4 text-xs text-gray-400 italic">
-                    * Menampilkan 50 data terakhir yang diinput/update. Gunakan pencarian untuk menemukan data spesifik.
-                </div>
+
+                {data.length > 0 && (
+                    <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-stroke pt-4 dark:border-strokedark">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                            Menampilkan {(currentPage - 1) * perPage + 1} - {Math.min(currentPage * perPage, totalItems)} dari {totalItems} data
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1 || loading}
+                                className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages || loading}
+                                className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4"
+                            >
+                                <ArrowRight className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* MODAL */}
@@ -386,10 +433,14 @@ function PayrollGajiPokokPage() {
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Karyawan</label>
                                     {modalMode === 'create' ? (
                                         <SearchableSelect
-                                            options={employees.map(k => ({ value: k.nik, label: `${k.nama_karyawan} (${k.nik})` }))}
+                                            options={[
+                                                { value: 'ALL', label: '--- SEMUA KARYAWAN (ALL) ---' },
+                                                ...employees.map(k => ({ value: k.nik, label: `${k.nama_karyawan} (${k.nik})` }))
+                                            ]}
                                             value={formData.nik}
                                             onChange={(val) => setFormData({ ...formData, nik: val })}
                                             placeholder="Pilih Karyawan"
+                                            usePortal={true}
                                         />
                                     ) : (
                                         <div className="p-3 bg-gray-100 dark:bg-meta-4 rounded-lg">
@@ -419,6 +470,7 @@ function PayrollGajiPokokPage() {
                                         placeholder="Pilih Tanggal"
                                         defaultDate={formData.tanggal_berlaku}
                                         onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, tanggal_berlaku: dateStr })}
+                                        staticDisplay={false}
                                     />
                                 </div>
                             </div>

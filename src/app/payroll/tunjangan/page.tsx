@@ -454,6 +454,7 @@ function PayrollTunjanganPage() {
                                                 value={formData.nik}
                                                 onChange={(val) => setFormData({ ...formData, nik: val })}
                                                 placeholder="Pilih Karyawan"
+                                                usePortal={true}
                                             />
                                         ) : (
                                             <div className="p-3 bg-gray-100 dark:bg-meta-4 rounded-lg">
@@ -471,6 +472,7 @@ function PayrollTunjanganPage() {
                                             placeholder="Pilih Tanggal"
                                             defaultDate={formData.tanggal_berlaku}
                                             onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, tanggal_berlaku: dateStr })}
+                                            staticDisplay={false}
                                         />
                                     </div>
                                 </div>

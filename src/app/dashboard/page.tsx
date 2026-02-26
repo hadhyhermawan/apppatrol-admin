@@ -26,11 +26,11 @@ type StockCard = {
 
 type DashboardData = {
     stats: any;
-    top_cabang: any[];
+    top_karyawan_chart: any;
     patroli_aktif_list: any[];
     presensi_open_list: any[];
     tidak_hadir_list: any[];
-    recent_activities: any[];
+    target_patroli_chart: any;
     chart_data: {
         categories: string[];
         series: { name: string; data: number[] }[];
@@ -319,83 +319,90 @@ export default function DashboardPage() {
 
             {/* Stock List Table */}
             <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-                {/* Left Column - Top Stocks */}
+                {/* Left Column - Top Performance */}
                 <div className="rounded-2xl border border-stroke bg-white shadow-sm dark:border-strokedark dark:bg-boxdark">
                     <div className="border-b border-stroke px-6 py-4 dark:border-strokedark">
-                        <h3 className="font-semibold text-black dark:text-white">Top Cabang Performance</h3>
+                        <h3 className="font-semibold text-black dark:text-white">Top Karyawan Performance (Bulan Ini)</h3>
                     </div>
-                    <div className="p-6">
-                        <div className="space-y-4">
-                            {dashData && dashData.top_cabang.slice(0, 5).map((cabang: any, idx: number) => (
-                                <div
-                                    key={idx}
-                                    className="flex items-center justify-between rounded-xl border border-stroke p-4 transition-all hover:border-brand-500 hover:shadow-md dark:border-strokedark dark:hover:border-brand-500"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500/10 font-bold text-brand-500">
-                                            {cabang.kode_cabang.slice(0, 2)}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-semibold text-black dark:text-white">{cabang.kode_cabang}</h4>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">{cabang.nama_cabang}</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-black dark:text-white">{cabang.total_karyawan} Karyawan</p>
-                                        <p className={`flex items-center gap-1 text-sm font-medium ${cabang.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                                            }`}>
-                                            {cabang.trend === 'up' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                                            {Math.abs(cabang.change)}%
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                    <div className="p-4">
+                        {dashData && dashData.top_karyawan_chart ? (
+                            <ReactApexChart
+                                options={{
+                                    chart: {
+                                        type: 'bar',
+                                        height: 350,
+                                        stacked: true,
+                                        toolbar: { show: false },
+                                        fontFamily: 'Satoshi, sans-serif'
+                                    },
+                                    plotOptions: {
+                                        bar: {
+                                            horizontal: true,
+                                            borderRadius: 4,
+                                        }
+                                    },
+                                    colors: ['#10B981', '#3B82F6', '#EF4444'],
+                                    dataLabels: { enabled: false },
+                                    xaxis: {
+                                        categories: dashData.top_karyawan_chart.categories,
+                                    },
+                                    legend: { position: 'top', horizontalAlign: 'left' },
+                                    fill: { opacity: 1 }
+                                }}
+                                series={dashData.top_karyawan_chart.series}
+                                type="bar"
+                                height={350}
+                            />
+                        ) : (
+                            <div className="flex h-[350px] items-center justify-center">
+                                <p className="text-gray-500">Memuat data chart...</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Right Column - Activity Feed */}
+                {/* Right Column - Target Patroli */}
                 <div className="rounded-2xl border border-stroke bg-white shadow-sm dark:border-strokedark dark:bg-boxdark">
                     <div className="border-b border-stroke px-6 py-4 dark:border-strokedark">
-                        <h3 className="font-semibold text-black dark:text-white">Recent Activities</h3>
+                        <h3 className="font-semibold text-black dark:text-white">Target Patroli Berdasarkan Cabang</h3>
                     </div>
-                    <div className="p-6">
-                        <div className="space-y-4">
-                            {dashData && dashData.recent_activities && dashData.recent_activities.length > 0 ? (
-                                dashData.recent_activities.map((activity, idx) => {
-                                    // Map string icon to component
-                                    const IconComponent =
-                                        activity.icon === 'UserCheck' ? UserCheck :
-                                            activity.icon === 'Shield' ? Shield :
-                                                activity.icon === 'Clock' ? Clock :
-                                                    activity.icon === 'AlertCircle' ? AlertCircle : Activity;
-
-                                    const colorMap: any = {
-                                        green: 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400',
-                                        blue: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400',
-                                        orange: 'bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-400',
-                                        purple: 'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-400'
-                                    };
-
-                                    return (
-                                        <div key={idx} className="flex items-start gap-4">
-                                            <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${colorMap[activity.color] || colorMap.blue}`}>
-                                                <IconComponent className="h-5 w-5" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="font-medium text-black dark:text-white">{activity.name}</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">{activity.action}</p>
-                                                <p className="mt-1 text-xs text-gray-400">
-                                                    {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true, locale: id })}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            ) : (
-                                <p className="text-center text-gray-500">Belum ada aktivitas hari ini.</p>
-                            )}
-                        </div>
+                    <div className="p-4">
+                        {dashData && dashData.target_patroli_chart ? (
+                            <ReactApexChart
+                                options={{
+                                    chart: {
+                                        type: 'bar',
+                                        height: 350,
+                                        stacked: true,
+                                        toolbar: { show: false },
+                                        fontFamily: 'Satoshi, sans-serif'
+                                    },
+                                    plotOptions: {
+                                        bar: {
+                                            horizontal: false,
+                                            columnWidth: '40%',
+                                            borderRadius: 4,
+                                        }
+                                    },
+                                    colors: ['#10B981', '#EF4444'],
+                                    dataLabels: { enabled: true, formatter: (val: number) => val > 0 ? val : '' },
+                                    xaxis: {
+                                        categories: dashData.target_patroli_chart.categories,
+                                    },
+                                    yaxis: {
+                                        title: { text: 'Jumlah Target Patroli' }
+                                    },
+                                    fill: { opacity: 1 }
+                                }}
+                                series={dashData.target_patroli_chart.series}
+                                type="bar"
+                                height={350}
+                            />
+                        ) : (
+                            <div className="flex h-[350px] items-center justify-center">
+                                <p className="text-gray-500">Memuat data chart...</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

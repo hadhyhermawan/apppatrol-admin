@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
 import { Search, Calendar, MapPin, ArrowLeft, ArrowRight, RefreshCw, Download, Printer, X, Eye } from 'lucide-react';
@@ -409,8 +410,10 @@ function LaporanPresensiPage() {
                                             </td>
                                             <td className="px-4 py-4">
                                                 <div className="flex flex-col">
-                                                    <span className="font-medium text-black dark:text-white text-sm">{item.nama_karyawan}</span>
-                                                    <span className="text-xs text-brand-500">{item.nik}</span>
+                                                    <Link href={`/reports/presensi/${item.nik}?startDate=${startDate}&endDate=${endDate}`} className="font-medium text-brand-500 hover:underline text-sm dark:text-brand-400">
+                                                        {item.nama_karyawan}
+                                                    </Link>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">{item.nik}</span>
                                                     <span className="text-xs text-gray-500">{item.nama_dept} - {item.nama_cabang}</span>
                                                 </div>
                                             </td>
@@ -503,7 +506,9 @@ function LaporanPresensiPage() {
                                             <td className="px-2 py-2 border border-gray-200 dark:border-gray-700 text-center sticky left-0 bg-white dark:bg-boxdark">{(currentPage - 1) * perPage + idx + 1}</td>
                                             <td className="px-2 py-2 border border-gray-200 dark:border-gray-700 sticky left-[50px] bg-white dark:bg-boxdark">
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-black dark:text-white">{emp.nama_karyawan}</span>
+                                                    <Link href={`/reports/presensi/${emp.nik}?startDate=${startDate}&endDate=${endDate}`} className="font-bold text-brand-500 hover:underline dark:text-brand-400">
+                                                        {emp.nama_karyawan}
+                                                    </Link>
                                                     <span className="text-[10px] text-gray-500">{emp.nik}</span>
                                                     <span className="text-[10px] text-gray-500">{emp.nama_dept} - {emp.nama_cabang}</span>
                                                 </div>

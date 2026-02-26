@@ -72,12 +72,45 @@ function MasterKaryawanPage() {
     const [filterDept, setFilterDept] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
     const [filterMasa, setFilterMasa] = useState('');
+    const [filterLock, setFilterLock] = useState('');
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [perPage, setPerPage] = useState(10);
     const [totalItems, setTotalItems] = useState(0);
+
+    const [isHydrated, setIsHydrated] = useState(false);
+
+    // Initial Hydration from SessionStorage
+    useEffect(() => {
+        const savedPage = sessionStorage.getItem('karyawan_page');
+        const savedSearch = sessionStorage.getItem('karyawan_search');
+        const savedDept = sessionStorage.getItem('karyawan_dept');
+        const savedCabang = sessionStorage.getItem('karyawan_cabang');
+        const savedMasa = sessionStorage.getItem('karyawan_masa');
+        const savedLock = sessionStorage.getItem('karyawan_lock');
+
+        if (savedPage) setCurrentPage(Number(savedPage));
+        if (savedSearch) setSearchTerm(savedSearch);
+        if (savedDept) setFilterDept(savedDept);
+        if (savedCabang) setFilterCabang(savedCabang);
+        if (savedMasa) setFilterMasa(savedMasa);
+        if (savedLock) setFilterLock(savedLock);
+
+        setIsHydrated(true);
+    }, []);
+
+    // Save state changes to SessionStorage
+    useEffect(() => {
+        if (!isHydrated) return;
+        sessionStorage.setItem('karyawan_page', currentPage.toString());
+        sessionStorage.setItem('karyawan_search', searchTerm);
+        sessionStorage.setItem('karyawan_dept', filterDept);
+        sessionStorage.setItem('karyawan_cabang', filterCabang);
+        sessionStorage.setItem('karyawan_masa', filterMasa);
+        sessionStorage.setItem('karyawan_lock', filterLock);
+    }, [currentPage, searchTerm, filterDept, filterCabang, filterMasa, filterLock, isHydrated]);
 
     // Toggle Modal Jam Kerja
     const [showJamKerjaModal, setShowJamKerjaModal] = useState(false);
@@ -109,6 +142,7 @@ function MasterKaryawanPage() {
             if (filterDept) url += `&dept_code=${filterDept}`;
             if (filterCabang) url += `&cabang_code=${filterCabang}`;
             if (filterMasa) url += `&masa_anggota=${filterMasa}`;
+            if (filterLock) url += `&lock_device=${filterLock}`;
 
             const response: any = await apiClient.get(url);
             if (response.status) {
@@ -129,9 +163,30 @@ function MasterKaryawanPage() {
     };
 
     useEffect(() => {
+        if (!isHydrated) return;
         const timer = setTimeout(() => fetchData(), 300);
         return () => clearTimeout(timer);
-    }, [searchTerm, currentPage, perPage, filterDept, filterCabang, filterMasa]);
+    }, [searchTerm, currentPage, perPage, filterDept, filterCabang, filterMasa, filterLock, isHydrated]);
+
+    const handleRefresh = () => {
+        sessionStorage.removeItem('karyawan_page');
+        sessionStorage.removeItem('karyawan_search');
+        sessionStorage.removeItem('karyawan_dept');
+        sessionStorage.removeItem('karyawan_cabang');
+        sessionStorage.removeItem('karyawan_masa');
+        sessionStorage.removeItem('karyawan_lock');
+
+        if (searchTerm === '' && filterDept === '' && filterCabang === '' && filterMasa === '' && filterLock === '' && currentPage === 1) {
+            fetchData();
+        } else {
+            setSearchTerm('');
+            setFilterDept('');
+            setFilterCabang('');
+            setFilterMasa('');
+            setFilterLock('');
+            setCurrentPage(1);
+        }
+    };
 
     const handleDelete = async (nik: string, nama: string) => {
         const result = await Swal.fire({
@@ -278,7 +333,7 @@ function MasterKaryawanPage() {
                         Daftar Karyawan
                     </h2>
                     <div className="flex gap-3">
-                        <button onClick={() => fetchData()} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
+                        <button onClick={handleRefresh} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
@@ -300,7 +355,10 @@ function MasterKaryawanPage() {
                             type="text"
                             placeholder="Cari karyawan..."
                             value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
+                            onChange={e => {
+                                setSearchTerm(e.target.value);
+                                setCurrentPage(1); // Reset page on search
+                            }}
                             className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
@@ -309,7 +367,10 @@ function MasterKaryawanPage() {
                     <SearchableSelect
                         options={options.cabang.map(o => ({ value: o.code, label: o.name }))}
                         value={filterCabang}
-                        onChange={(val) => setFilterCabang(val)}
+                        onChange={(val) => {
+                            setFilterCabang(val);
+                            setCurrentPage(1);
+                        }}
                         placeholder="Semua Cabang"
                         className="w-full min-w-[200px]"
                     />
@@ -317,7 +378,10 @@ function MasterKaryawanPage() {
                     <SearchableSelect
                         options={options.departemen.map(o => ({ value: o.code, label: o.name }))}
                         value={filterDept}
-                        onChange={(val) => setFilterDept(val)}
+                        onChange={(val) => {
+                            setFilterDept(val);
+                            setCurrentPage(1);
+                        }}
                         placeholder="Semua Departemen"
                         className="w-full min-w-[200px]"
                     />
@@ -329,8 +393,26 @@ function MasterKaryawanPage() {
                             { value: 'expired', label: 'Kadaluarsa' }
                         ]}
                         value={filterMasa}
-                        onChange={(val) => setFilterMasa(val)}
+                        onChange={(val) => {
+                            setFilterMasa(val);
+                            setCurrentPage(1);
+                        }}
                         placeholder="Filter Masa Anggota"
+                        className="w-full min-w-[200px]"
+                    />
+
+                    <SearchableSelect
+                        options={[
+                            { value: 'all', label: 'Semua Status' },
+                            { value: '1', label: 'Terkunci (Locked)' },
+                            { value: '0', label: 'Terbuka (Unlocked)' }
+                        ]}
+                        value={filterLock}
+                        onChange={(val) => {
+                            setFilterLock(val);
+                            setCurrentPage(1);
+                        }}
+                        placeholder="Device Login Lock"
                         className="w-full min-w-[200px]"
                     />
                 </div>

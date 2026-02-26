@@ -410,6 +410,7 @@ function PresensiPage() {
                             <tr className="bg-gray-100 text-left dark:bg-gray-800">
                                 <th className="min-w-[50px] px-4 py-4 font-medium text-black dark:text-white text-center">No</th>
                                 <th className="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white">Karyawan</th>
+                                <th className="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">Tanggal</th>
                                 <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Shift</th>
                                 <th className="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">Jam Masuk</th>
                                 <th className="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">Jam Pulang</th>
@@ -420,9 +421,9 @@ function PresensiPage() {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
+                                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
                             ) : data.length === 0 ? (
-                                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan</td></tr>
+                                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan</td></tr>
                             ) : (
                                 data.map((item, idx) => (
                                     <tr key={item.id} className={clsx(
@@ -451,6 +452,9 @@ function PresensiPage() {
                                                     </div>
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <p className="text-black dark:text-white text-sm font-medium">{item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</p>
                                         </td>
                                         <td className="px-4 py-4">
                                             <span className="inline-block rounded bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-black dark:bg-meta-4 dark:text-white">

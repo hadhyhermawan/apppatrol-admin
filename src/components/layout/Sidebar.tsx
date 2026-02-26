@@ -77,12 +77,12 @@ const menuItems: MenuItem[] = [
         permissions: ['users.index', 'roles.index', 'permissions.index'], // Any of these
         submenu: [
             { name: 'Users', href: '/utilities/users', permissions: ['users.index'] },
-            { name: 'Roles', href: '/utilities/roles', permissions: ['roles.index'] },
-            { name: 'Permissions', href: '/utilities/permissions', permissions: ['permissions.index'] },
-            { name: 'Group Permissions', href: '/utilities/group-permissions', permissions: ['permissiongroups.index'] },
-            { name: 'Role & Permission', href: '/utilities/role-permission', permissions: ['roles.index', 'permissions.index'] },
-            { name: 'Logs', href: '/utilities/logs', permissions: ['logs.index'] },
-            { name: 'User Agreements', href: '/user-agreements', permissions: ['users.index'] },
+            { name: 'Roles', href: '/utilities/roles', permissions: ['super_admin_only'] },
+            { name: 'Permissions', href: '/utilities/permissions', permissions: ['super_admin_only'] },
+            { name: 'Group Permissions', href: '/utilities/group-permissions', permissions: ['super_admin_only'] },
+            { name: 'Role & Permission', href: '/utilities/role-permission', permissions: ['super_admin_only'] },
+            { name: 'Logs', href: '/utilities/logs', permissions: ['super_admin_only'] },
+            { name: 'User Agreements', href: '/user-agreements', permissions: ['super_admin_only'] },
             { name: 'Security Reports', href: '/utilities/security-reports', permissions: ['securityreports.index'] },
             { name: 'Multi Device', href: '/utilities/multi-device', permissions: ['multidevice.index'] },
             { name: 'Chat Management', href: '/utilities/chat-management', permissions: ['chat.index'] },
@@ -96,6 +96,7 @@ const menuItems: MenuItem[] = [
             { name: 'Laporan Presensi', href: '/reports/presensi', permissions: ['laporan.index'] },
             { name: 'Laporan Gaji', href: '/reports/salary', permissions: ['laporan.index'] },
             { name: 'Laporan Tugas', href: '/reports/tugas-monitoring', permissions: ['monitoringpatrol.index'] },
+            { name: 'Laporan Performance', href: '/reports/performance', permissions: ['laporan.index'] },
         ]
     },
     {

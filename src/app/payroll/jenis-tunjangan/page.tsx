@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, Trash2 } from 'lucide-react';
+import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, Trash2, List } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
@@ -169,7 +169,10 @@ function PayrollJenisTunjanganPage() {
             <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 className="text-xl font-semibold text-black dark:text-white mb-1">Daftar Jenis Tunjangan</h2>
+                        <h2 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2 mb-1">
+                            <List className="w-6 h-6 text-brand-500" />
+                            Daftar Jenis Tunjangan
+                        </h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                             Kelola daftar jenis tunjangan yang tersedia
                         </p>
@@ -209,10 +212,10 @@ function PayrollJenisTunjanganPage() {
                     <table className="w-full table-auto">
                         <thead>
                             <tr className="bg-gray-100 text-left dark:bg-gray-800">
-                                <th className="min-w-[50px] px-4 py-4 font-semibold text-black dark:text-white text-center">No</th>
-                                <th className="min-w-[150px] px-4 py-4 font-semibold text-black dark:text-white">Kode</th>
-                                <th className="min-w-[200px] px-4 py-4 font-semibold text-black dark:text-white">Jenis Tunjangan</th>
-                                <th className="px-4 py-4 font-semibold text-black dark:text-white text-center">Aksi</th>
+                                <th className="min-w-[50px] px-4 py-4 font-medium text-black dark:text-white text-center">No</th>
+                                <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Kode</th>
+                                <th className="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white">Jenis Tunjangan</th>
+                                <th className="px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -224,22 +227,26 @@ function PayrollJenisTunjanganPage() {
                                 </td></tr>
                             ) : (
                                 paginatedData.map((item, idx) => (
-                                    <tr key={item.kode_jenis_tunjangan} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors">
+                                    <tr key={item.kode_jenis_tunjangan} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20 align-top transition-colors">
                                         <td className="px-4 py-4 text-center">
                                             <p className="text-black dark:text-white text-sm">{(currentPage - 1) * perPage + idx + 1}</p>
                                         </td>
-                                        <td className="px-4 py-4 text-black dark:text-white font-medium">{item.kode_jenis_tunjangan}</td>
-                                        <td className="px-4 py-4 text-black dark:text-white">{item.jenis_tunjangan}</td>
+                                        <td className="px-4 py-4 text-black dark:text-white">
+                                            <span className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{item.kode_jenis_tunjangan}</span>
+                                        </td>
+                                        <td className="px-4 py-4 text-black dark:text-white text-sm">
+                                            {item.jenis_tunjangan}
+                                        </td>
                                         <td className="px-4 py-4 text-center">
-                                            <div className="flex items-center justify-center gap-3">
+                                            <div className="flex items-center justify-center gap-2">
                                                 {canUpdate('jenistunjangan') && (
-                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-yellow-400 transition-colors" title="Edit">
-                                                        <Edit className="h-5 w-5" />
+                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-brand-500 text-gray-500 transition-colors" title="Edit">
+                                                        <Edit className="h-4 w-4" />
                                                     </button>
                                                 )}
                                                 {canDelete('jenistunjangan') && (
-                                                    <button onClick={() => handleDelete(item.kode_jenis_tunjangan)} className="hover:text-red-500 text-red-500 transition-colors" title="Hapus">
-                                                        <Trash className="h-5 w-5" />
+                                                    <button onClick={() => handleDelete(item.kode_jenis_tunjangan)} className="hover:text-red-500 text-gray-500 transition-colors" title="Hapus">
+                                                        <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 )}
                                             </div>
@@ -255,7 +262,7 @@ function PayrollJenisTunjanganPage() {
                 {filteredData.length > 0 && (
                     <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-stroke pt-4 dark:border-strokedark">
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Menampilkan <span className="font-medium text-black dark:text-white">{(currentPage - 1) * perPage + 1}</span> - <span className="font-medium text-black dark:text-white">{Math.min(currentPage * perPage, filteredData.length)}</span> dari <span className="font-medium text-black dark:text-white">{filteredData.length}</span> data
+                            Menampilkan {(currentPage - 1) * perPage + 1} - {Math.min(currentPage * perPage, filteredData.length)} dari {filteredData.length} data
                         </div>
                         <div className="flex gap-2">
                             <button
@@ -280,9 +287,10 @@ function PayrollJenisTunjanganPage() {
             {/* MODAL */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-white dark:bg-boxdark rounded-lg shadow-xl w-full max-w-lg overflow-hidden transform transition-all scale-100 max-h-[90vh] overflow-y-auto">
-                        <div className="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center sticky top-0 bg-white dark:bg-boxdark z-10">
-                            <h3 className="text-lg font-bold text-black dark:text-white">
+                    <div className="bg-white dark:bg-boxdark rounded-lg shadow-xl w-full max-w-lg overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh]">
+                        <div className="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center bg-gray-50 dark:bg-meta-4 shrink-0">
+                            <h3 className="text-lg font-bold text-black dark:text-white flex items-center gap-2">
+                                <List className="w-5 h-5 text-brand-500" />
                                 {modalMode === 'create' ? 'Tambah Jenis Tunjangan' : 'Edit Jenis Tunjangan'}
                             </h3>
                             <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
@@ -290,8 +298,8 @@ function PayrollJenisTunjanganPage() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit}>
-                            <div className="px-6 py-5 space-y-4">
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+                            <div className="p-6 space-y-5">
                                 {errorMsg && (
                                     <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100">
                                         {errorMsg}
@@ -324,12 +332,22 @@ function PayrollJenisTunjanganPage() {
                                 </div>
                             </div>
 
-                            <div className="px-6 py-4 bg-gray-50 dark:bg-meta-4/30 flex justify-end gap-3 border-t border-stroke dark:border-strokedark sticky bottom-0 z-10">
-                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium text-black bg-white border border-stroke rounded-lg hover:bg-gray-50 dark:bg-meta-4 dark:text-white dark:border-strokedark">
+                            <div className="px-6 py-4 border-t border-stroke dark:border-strokedark flex justify-end gap-3 bg-gray-50 dark:bg-meta-4 shrink-0">
+                                <button type="button" onClick={handleCloseModal} className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 dark:bg-boxdark dark:text-gray-300 dark:border-strokedark dark:hover:bg-meta-4 transition-colors">
                                     Batal
                                 </button>
-                                <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-opacity-90 flex items-center">
-                                    {isSubmitting ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-2" /> Simpan</>}
+                                <button type="submit" disabled={isSubmitting} className="px-5 py-2.5 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50 flex items-center gap-2 transition-colors">
+                                    {isSubmitting ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            <span>Menyimpan...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-4 h-4" />
+                                            <span>Simpan</span>
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>

@@ -6,6 +6,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { withPermission } from '@/hoc/withPermission';
 import apiClient from '@/lib/api';
+import Swal from 'sweetalert2';
 
 interface Role {
     id: number;
@@ -97,7 +98,7 @@ function RolePermissionContent() {
             const res = await apiClient.post("/role-permission/assign-permission-group", { role_id: roleId, group_id: groupId });
 
             if (res) {
-                alert("Permissions assigned successfully!");
+                // Silently update or show a gentle toast, but for single permission toggles, refetch is enough
                 if (selectedRole) fetchRoleDetails(selectedRole.id);
                 fetchData();
             }
@@ -111,12 +112,20 @@ function RolePermissionContent() {
             const res = await apiClient.post("/role-permission/remove-permissions", { role_id: roleId, permission_ids: [permissionId] });
 
             if (res) {
-                alert("Permission removed successfully!");
                 if (selectedRole) fetchRoleDetails(selectedRole.id);
                 fetchData();
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error removing permission:", error);
+            Swal.fire({
+                title: 'Gagal',
+                text: error?.response?.data?.detail || "Gagal menghapus hak akses",
+                icon: 'error',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
         }
     };
 
@@ -158,9 +167,9 @@ function RolePermissionContent() {
             </div>
 
             {activeTab === "roles" && (
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div className="flex flex-col xl:flex-row gap-6 items-start">
                     {/* Roles List */}
-                    <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+                    <div className="w-full xl:w-1/4 xl:sticky xl:top-24 rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
                         <div className="border-b border-stroke px-6 py-4 dark:border-strokedark">
                             <h3 className="font-medium text-black dark:text-white">
                                 Web Admin Roles ({roles.filter(r => r.name.toLowerCase() !== 'karyawan').length})
@@ -176,9 +185,9 @@ function RolePermissionContent() {
                                     .map((role) => (
                                         <div
                                             key={role.id}
-                                            className={`cursor-pointer rounded-lg border p-4 transition-all hover:border-primary ${selectedRole?.id === role.id
-                                                ? "border-primary bg-primary/5"
-                                                : "border-stroke dark:border-strokedark"
+                                            className={`cursor-pointer rounded-xl border p-4 transition-all hover:border-primary hover:shadow-1 ${selectedRole?.id === role.id
+                                                ? "border-primary bg-primary/5 shadow-1 ring-1 ring-primary"
+                                                : "border-stroke bg-gray-50 dark:bg-meta-4 dark:border-strokedark"
                                                 }`}
                                             onClick={() => fetchRoleDetails(role.id)}
                                         >
@@ -215,7 +224,7 @@ function RolePermissionContent() {
                     </div>
 
                     {/* Role Details */}
-                    <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+                    <div className="w-full xl:w-3/4 rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
                         <div className="border-b border-stroke px-6 py-4 dark:border-strokedark">
                             <h3 className="font-medium text-black dark:text-white">
                                 {selectedRole ? `${selectedRole.name} Details` : "Select a Role"}
@@ -257,7 +266,7 @@ function RolePermissionContent() {
                                             )}
                                         </h5>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[600px] overflow-y-auto">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[75vh] overflow-y-auto p-2">
                                             {permissionGroups.map((group) => {
                                                 const groupPerms = permissions.filter(
                                                     (p) => p.id_permission_group === group.id
@@ -291,39 +300,49 @@ function RolePermissionContent() {
                                                                 return (
                                                                     <label
                                                                         key={perm.id}
-                                                                        className={`flex items-start gap-2 cursor-pointer ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-meta-4'
-                                                                            } p-2 rounded transition-colors`}
+                                                                        className={`flex items-start gap-3 cursor-pointer ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/5 hover:border-primary dark:hover:bg-meta-4'
+                                                                            } p-3 rounded-lg border ${isChecked ? 'border-primary bg-primary/5 dark:bg-primary/10' : 'border-stroke dark:border-strokedark'} transition-all min-h-[50px]`}
                                                                     >
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={isChecked}
-                                                                            disabled={isDisabled}
-                                                                            onChange={async (e) => {
-                                                                                if (isDisabled) return;
+                                                                        <div className="flex items-center h-5 mt-0.5">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={isChecked}
+                                                                                disabled={isDisabled}
+                                                                                onChange={async (e) => {
+                                                                                    if (isDisabled) return;
 
-                                                                                if (e.target.checked) {
-                                                                                    // Assign permission
-                                                                                    try {
-                                                                                        const res = await apiClient.post("/role-permission/assign-permissions", {
-                                                                                            role_id: selectedRole.id,
-                                                                                            permission_ids: [perm.id]
-                                                                                        });
-                                                                                        if (res) {
-                                                                                            fetchRoleDetails(selectedRole.id);
-                                                                                            fetchData();
+                                                                                    if (e.target.checked) {
+                                                                                        // Assign permission
+                                                                                        try {
+                                                                                            const res = await apiClient.post("/role-permission/assign-permissions", {
+                                                                                                role_id: selectedRole.id,
+                                                                                                permission_ids: [perm.id]
+                                                                                            });
+                                                                                            if (res) {
+                                                                                                fetchRoleDetails(selectedRole.id);
+                                                                                            }
+                                                                                        } catch (error: any) {
+                                                                                            console.error("Error assigning permission:", error);
+                                                                                            Swal.fire({
+                                                                                                title: 'Gagal',
+                                                                                                text: error?.response?.data?.detail || "Gagal memberikan hak akses",
+                                                                                                icon: 'error',
+                                                                                                toast: true,
+                                                                                                position: 'top-end',
+                                                                                                showConfirmButton: false,
+                                                                                                timer: 3000
+                                                                                            });
                                                                                         }
-                                                                                    } catch (error) {
-                                                                                        console.error("Error assigning permission:", error);
+                                                                                    } else {
+                                                                                        // Remove permission
+                                                                                        removePermission(selectedRole.id, perm.id);
                                                                                     }
-                                                                                } else {
-                                                                                    // Remove permission
-                                                                                    removePermission(selectedRole.id, perm.id);
-                                                                                }
-                                                                            }}
-                                                                            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                                                        />
-                                                                        <span className="text-xs text-black dark:text-white flex-1">
-                                                                            {perm.name.replace(`${group.name.toLowerCase()}.`, '')}
+                                                                                }}
+                                                                                className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                                                            />
+                                                                        </div>
+                                                                        <span className="text-sm font-medium text-black dark:text-white flex-1 leading-tight break-words">
+                                                                            {perm.name.replace(`${group.name.toLowerCase()}.`, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                                                         </span>
                                                                     </label>
                                                                 );
@@ -402,5 +421,5 @@ function RolePermissionPage() {
 
 // Protect page with permission
 export default withPermission(RolePermissionPage, {
-    permissions: ['roles.index', 'permissions.index']
+    permissions: ['super_admin_only']
 });

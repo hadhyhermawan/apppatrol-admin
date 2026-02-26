@@ -6,6 +6,18 @@ import apiClient from '@/lib/api';
 import { RefreshCw, Search, Shield, Trash2, ArrowLeft, ArrowRight, User, Building, MapPin, AlertTriangle, Monitor, Smartphone, FileText } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
+import SearchableSelect from '@/components/form/SearchableSelect';
+import dynamic from 'next/dynamic';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
+
+type CabangOption = {
+    kode_cabang: string;
+    nama_cabang: string;
+};
 
 type SecurityReportItem = {
     id: number;
@@ -29,15 +41,24 @@ export default function UtilitiesSecurityReportsPage() {
     const [keyword, setKeyword] = useState('');
     const [nikFilter, setNikFilter] = useState('');
     const [kodeCabang, setKodeCabang] = useState('');
-    const [kodeDept, setKodeDept] = useState('');
+    const [dateStart, setDateStart] = useState('');
+    const [dateEnd, setDateEnd] = useState('');
+    const [filterType, setFilterType] = useState('');
 
-    // Dropdown Data State (Mocked or assume we have endpoints, but for now we can rely on manual input or fetch)
-    // To match user request perfectly, we should ideally fetch branches/depts if needed, but for MVP let's stick to text or simple inputs first
-    // or reuse existing hooks. For now I will use text inputs for filters to be quick, or check if I can fetch select options.
+    const [cabangList, setCabangList] = useState<CabangOption[]>([]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
+
+    const fetchCabang = async () => {
+        try {
+            const response: any = await apiClient.get('/master/cabang/options');
+            setCabangList(response);
+        } catch (error) {
+            console.error("Failed to fetch cabang options", error);
+        }
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -46,7 +67,9 @@ export default function UtilitiesSecurityReportsPage() {
             if (keyword) params.append('keyword', keyword);
             if (nikFilter) params.append('nik_filter', nikFilter);
             if (kodeCabang) params.append('kode_cabang', kodeCabang);
-            if (kodeDept) params.append('kode_dept', kodeDept);
+            if (dateStart) params.append('date_start', dateStart);
+            if (dateEnd) params.append('date_end', dateEnd);
+            if (filterType) params.append('type_filter', filterType);
             params.append('limit', '100');
 
             const response: any = await apiClient.get(`/utilities/security-reports?${params.toString()}`);
@@ -64,12 +87,16 @@ export default function UtilitiesSecurityReportsPage() {
     };
 
     useEffect(() => {
+        fetchCabang();
+    }, []);
+
+    useEffect(() => {
         const timer = setTimeout(() => {
             setCurrentPage(1);
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [keyword, nikFilter, kodeCabang, kodeDept]);
+    }, [keyword, nikFilter, kodeCabang, dateStart, dateEnd, filterType]);
 
     // Client-side pagination
     const paginatedData = useMemo(() => {
@@ -122,48 +149,63 @@ export default function UtilitiesSecurityReportsPage() {
 
                 {/* Filter Section */}
                 <div className="mb-6">
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
                         <div className="relative">
                             <input
                                 type="text"
-                                placeholder="Cari NIK / Karyawan..."
-                                value={nikFilter}
-                                onChange={(e) => setNikFilter(e.target.value)}
-                                className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                            />
-                            <User className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
-                        </div>
-                        {/* Simple placeholder inputs for filters - could be Selects if we fetched lists */}
-                        <div className="relative">
-                            <input
-                                type="text"
-                                placeholder="Kode Cabang..."
-                                value={kodeCabang}
-                                onChange={(e) => setKodeCabang(e.target.value)}
-                                className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                            />
-                            <Building className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
-                        </div>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                placeholder="Kode Dept..."
-                                value={kodeDept}
-                                onChange={(e) => setKodeDept(e.target.value)}
-                                className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                            />
-                            <MapPin className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
-                        </div>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                placeholder="Keyword (Tipe...)"
+                                placeholder="Cari NIK / Nama Karyawan..."
                                 value={keyword}
                                 onChange={(e) => setKeyword(e.target.value)}
                                 className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                             />
                             <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                         </div>
+                        <div>
+                            <SearchableSelect
+                                options={cabangList.map(cab => ({ value: cab.kode_cabang, label: cab.nama_cabang }))}
+                                value={kodeCabang}
+                                onChange={(val) => {
+                                    setKodeCabang(val);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Semua Cabang"
+                            />
+                        </div>
+                        <div>
+                            <SearchableSelect
+                                options={[
+                                    { value: '', label: 'Semua Tipe' },
+                                    { value: 'FACE_LIVENESS_LOCK', label: 'Face Liveness Lock' },
+                                    { value: 'OUT_OF_LOCATION', label: 'Luar Area Absen' },
+                                    { value: 'APP_FORCE_CLOSE', label: 'Aplikasi Force Close' },
+                                    { value: 'FAKE_GPS', label: 'Deteksi Fake GPS' },
+                                    { value: 'ROOTED_DEVICE', label: 'Perangkat Root' }
+                                ]}
+                                value={filterType}
+                                onChange={(val) => {
+                                    setFilterType(val);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Tipe Pelanggaran"
+                            />
+                        </div>
+                        <div>
+                            <DatePicker
+                                id="date-start"
+                                placeholder="Dari Tanggal"
+                                defaultDate={dateStart}
+                                onChange={(dates: Date[], dateStr: string) => setDateStart(dateStr)}
+                            />
+                        </div>
+                        <div>
+                            <DatePicker
+                                id="date-end"
+                                placeholder="Sampai Tanggal"
+                                defaultDate={dateEnd}
+                                onChange={(dates: Date[], dateStr: string) => setDateEnd(dateStr)}
+                            />
+                        </div>
+
                     </div>
                 </div>
 
@@ -235,9 +277,17 @@ export default function UtilitiesSecurityReportsPage() {
                                                 <span className="inline-flex px-2 py-1 rounded text-xs font-medium bg-red-500 text-white">
                                                     Blocked
                                                 </span>
-                                            ) : (
+                                            ) : item.status_flag === 'pending' ? (
+                                                <span className="inline-flex px-2 py-1 rounded text-xs font-medium bg-yellow-500 text-white">
+                                                    Pending
+                                                </span>
+                                            ) : item.status_flag === 'resolved' ? (
                                                 <span className="inline-flex px-2 py-1 rounded text-xs font-medium bg-green-500 text-white">
-                                                    Logged
+                                                    Resolved
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex px-2 py-1 rounded text-xs font-medium bg-blue-500 text-white">
+                                                    {item.status_flag || 'Logged'}
                                                 </span>
                                             )}
                                         </td>

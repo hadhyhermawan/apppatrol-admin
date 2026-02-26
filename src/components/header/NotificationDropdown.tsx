@@ -181,9 +181,13 @@ export default function NotificationDropdown() {
               {details?.device_locks?.map((alert, idx) => (
                 <li key={`device-${idx}`}>
                   <DropdownItem tag="a"
-                    onItemClick={closeDropdown}
+                    onItemClick={() => {
+                      closeDropdown();
+                      sessionStorage.setItem('karyawan_search', alert.nik);
+                      sessionStorage.setItem('karyawan_lock', '1');
+                    }}
                     className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
-                    href="/master/karyawan"
+                    href={`/master/karyawan`}
                   >
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 shrink-0">
                       <Lock size={20} />

@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { RefreshCw, Plus, Edit, Trash2, Search, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { RefreshCw, Plus, Edit, Trash2, Search, FileText, CheckCircle, XCircle, Save, AlertCircle, X, Calendar } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import Link from 'next/link';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
 
 type SlipGajiItem = {
     kode_slip_gaji: string;
@@ -23,6 +24,18 @@ function PayrollSlipGajiPage() {
     const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<SlipGajiItem[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+    const [formData, setFormData] = useState({
+        bulan: new Date().getMonth() + 1,
+        tahun: new Date().getFullYear(),
+        status: 0,
+        kode_slip_gaji: ''
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState('');
 
     const fetchData = async () => {
         setLoading(true);
@@ -45,102 +58,74 @@ function PayrollSlipGajiPage() {
         fetchData();
     }, []);
 
-    const handleCreate = () => {
-        Swal.fire({
-            title: 'Generate Slip Gaji',
-            html: `
-                <div class="flex flex-col gap-3 text-left">
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Bulan</label>
-                        <select id="swal-bulan" class="swal2-select w-full m-0 text-base">
-                            ${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${i + 1 === new Date().getMonth() + 1 ? 'selected' : ''}>${new Date(0, i).toLocaleString('id-ID', { month: 'long' })}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Tahun</label>
-                        <input id="swal-tahun" type="number" class="swal2-input w-full m-0" value="${new Date().getFullYear()}">
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Status</label>
-                         <select id="swal-status" class="swal2-select w-full m-0 text-base">
-                            <option value="0">Draft</option>
-                            <option value="1">Publish</option>
-                        </select>
-                    </div>
-                </div>
-            `,
-            width: '400px',
-            focusConfirm: false,
-            preConfirm: () => {
-                const bulan = (document.getElementById('swal-bulan') as HTMLSelectElement).value;
-                const tahun = (document.getElementById('swal-tahun') as HTMLInputElement).value;
-                const status = (document.getElementById('swal-status') as HTMLSelectElement).value;
-
-                if (!bulan || !tahun) {
-                    Swal.showValidationMessage('Semua field harus diisi');
-                }
-                return { bulan: parseInt(bulan), tahun: parseInt(tahun), status: parseInt(status) };
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await apiClient.post('/payroll/slip-gaji', result.value);
-                    Swal.fire('Berhasil!', 'Data telah disimpan.', 'success');
-                    fetchData();
-                } catch (error: any) {
-                    Swal.fire('Gagal!', error.response?.data?.detail || 'Gagal menyimpan data.', 'error');
-                }
-            }
+    const openCreateModal = () => {
+        setModalMode('create');
+        setFormData({
+            bulan: new Date().getMonth() + 1,
+            tahun: new Date().getFullYear(),
+            status: 0,
+            kode_slip_gaji: ''
         });
+        setError('');
+        setIsModalOpen(true);
     };
 
-    const handleEdit = (item: SlipGajiItem) => {
-        Swal.fire({
-            title: 'Edit Slip Gaji',
-            html: `
-                <div class="flex flex-col gap-3 text-left">
-                     <div>
-                        <label class="text-sm font-medium mb-1 block">Bulan</label>
-                        <select id="swal-bulan" class="swal2-select w-full m-0 text-base">
-                            ${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${i + 1 === item.bulan ? 'selected' : ''}>${new Date(0, i).toLocaleString('id-ID', { month: 'long' })}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Tahun</label>
-                        <input id="swal-tahun" type="number" class="swal2-input w-full m-0" value="${item.tahun}">
-                    </div>
-                    <div>
-                         <label class="text-sm font-medium mb-1 block">Status</label>
-                         <select id="swal-status" class="swal2-select w-full m-0 text-base">
-                            <option value="0" ${item.status === 0 ? 'selected' : ''}>Draft</option>
-                            <option value="1" ${item.status === 1 ? 'selected' : ''}>Publish</option>
-                        </select>
-                    </div>
-                </div>
-            `,
-            width: '400px',
-            focusConfirm: false,
-            preConfirm: () => {
-                const bulan = (document.getElementById('swal-bulan') as HTMLSelectElement).value;
-                const tahun = (document.getElementById('swal-tahun') as HTMLInputElement).value;
-                const status = (document.getElementById('swal-status') as HTMLSelectElement).value;
-
-                if (!bulan || !tahun) {
-                    Swal.showValidationMessage('Semua field harus diisi');
-                }
-                return { bulan: parseInt(bulan), tahun: parseInt(tahun), status: parseInt(status) };
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await apiClient.put(`/payroll/slip-gaji/${item.kode_slip_gaji}`, result.value);
-                    Swal.fire('Berhasil!', 'Data telah diperbarui.', 'success');
-                    fetchData();
-                } catch (error: any) {
-                    Swal.fire('Gagal!', error.response?.data?.detail || 'Gagal memperbarui data.', 'error');
-                }
-            }
+    const openEditModal = (item: SlipGajiItem) => {
+        setModalMode('edit');
+        setFormData({
+            bulan: item.bulan,
+            tahun: typeof item.tahun === 'string' ? parseInt(item.tahun) : item.tahun as number,
+            status: item.status,
+            kode_slip_gaji: item.kode_slip_gaji
         });
+        setError('');
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setError('');
+
+        try {
+            if (modalMode === 'create') {
+                await apiClient.post('/payroll/slip-gaji', {
+                    bulan: formData.bulan,
+                    tahun: formData.tahun,
+                    status: formData.status
+                });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    text: 'Data telah disimpan.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else {
+                await apiClient.put(`/payroll/slip-gaji/${formData.kode_slip_gaji}`, {
+                    bulan: formData.bulan,
+                    tahun: formData.tahun,
+                    status: formData.status
+                });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    text: 'Data telah diperbarui.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+            closeModal();
+            fetchData();
+        } catch (error: any) {
+            setError(error.response?.data?.detail || 'Terjadi kesalahan saat menyimpan data.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleDelete = (kode: string) => {
@@ -186,10 +171,10 @@ function PayrollSlipGajiPage() {
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
                         {canCreate('slipgaji') && (
-                            <button onClick={handleCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Generate Slip Gaji</span>
-                        </button>
+                            <button onClick={openCreateModal} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
+                                <Plus className="h-4 w-4" />
+                                <span>Generate Slip Gaji</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -240,13 +225,15 @@ function PayrollSlipGajiPage() {
                                                 <Link href={`/payroll/slip-gaji/${item.kode_slip_gaji}`} className="hover:text-blue-500 text-gray-500 transition-colors" title="Lihat">
                                                     <FileText className="h-4 w-4" />
                                                 </Link>
-                                                <button onClick={() => handleEdit(item)} className="hover:text-brand-500 text-gray-500 transition-colors" title="Edit">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
+                                                {canUpdate('slipgaji') && (
+                                                    <button onClick={() => openEditModal(item)} className="hover:text-brand-500 text-gray-500 transition-colors" title="Edit">
+                                                        <Edit className="h-4 w-4" />
+                                                    </button>
+                                                )}
                                                 {canDelete('slipgaji') && (
                                                     <button onClick={() => handleDelete(item.kode_slip_gaji)} className="hover:text-red-500 text-gray-500 transition-colors" title="Hapus">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -257,6 +244,110 @@ function PayrollSlipGajiPage() {
                     </table>
                 </div>
             </div>
+
+            {/* MODAL */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-boxdark rounded-lg shadow-xl w-full max-w-md overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh]">
+                        <div className="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center bg-gray-50 dark:bg-meta-4 shrink-0">
+                            <h3 className="text-lg font-bold text-black dark:text-white flex items-center gap-2">
+                                <FileText className="w-5 h-5 text-brand-500" />
+                                {modalMode === 'create' ? 'Generate Slip Gaji' : 'Edit Slip Gaji'}
+                            </h3>
+                            <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+                            <div className="p-6 space-y-5">
+                                {error && (
+                                    <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100 flex items-start gap-2">
+                                        <AlertCircle className="w-4 h-4 mt-0.5" />
+                                        <span>{error}</span>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">Bulan</label>
+                                    <div className="relative z-[100] bg-white dark:bg-form-input">
+                                        <SearchableSelect
+                                            options={Array.from({ length: 12 }, (_, i) => ({
+                                                value: (i + 1).toString(),
+                                                label: new Date(0, i).toLocaleString('id-ID', { month: 'long' })
+                                            }))}
+                                            value={formData.bulan.toString()}
+                                            onChange={(val) => {
+                                                if (val) setFormData({ ...formData, bulan: parseInt(val) })
+                                            }}
+                                            placeholder="Pilih Bulan"
+                                            usePortal={true}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">Tahun</label>
+                                    <input
+                                        type="number"
+                                        value={formData.tahun}
+                                        onChange={(e) => setFormData({ ...formData, tahun: parseInt(e.target.value) })}
+                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2.5 px-4 outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-brand-500"
+                                        min="2020"
+                                        max="2030"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">Status</label>
+                                    <div className="relative z-[90] bg-white dark:bg-form-input">
+                                        <SearchableSelect
+                                            options={[
+                                                { value: "0", label: "Draft" },
+                                                { value: "1", label: "Publish" },
+                                            ]}
+                                            value={formData.status.toString()}
+                                            onChange={(val) => {
+                                                if (val) setFormData({ ...formData, status: parseInt(val) })
+                                            }}
+                                            placeholder="Pilih Status"
+                                            usePortal={true}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="px-6 py-4 border-t border-stroke dark:border-strokedark flex justify-end gap-3 bg-gray-50 dark:bg-meta-4 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={closeModal}
+                                    disabled={isSubmitting}
+                                    className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 dark:bg-boxdark dark:text-gray-300 dark:border-strokedark dark:hover:bg-meta-4 transition-colors"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="px-5 py-2.5 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50 flex items-center gap-2 transition-colors"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            <span>Menyimpan...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-4 h-4" />
+                                            <span>Simpan</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </MainLayout>
     );
 }

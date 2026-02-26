@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
 import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, ShieldCheck, MapPin, Eye, User } from 'lucide-react';
@@ -62,6 +62,7 @@ function SecurityPatrolPage() {
     const [karyawanList, setKaryawanList] = useState<KaryawanOption[]>([]);
     const [cabangList, setCabangList] = useState<CabangOption[]>([]);
     const [jamKerjaList, setJamKerjaList] = useState<JamKerjaOption[]>([]);
+    const isFirstRender = useRef(true);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -152,7 +153,6 @@ function SecurityPatrolPage() {
         fetchKaryawan();
         fetchCabang();
         fetchJamKerjaOptions();
-        fetchData();
     }, []);
 
     useEffect(() => {

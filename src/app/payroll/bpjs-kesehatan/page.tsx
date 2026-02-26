@@ -3,13 +3,18 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { RefreshCw, Plus, Edit, Trash2, Search, Activity } from 'lucide-react';
+import { RefreshCw, Plus, Edit, Trash2, Search, Activity, X, Save } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
-import flatpickr from "flatpickr";
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
-import "flatpickr/dist/flatpickr.min.css";
+import SearchableSelect from '@/components/form/SearchableSelect';
+import dynamic from 'next/dynamic';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 
 type BpjsKesehatanItem = {
     kode_bpjs_kesehatan: string;
@@ -27,16 +32,46 @@ type EmployeeOption = {
     nama_karyawan: string;
 };
 
+type CabangOption = {
+    kode_cabang: string;
+    nama_cabang: string;
+};
+
+type DeptOption = {
+    kode_dept: string;
+    nama_dept: string;
+};
+
 function PayrollBpjsKesehatanPage() {
     const { canCreate, canUpdate, canDelete } = usePermissions();
     const [data, setData] = useState<BpjsKesehatanItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+    const [cabangList, setCabangList] = useState<CabangOption[]>([]);
+    const [deptList, setDeptList] = useState<DeptOption[]>([]);
 
     // Filters
     const [keyword, setKeyword] = useState('');
     const [kodeCabang, setKodeCabang] = useState('');
     const [kodeDept, setKodeDept] = useState('');
+
+    // Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+    const [formData, setFormData] = useState<{
+        kode_bpjs_kesehatan: string;
+        nik: string;
+        jumlah: number | '';
+        tanggal_berlaku: string;
+    }>({
+        kode_bpjs_kesehatan: '',
+        nik: '',
+        jumlah: '',
+        tanggal_berlaku: '',
+    });
+    const [editingKode, setEditingKode] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
     const fetchData = async () => {
         setLoading(true);
@@ -61,133 +96,115 @@ function PayrollBpjsKesehatanPage() {
         }
     };
 
-    const fetchEmployees = async () => {
+    const fetchDropdownOptions = async () => {
         try {
-            const response: any = await apiClient.get('/payroll/employees-list');
-            if (Array.isArray(response)) {
-                setEmployees(response);
-            }
+            const [empRes, cabangRes, deptRes] = await Promise.all([
+                apiClient.get('/payroll/employees-list'),
+                apiClient.get('/master/cabang/options'),
+                apiClient.get('/master/departemen/options')
+            ]);
+
+            if (Array.isArray(empRes)) setEmployees(empRes);
+            if (Array.isArray(cabangRes)) setCabangList(cabangRes);
+            if (Array.isArray(deptRes)) setDeptList(deptRes);
         } catch (error) {
-            console.error("Failed to fetch employees", error);
+            console.error("Failed to fetch dropdown options", error);
         }
     };
 
     useEffect(() => {
-        fetchData();
-        fetchEmployees();
+        const debounce = setTimeout(() => {
+            fetchData();
+        }, 500);
+        return () => clearTimeout(debounce);
+    }, [keyword, kodeCabang, kodeDept]);
+
+    useEffect(() => {
+        fetchDropdownOptions();
     }, []);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
     };
 
-    const handleCreate = () => {
-        const employeeOptions = employees.map(e => `<option value="${e.nik}">${e.nama_karyawan} (${e.nik})</option>`).join('');
-
-        Swal.fire({
-            title: 'Tambah BPJS Kesehatan',
-            html: `
-                <div class="flex flex-col gap-3 text-left">
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Karyawan</label>
-                        <select id="swal-nik" class="swal2-select w-full m-0 text-base">
-                            <option value="">Pilih Karyawan</option>
-                            ${employeeOptions}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Jumlah Iuran</label>
-                        <input id="swal-jumlah" type="number" class="swal2-input w-full m-0" placeholder="Rp 0">
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Tanggal Berlaku</label>
-                        <input id="swal-tanggal" class="swal2-input w-full m-0 flatpickr-date" placeholder="YYYY-MM-DD">
-                    </div>
-                </div>
-            `,
-            width: '600px',
-            focusConfirm: false,
-            didOpen: () => {
-                flatpickr("#swal-tanggal", {
-                    dateFormat: "Y-m-d",
-                    allowInput: true,
-                    defaultDate: new Date()
-                });
-            },
-            preConfirm: () => {
-                const nik = (document.getElementById('swal-nik') as HTMLSelectElement).value;
-                const jumlah = (document.getElementById('swal-jumlah') as HTMLInputElement).value;
-                const tanggal = (document.getElementById('swal-tanggal') as HTMLInputElement).value;
-
-                if (!nik || !jumlah || !tanggal) {
-                    Swal.showValidationMessage('Semua field harus diisi');
-                }
-                return { nik, jumlah: parseInt(jumlah), tanggal_berlaku: tanggal };
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await apiClient.post('/payroll/bpjs-kesehatan', result.value);
-                    Swal.fire('Berhasil!', 'Data telah disimpan.', 'success');
-                    fetchData();
-                } catch (error: any) {
-                    Swal.fire('Gagal!', error.response?.data?.detail || 'Gagal menyimpan data.', 'error');
-                }
-            }
+    // Modal Handlers
+    const handleOpenCreate = () => {
+        setModalMode('create');
+        setEditingKode(null);
+        setFormData({
+            kode_bpjs_kesehatan: '',
+            nik: '',
+            jumlah: '',
+            tanggal_berlaku: new Date().toISOString().split('T')[0]
         });
+        setErrorMsg('');
+        setIsModalOpen(true);
     };
 
-    const handleEdit = (item: BpjsKesehatanItem) => {
-        Swal.fire({
-            title: 'Edit BPJS Kesehatan',
-            html: `
-                <div class="flex flex-col gap-3 text-left">
-                    <div class="p-3 bg-gray-100 rounded-lg">
-                        <p class="text-sm text-gray-500">Karyawan</p>
-                        <p class="font-semibold">${item.nama_karyawan} (${item.nik})</p>
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Jumlah Iuran</label>
-                        <input id="swal-jumlah" type="number" class="swal2-input w-full m-0" placeholder="Rp 0" value="${item.jumlah}">
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">Tanggal Berlaku</label>
-                        <input id="swal-tanggal" class="swal2-input w-full m-0 flatpickr-date" placeholder="YYYY-MM-DD" value="${item.tanggal_berlaku}">
-                    </div>
-                </div>
-            `,
-            width: '500px',
-            focusConfirm: false,
-            didOpen: () => {
-                flatpickr("#swal-tanggal", {
-                    dateFormat: "Y-m-d",
-                    allowInput: true
-                });
-            },
-            preConfirm: () => {
-                const jumlah = (document.getElementById('swal-jumlah') as HTMLInputElement).value;
-                const tanggal = (document.getElementById('swal-tanggal') as HTMLInputElement).value;
-
-                if (!jumlah || !tanggal) {
-                    Swal.showValidationMessage('Semua field harus diisi');
-                }
-                return { jumlah: parseInt(jumlah), tanggal_berlaku: tanggal };
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await apiClient.put(`/payroll/bpjs-kesehatan/${item.kode_bpjs_kesehatan}`, result.value);
-                    Swal.fire('Berhasil!', 'Data telah diperbarui.', 'success');
-                    fetchData();
-                } catch (error: any) {
-                    Swal.fire('Gagal!', error.response?.data?.detail || 'Gagal memperbarui data.', 'error');
-                }
-            }
+    const handleOpenEdit = (item: BpjsKesehatanItem) => {
+        setModalMode('edit');
+        setEditingKode(item.kode_bpjs_kesehatan);
+        setFormData({
+            kode_bpjs_kesehatan: item.kode_bpjs_kesehatan,
+            nik: item.nik,
+            jumlah: item.jumlah,
+            tanggal_berlaku: item.tanggal_berlaku
         });
+        setErrorMsg('');
+        setIsModalOpen(true);
     };
 
-    const handleDelete = (kode: string) => {
-        Swal.fire({
+    const handleCloseModal = () => {
+        if (!isSubmitting) {
+            setIsModalOpen(false);
+        }
+    };
+
+    const handleFormChange = (field: string, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setErrorMsg('');
+
+        if (!formData.nik || formData.jumlah === '' || !formData.tanggal_berlaku) {
+            setErrorMsg('Semua field wajib diisi.');
+            return;
+        }
+
+        const payload = {
+            nik: formData.nik,
+            jumlah: Number(formData.jumlah),
+            tanggal_berlaku: formData.tanggal_berlaku
+        };
+
+        setIsSubmitting(true);
+        try {
+            if (modalMode === 'create') {
+                await apiClient.post('/payroll/bpjs-kesehatan', payload);
+            } else {
+                await apiClient.put(`/payroll/bpjs-kesehatan/${editingKode}`, payload);
+            }
+
+            setIsModalOpen(false);
+            fetchData();
+            Swal.fire({
+                title: 'Berhasil!',
+                text: `Data BPJS Kesehatan berhasil ${modalMode === 'create' ? 'ditambahkan' : 'diperbarui'}.`,
+                icon: 'success',
+                confirmButtonColor: '#3C50E0'
+            });
+        } catch (error: any) {
+            console.error(error);
+            setErrorMsg(error.response?.data?.detail || 'Terjadi kesalahan saat menyimpan data.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (kode: string) => {
+        const result = await Swal.fire({
             title: 'Hapus Data?',
             text: "Data akan dihapus permanen!",
             icon: 'warning',
@@ -196,17 +213,17 @@ function PayrollBpjsKesehatanPage() {
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Ya, hapus!',
             cancelButtonText: 'Batal'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await apiClient.delete(`/payroll/bpjs-kesehatan/${kode}`);
-                    Swal.fire('Terhapus!', 'Data berhasil dihapus.', 'success');
-                    fetchData();
-                } catch (error) {
-                    Swal.fire('Gagal!', 'Gagal menghapus data.', 'error');
-                }
-            }
         });
+
+        if (result.isConfirmed) {
+            try {
+                await apiClient.delete(`/payroll/bpjs-kesehatan/${kode}`);
+                Swal.fire('Terhapus!', 'Data berhasil dihapus.', 'success');
+                fetchData();
+            } catch (error) {
+                Swal.fire('Gagal!', 'Gagal menghapus data.', 'error');
+            }
+        }
     };
 
     return (
@@ -225,49 +242,42 @@ function PayrollBpjsKesehatanPage() {
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
                         {canCreate('bpjskesehatan') && (
-                            <button onClick={handleCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Data</span>
-                        </button>
+                            <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Data</span>
+                            </button>
                         )}
                     </div>
                 </div>
 
                 {/* Filter Section */}
                 <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Cari Karyawan..."
+                    <div className="relative z-20 bg-white dark:bg-form-input">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 z-30">
+                            <Search className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <SearchableSelect
+                            options={employees.map(e => ({ value: e.nik, label: `${e.nama_karyawan} (${e.nik})` }))}
                             value={keyword}
-                            onChange={(e) => setKeyword(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 pl-10"
+                            onChange={(val) => setKeyword(val)}
+                            placeholder="Cari Karyawan..."
                         />
-                        <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                     </div>
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Kode Cabang..."
+                    <div className="relative z-20 bg-white dark:bg-form-input">
+                        <SearchableSelect
+                            options={cabangList.map(c => ({ value: c.kode_cabang, label: `${c.kode_cabang} - ${c.nama_cabang}` }))}
                             value={kodeCabang}
-                            onChange={(e) => setKodeCabang(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                            onChange={(val) => setKodeCabang(val)}
+                            placeholder="Semua Cabang"
                         />
                     </div>
-                    <div className="relative flex gap-2">
-                        <input
-                            type="text"
-                            placeholder="Kode Dept..."
+                    <div className="relative z-20 bg-white dark:bg-form-input">
+                        <SearchableSelect
+                            options={deptList.map(d => ({ value: d.kode_dept, label: `${d.kode_dept} - ${d.nama_dept}` }))}
                             value={kodeDept}
-                            onChange={(e) => setKodeDept(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                            onChange={(val) => setKodeDept(val)}
+                            placeholder="Semua Dept"
                         />
-                        <button onClick={fetchData} className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-opacity-90">
-                            <Search className="h-4 w-4" />
-                        </button>
                     </div>
                 </div>
 
@@ -276,8 +286,7 @@ function PayrollBpjsKesehatanPage() {
                         <thead>
                             <tr className="bg-gray-100 text-left dark:bg-gray-800">
                                 <th className="px-4 py-4 font-medium text-black dark:text-white">Kode BPJS</th>
-                                <th className="px-4 py-4 font-medium text-black dark:text-white">Nama Karyawan</th>
-                                <th className="px-4 py-4 font-medium text-black dark:text-white">Cabang/Dept</th>
+                                <th className="px-4 py-4 font-medium text-black dark:text-white">Karyawan</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-right">Jumlah (Rp)</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-center">Berlaku Mulai</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>
@@ -285,9 +294,9 @@ function PayrollBpjsKesehatanPage() {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
+                                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
                             ) : data.length === 0 ? (
-                                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan.</td></tr>
+                                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan.</td></tr>
                             ) : (
                                 data.map((item) => (
                                     <tr key={item.kode_bpjs_kesehatan} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20 align-top">
@@ -298,15 +307,14 @@ function PayrollBpjsKesehatanPage() {
                                             <div className="flex flex-col">
                                                 <span className="font-semibold text-black dark:text-white">{item.nama_karyawan}</span>
                                                 <span className="text-xs text-brand-500">{item.nik}</span>
+                                                <div className="flex text-xs text-gray-500 gap-2 mt-1">
+                                                    <span>{item.kode_cabang || '-'}</span>
+                                                    <span>•</span>
+                                                    <span>{item.kode_dept || '-'}</span>
+                                                </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex flex-col text-xs text-gray-600 dark:text-gray-400">
-                                                <span>{item.kode_cabang || '-'}</span>
-                                                <span>{item.kode_dept || '-'}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4 text-right font-medium text-green-600 dark:text-green-400">
+                                        <td className="px-4 py-4 text-right font-medium text-blue-600 dark:text-blue-400">
                                             {formatCurrency(item.jumlah)}
                                         </td>
                                         <td className="px-4 py-4 text-center text-gray-600 dark:text-gray-400">
@@ -314,13 +322,13 @@ function PayrollBpjsKesehatanPage() {
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => handleEdit(item)} className="hover:text-brand-500 text-gray-500 transition-colors" title="Edit">
+                                                <button onClick={() => handleOpenEdit(item)} className="hover:text-brand-500 text-gray-500 transition-colors" title="Edit">
                                                     <Edit className="h-4 w-4" />
                                                 </button>
                                                 {canDelete('bpjskesehatan') && (
                                                     <button onClick={() => handleDelete(item.kode_bpjs_kesehatan)} className="hover:text-red-500 text-gray-500 transition-colors" title="Hapus">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -330,10 +338,116 @@ function PayrollBpjsKesehatanPage() {
                         </tbody>
                     </table>
                 </div>
-                <div className="mt-4 text-xs text-gray-400 italic">
-                    * Menampilkan 50 data terakhir yang diinput/update. Gunakan pencarian untuk menemukan data spesifik.
-                </div>
             </div>
+
+            {/* MODAL */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-boxdark rounded-lg shadow-xl w-full max-w-lg overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh]">
+                        <div className="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center bg-gray-50 dark:bg-meta-4 shrink-0">
+                            <h3 className="text-lg font-bold text-black dark:text-white flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-brand-500" />
+                                {modalMode === 'create' ? 'Tambah BPJS Kesehatan' : 'Edit BPJS Kesehatan'}
+                            </h3>
+                            <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+                            <div className="p-6 space-y-5">
+                                {errorMsg && (
+                                    <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100 flex items-start gap-2">
+                                        <span>{errorMsg}</span>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">Karyawan</label>
+                                    {modalMode === 'create' ? (
+                                        <div className="relative z-[100] bg-white dark:bg-form-input">
+                                            <SearchableSelect
+                                                options={employees.map(e => ({ value: e.nik, label: `${e.nama_karyawan} (${e.nik})` }))}
+                                                value={formData.nik}
+                                                onChange={(val) => handleFormChange('nik', val)}
+                                                placeholder="Pilih Karyawan"
+                                                usePortal={true}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="p-3 bg-gray-50 dark:bg-meta-4 rounded-lg border border-stroke dark:border-strokedark flex items-center justify-between">
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold text-black dark:text-white">
+                                                    {employees.find(e => e.nik === formData.nik)?.nama_karyawan || formData.nik}
+                                                </span>
+                                                <span className="text-xs text-gray-500">{formData.nik}</span>
+                                            </div>
+                                            <span className="text-xs font-medium bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
+                                                Tidak dapat diubah
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-black dark:text-white mb-2">Jumlah Iuran (Rp)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium tracking-wider">Rp</span>
+                                            <input
+                                                type="number"
+                                                className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2.5 pl-12 pr-4 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-brand-500"
+                                                value={formData.jumlah}
+                                                onChange={(e) => handleFormChange('jumlah', e.target.value === '' ? '' : Number(e.target.value))}
+                                                placeholder="0"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-black dark:text-white mb-2">Tanggal Berlaku</label>
+                                        <DatePicker
+                                            id="form-tanggal-kes"
+                                            placeholder="Pilih Tanggal"
+                                            defaultDate={formData.tanggal_berlaku}
+                                            onChange={(dates: Date[], dateStr: string) => handleFormChange('tanggal_berlaku', dateStr)}
+                                            staticDisplay={false}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="px-6 py-4 border-t border-stroke dark:border-strokedark flex justify-end gap-3 bg-gray-50 dark:bg-meta-4 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={handleCloseModal}
+                                    disabled={isSubmitting}
+                                    className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 dark:bg-boxdark dark:text-gray-300 dark:border-strokedark dark:hover:bg-meta-4 transition-colors"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="px-5 py-2.5 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50 flex items-center gap-2 transition-colors"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            <span>Menyimpan...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-4 h-4" />
+                                            <span>Simpan</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </MainLayout>
     );
 }
