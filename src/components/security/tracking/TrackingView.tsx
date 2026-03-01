@@ -8,7 +8,9 @@ import {
     Wifi, WifiOff, Clock, User, Building, Radio, ChevronDown, X
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet/dist/leaflet.css';
 import Image from 'next/image';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 // Leaflet components dynamic import
 const MapContainer = dynamic(
@@ -94,122 +96,10 @@ interface EmployeeData {
     distance_to_office_meter: number | null;
 }
 
-interface SearchableSelectProps {
-    options: any[];
-    value: string;
-    onChange: (val: string) => void;
-    placeholder: string;
-    valueKey: string;
-    labelKey: string;
-}
-
-const SearchableSelect = ({ options, value, onChange, placeholder, valueKey, labelKey }: SearchableSelectProps) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [search, setSearch] = useState('');
-    const wrapperRef = useRef<HTMLDivElement>(null);
-
-    // Sync search with value
-    useEffect(() => {
-        const selected = options.find(o => o[valueKey] === value);
-        if (selected) {
-            setSearch(selected[labelKey]);
-        } else if (!value) {
-            setSearch('');
-        }
-    }, [value, options, valueKey, labelKey]);
-
-    const filteredOptions = options.filter(opt =>
-        String(opt[labelKey]).toLowerCase().includes(search.toLowerCase())
-    );
-
-    // Handle click outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-                // Reset search to selected value label on close
-                const selected = options.find(o => o[valueKey] === value);
-                if (selected) setSearch(selected[labelKey]);
-                else if (!value) setSearch('');
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [wrapperRef, value, options, valueKey, labelKey]);
-
-    return (
-        <div ref={wrapperRef} className="relative w-full">
-            <div className="relative">
-                <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => {
-                        setSearch(e.target.value);
-                        setIsOpen(true);
-                        // If user clears input, clear value immediately? Optional.
-                        // Better: let them search, only clear if they select 'Semua' or empty search completely
-                        if (e.target.value === '') onChange('');
-                    }}
-                    onFocus={() => setIsOpen(true)}
-                    placeholder={placeholder}
-                    className="w-full pl-3 pr-8 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none truncate"
-                />
-                <div className="absolute right-2 top-2.5 text-gray-400 pointer-events-none">
-                    <ChevronDown className="w-4 h-4" />
-                </div>
-                {value && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onChange('');
-                            setSearch('');
-                            setIsOpen(true);
-                        }}
-                        className="absolute right-8 top-2.5 text-gray-400 hover:text-gray-600 pointer-events-auto"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
-                )}
-            </div>
-
-            {isOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    <div
-                        className="px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b dark:border-gray-700"
-                        onClick={() => {
-                            onChange('');
-                            setSearch('');
-                            setIsOpen(false);
-                        }}
-                    >
-                        {placeholder} (Semua)
-                    </div>
-                    {filteredOptions.length > 0 ? (
-                        filteredOptions.map((opt) => (
-                            <div
-                                key={opt[valueKey]}
-                                className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${value === opt[valueKey] ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600' : 'text-gray-700 dark:text-gray-200'}`}
-                                onClick={() => {
-                                    onChange(opt[valueKey]);
-                                    setSearch(opt[labelKey]);
-                                    setIsOpen(false);
-                                }}
-                            >
-                                {opt[labelKey]}
-                            </div>
-                        ))
-                    ) : (
-                        <div className="px-3 py-2 text-sm text-gray-400 text-center">
-                            Tidak ditemukan
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
+import SearchableSelect from '@/components/form/SearchableSelect';
 
 export default function TrackingView() {
+    const { isSuperAdmin } = usePermissions();
     const [employees, setEmployees] = useState<EmployeeData[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -227,19 +117,42 @@ export default function TrackingView() {
     const [selectedDept, setSelectedDept] = useState('');
     const [selectedShift, setSelectedShift] = useState('');
 
+    // Vendor State
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<any[]>([]);
+
     const fetchOptions = async () => {
         try {
-            const [cabangRes, deptRes, shiftRes] = await Promise.all([
-                apiClient.get('/master/cabang'),
+            const cabParams = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) {
+                cabParams.append('vendor_id', filterVendor);
+            }
+
+            const calls = [
+                apiClient.get(`/master/cabang?${cabParams.toString()}`),
                 apiClient.get('/master/departemen'),
                 apiClient.get('/master/jamkerja')
-            ]);
+            ];
+
+            if (isSuperAdmin) {
+                calls.push(apiClient.get('/vendors'));
+            }
+
+            const responses = await Promise.all(calls);
+            const cabangRes = responses[0];
+            const deptRes = responses[1];
+            const shiftRes = responses[2];
+            const vendorRes = isSuperAdmin ? responses[3] : [];
 
             // API client interceptor returns response.data directly
-            // If API returns list, res IS the list. If mapped to {data: ...}, res.data IS the list.
             setCabangOptions(Array.isArray(cabangRes) ? cabangRes : (cabangRes?.data || []));
             setDeptOptions(Array.isArray(deptRes) ? deptRes : (deptRes?.data || []));
             setShiftOptions(Array.isArray(shiftRes) ? shiftRes : (shiftRes?.data || []));
+
+            if (isSuperAdmin) {
+                const vData = Array.isArray(vendorRes) ? vendorRes : (vendorRes?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            }
 
         } catch (error) {
             console.error("Error fetching options:", error);
@@ -249,11 +162,14 @@ export default function TrackingView() {
     const fetchEmployees = async () => {
         setLoading(true);
         try {
-            const params = {
+            const params: any = {
                 kode_cabang: selectedCabang || undefined,
                 kode_dept: selectedDept || undefined,
                 kode_jadwal: selectedShift || undefined
             };
+            if (isSuperAdmin && filterVendor) {
+                params.vendor_id = filterVendor;
+            }
             const response = await apiClient.get('/employee-tracking/map-data', { params });
             if (response && response.data) {
                 setEmployees(response.data);
@@ -292,7 +208,7 @@ export default function TrackingView() {
         // Auto refresh every 30 seconds
         const interval = setInterval(fetchEmployees, 30000);
         return () => clearInterval(interval);
-    }, [selectedCabang, selectedDept, selectedShift]);
+    }, [selectedCabang, selectedDept, selectedShift, filterVendor, isSuperAdmin]);
 
     // Auto Zoom Logic
     const [lastZoomedCabang, setLastZoomedCabang] = useState<string | null>(null);
@@ -394,14 +310,20 @@ export default function TrackingView() {
                         </div>
 
                         {/* Filters */}
-                        <div className="space-y-2">
+                        <div className="space-y-2 relative z-50">
+                            {isSuperAdmin && (
+                                <SearchableSelect
+                                    options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                    value={filterVendor}
+                                    onChange={setFilterVendor}
+                                    placeholder="Semua Vendor"
+                                />
+                            )}
                             <SearchableSelect
-                                options={cabangOptions}
+                                options={cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))}
                                 value={selectedCabang}
                                 onChange={setSelectedCabang}
                                 placeholder="Pilih Cabang"
-                                valueKey="kode_cabang"
-                                labelKey="nama_cabang"
                             />
 
                             <select

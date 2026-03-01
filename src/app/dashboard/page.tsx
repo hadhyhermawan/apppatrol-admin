@@ -9,6 +9,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
 
 import apiClient from '@/lib/api';
 
@@ -40,9 +42,12 @@ type DashboardData = {
 
 export default function DashboardPage() {
     const router = useRouter();
+    const { isSuperAdmin } = usePermissions();
     const [loading, setLoading] = useState(true);
     const [stockData, setStockData] = useState<StockCard[]>([]);
     const [dashData, setDashData] = useState<DashboardData | null>(null);
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<any[]>([]);
 
     useEffect(() => {
         fetchDashboardData();
@@ -53,8 +58,20 @@ export default function DashboardPage() {
         };
         loadAlerts();
         const intervalId = setInterval(loadAlerts, 20000); // Check every 20s
+
+        if (isSuperAdmin) {
+            apiClient.get('/vendors').then((res: any) => {
+                const vData = Array.isArray(res) ? res : (res?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            }).catch(() => { });
+        }
+
         return () => clearInterval(intervalId);
-    }, []);
+    }, [isSuperAdmin]);
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, [filterVendor]);
 
     const pollSecurityAlerts = async () => {
         try {
@@ -112,7 +129,12 @@ export default function DashboardPage() {
 
     const fetchDashboardData = async () => {
         try {
-            const response: any = await apiClient.get('/dashboard');
+            setLoading(true);
+            let url = '/dashboard';
+            if (isSuperAdmin && filterVendor) {
+                url += `?vendor_id=${filterVendor}`;
+            }
+            const response: any = await apiClient.get(url);
             setDashData(response);
 
             // Build stock cards from real data
@@ -162,7 +184,7 @@ export default function DashboardPage() {
         }
     };
 
-    if (loading) {
+    if (loading && !dashData) {
         return (
             <MainLayout>
                 <PageBreadcrumb pageTitle="Dashboard" />
@@ -202,7 +224,19 @@ export default function DashboardPage() {
 
     return (
         <MainLayout>
-            <PageBreadcrumb pageTitle="Dashboard" />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 mt-2">
+                <PageBreadcrumb pageTitle="Dashboard" />
+                {isSuperAdmin && (
+                    <div className="w-full sm:w-64 z-[9999] relative">
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                            value={filterVendor}
+                            onChange={val => setFilterVendor(val)}
+                            placeholder="Semua Vendor"
+                        />
+                    </div>
+                )}
+            </div>
 
             {/* Stock-style Cards Grid */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">

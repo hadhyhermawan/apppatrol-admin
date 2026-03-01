@@ -256,7 +256,7 @@ export default function NotificationDropdown() {
                   <DropdownItem tag="a"
                     onItemClick={closeDropdown}
                     className="flex gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
-                    href="/master/karyawan"
+                    href="/security/violations"
                   >
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 shrink-0">
                       <UserX size={20} />

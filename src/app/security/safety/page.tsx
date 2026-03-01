@@ -35,7 +35,7 @@ type KaryawanOption = {
 };
 
 function SecuritySafetyBriefingPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<SafetyBriefingItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -45,6 +45,8 @@ function SecuritySafetyBriefingPage() {
     const [cabangOptions, setCabangOptions] = useState<{ kode_cabang: string; nama_cabang: string }[]>([]);
     const [karyawanList, setKaryawanList] = useState<KaryawanOption[]>([]);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
     const isFirstRender = useRef(true);
 
     // Pagination State
@@ -73,10 +75,27 @@ function SecuritySafetyBriefingPage() {
 
     const fetchOptions = async () => {
         try {
-            const [karyawanRes, cabangRes] = await Promise.all([
-                apiClient.get('/master/karyawan?per_page=10000'),
-                apiClient.get('/master/cabang')
-            ]);
+            const cabParams = new URLSearchParams();
+            const karParams = new URLSearchParams({ per_page: '10000' });
+
+            if (isSuperAdmin && filterVendor) {
+                cabParams.append('vendor_id', filterVendor);
+                karParams.append('vendor_id', filterVendor);
+            }
+
+            const calls: any[] = [
+                apiClient.get(`/master/karyawan?${karParams.toString()}`),
+                apiClient.get(`/master/cabang?${cabParams.toString()}`)
+            ];
+
+            if (isSuperAdmin) {
+                calls.push(apiClient.get('/vendors'));
+            }
+
+            const responses = await Promise.all(calls);
+            const karyawanRes = responses[0];
+            const cabangRes = responses[1];
+            const vendorRes = isSuperAdmin ? responses[2] : [];
 
             if (karyawanRes && (karyawanRes as any).data && Array.isArray((karyawanRes as any).data)) {
                 setKaryawanList((karyawanRes as any).data);
@@ -86,6 +105,13 @@ function SecuritySafetyBriefingPage() {
 
             if (Array.isArray(cabangRes)) {
                 setCabangOptions(cabangRes as any);
+            } else if (cabangRes && Array.isArray((cabangRes as any).data)) {
+                setCabangOptions((cabangRes as any).data);
+            }
+
+            if (isSuperAdmin) {
+                const vData = Array.isArray(vendorRes) ? vendorRes : (vendorRes?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
             }
         } catch (error) {
             console.error("Failed to fetch options", error);
@@ -99,7 +125,8 @@ function SecuritySafetyBriefingPage() {
             if (searchTerm) url += `search=${searchTerm}&`;
             if (dateStart) url += `date_start=${dateStart}&`;
             if (dateEnd) url += `date_end=${dateEnd}&`;
-            if (filterCabang) url += `kode_cabang=${filterCabang}`;
+            if (filterCabang) url += `kode_cabang=${filterCabang}&`;
+            if (isSuperAdmin && filterVendor) url += `vendor_id=${filterVendor}&`;
 
             const response: any = await apiClient.get(url);
             if (Array.isArray(response)) {
@@ -117,14 +144,14 @@ function SecuritySafetyBriefingPage() {
 
     useEffect(() => {
         fetchOptions();
-    }, []);
+    }, [filterVendor, isSuperAdmin]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchData();
         }, 800);
         return () => clearTimeout(timer);
-    }, [searchTerm, dateStart, dateEnd, filterCabang]);
+    }, [searchTerm, dateStart, dateEnd, filterCabang, filterVendor]);
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -292,7 +319,20 @@ function SecuritySafetyBriefingPage() {
                     </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
+                <div className={`mb-6 grid grid-cols-1 gap-4 ${isSuperAdmin ? 'md:grid-cols-6' : 'md:grid-cols-5'}`}>
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={(val) => {
+                                    setFilterVendor(val);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
                     <div className="relative col-span-2">
                         <input
                             type="text"

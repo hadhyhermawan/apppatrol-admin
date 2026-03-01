@@ -49,7 +49,7 @@ const STATUS_OPTIONS = [
 ];
 
 function PresensiPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<PresensiItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -60,7 +60,9 @@ function PresensiPage() {
     const [filterDept, setFilterDept] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
     const [filterShift, setFilterShift] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
     const [options, setOptions] = useState<MasterOptions>({ departemen: [], cabang: [] });
+    const [vendorOptions, setVendorOptions] = useState<OptionItem[]>([]);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -86,7 +88,14 @@ function PresensiPage() {
         apiClient.get('/monitoring/jam-kerja-options').then((res: any) => {
             setJamKerjaOptions(res?.data || []);
         }).catch(() => { });
-    }, []);
+
+        if (isSuperAdmin) {
+            apiClient.get('/vendors').then((res: any) => {
+                const vData = Array.isArray(res) ? res : (res?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ code: String(v.id), name: v.nama_vendor })));
+            }).catch(() => { });
+        }
+    }, [isSuperAdmin]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -96,6 +105,7 @@ function PresensiPage() {
             if (filterDept) url += `&dept_code=${filterDept}`;
             if (filterCabang) url += `&cabang_code=${filterCabang}`;
             if (filterShift) url += `&kode_jam_kerja=${filterShift}`;
+            if (isSuperAdmin && filterVendor) url += `&vendor_id=${filterVendor}`;
             if (debouncedSearch) url += `&search=${encodeURIComponent(debouncedSearch)}`;
 
             const response: any = await apiClient.get(url);
@@ -120,8 +130,8 @@ function PresensiPage() {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    useEffect(() => { fetchData(); }, [dateFilter, currentPage, filterDept, filterCabang, filterShift, debouncedSearch]);
-    useEffect(() => { setCurrentPage(1); }, [dateFilter, filterDept, filterCabang, filterShift, debouncedSearch]);
+    useEffect(() => { fetchData(); }, [dateFilter, currentPage, filterDept, filterCabang, filterShift, filterVendor, debouncedSearch]);
+    useEffect(() => { setCurrentPage(1); }, [dateFilter, filterDept, filterCabang, filterShift, filterVendor, debouncedSearch]);
 
     // ─── Edit handlers ─────────────────────────────────────────────────────────
     const openEdit = (item: PresensiItem) => {
@@ -369,6 +379,18 @@ function PresensiPage() {
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
+
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions.map(o => ({ value: o.code, label: o.name }))]}
+                                value={filterVendor}
+                                onChange={val => setFilterVendor(val)}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
+
                     <div>
                         <DatePicker
                             id="date-filter"

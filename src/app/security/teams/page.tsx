@@ -6,6 +6,7 @@ import apiClient from '@/lib/api';
 import { RefreshCw, User, CheckCircle, AlertTriangle, Check, X } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 
 // --- TYPES ---
@@ -79,7 +80,11 @@ function LegacyMonitoringView() {
     const [summary, setSummary] = useState<MonitoringSummary | null>(null);
     const [loading, setLoading] = useState(false);
 
+    const { isSuperAdmin } = usePermissions();
+
     // Filter State
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
+    const [selectedVendor, setSelectedVendor] = useState('');
     const [cabangOptions, setCabangOptions] = useState<{ kode_cabang: string; nama_cabang: string }[]>([]);
     const [selectedCabang, setSelectedCabang] = useState('');
     const [deptOptions, setDeptOptions] = useState<{ kode_dept: string; nama_dept: string }[]>([]);
@@ -91,29 +96,53 @@ function LegacyMonitoringView() {
         // Fetch Options
         const fetchOptions = async () => {
             try {
-                const [resCabang, resDept, resShift] = await Promise.all([
-                    apiClient.get('/master/cabang'),
+                const cabParams = new URLSearchParams();
+                if (isSuperAdmin && selectedVendor) cabParams.append('vendor_id', selectedVendor);
+
+                const calls: any[] = [
+                    apiClient.get(`/master/cabang?${cabParams.toString()}`),
                     apiClient.get('/master/departemen'),
                     apiClient.get('/master/jam-kerja-options')
-                ]);
+                ];
+
+                if (isSuperAdmin) {
+                    calls.push(apiClient.get('/vendors'));
+                }
+
+                const responses = await Promise.all(calls);
+                const resCabang = responses[0];
+                const resDept = responses[1];
+                const resShift = responses[2];
+                const resVendors = isSuperAdmin ? responses[3] : [];
 
                 if (Array.isArray(resCabang)) {
                     setCabangOptions(resCabang as any);
+                } else if (resCabang && Array.isArray((resCabang as any).data)) {
+                    setCabangOptions((resCabang as any).data);
                 }
+
                 if (Array.isArray(resDept)) {
                     setDeptOptions(resDept as any);
+                } else if (resDept && Array.isArray((resDept as any).data)) {
+                    setDeptOptions((resDept as any).data);
                 }
+
                 if (resShift && Array.isArray((resShift as any).data)) {
                     setShiftOptions((resShift as any).data.map((s: any) => ({ kode_jam_kerja: s.kode, nama_jam_kerja: s.nama })));
                 } else if (Array.isArray(resShift)) {
                     setShiftOptions((resShift as any).map((s: any) => ({ kode_jam_kerja: s.kode_jam_kerja || s.kode, nama_jam_kerja: s.nama_jam_kerja || s.nama })));
+                }
+
+                if (isSuperAdmin) {
+                    const vData = Array.isArray(resVendors) ? resVendors : (resVendors?.data || []);
+                    setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
                 }
             } catch (error) {
                 console.error("Failed to fetch filter options", error);
             }
         };
         fetchOptions();
-    }, []);
+    }, [selectedVendor, isSuperAdmin]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -122,6 +151,7 @@ function LegacyMonitoringView() {
             if (selectedCabang) url += `&kode_cabang=${selectedCabang}`;
             if (selectedDept) url += `&kode_dept=${selectedDept}`;
             if (selectedShift) url += `&kode_jam_kerja=${selectedShift}`;
+            if (isSuperAdmin && selectedVendor) url += `&vendor_id=${selectedVendor}`;
 
             const response: any = await apiClient.get(url);
             if (response && response.regu_groups) {
@@ -144,7 +174,7 @@ function LegacyMonitoringView() {
         fetchData();
         const interval = setInterval(fetchData, 60000); // Auto refresh every minute
         return () => clearInterval(interval);
-    }, [monitorDate, selectedCabang, selectedDept, selectedShift]);
+    }, [monitorDate, selectedCabang, selectedDept, selectedShift, selectedVendor]);
 
     return (
         <div>
@@ -160,6 +190,23 @@ function LegacyMonitoringView() {
                             className="border border-stroke dark:border-strokedark bg-transparent rounded px-3 py-1.5 focus:border-brand-500 outline-none dark:bg-meta-4 text-sm text-black dark:text-white"
                         />
                     </div>
+
+                    {isSuperAdmin && (
+                        <div className="flex items-center gap-2 min-w-[200px] flex-1 xl:flex-none">
+                            <label className="text-sm font-medium text-black dark:text-white hidden sm:block">Vendor:</label>
+                            <div className="w-full">
+                                <SearchableSelect
+                                    value={selectedVendor}
+                                    onChange={setSelectedVendor}
+                                    options={[
+                                        { value: '', label: 'Semua Vendor' },
+                                        ...vendorOptions
+                                    ]}
+                                    placeholder="Semua Vendor"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex items-center gap-2 min-w-[200px] flex-1 xl:flex-none">
                         <label className="text-sm font-medium text-black dark:text-white hidden sm:block">Cabang:</label>

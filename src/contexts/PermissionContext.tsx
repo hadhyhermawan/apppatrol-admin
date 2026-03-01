@@ -21,6 +21,8 @@ interface PermissionContextType {
     canView: (resource: string) => boolean;
     canDetail: (resource: string) => boolean;
     isSuperAdmin: boolean;
+    isKaryawan: boolean;
+    vendorId: string | null;
     refreshPermissions: () => Promise<void>;
 }
 
@@ -29,10 +31,17 @@ const PermissionContext = createContext<PermissionContextType | undefined>(undef
 export function PermissionProvider({ children }: { children: React.ReactNode }) {
     const [permissions, setPermissions] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
+    const [vendorId, setVendorId] = useState<string | null>(null);
     // Initialize isSuperAdmin from localStorage cache to avoid flash
     const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem('patrol_is_super_admin') === 'true';
+        }
+        return false;
+    });
+    const [isKaryawan, setIsKaryawan] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('patrol_is_karyawan') === 'true';
         }
         return false;
     });
@@ -46,8 +55,11 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
             if (!token) {
                 setPermissions([]);
                 setIsSuperAdmin(false);
+                setIsKaryawan(false);
+                setVendorId(null);
                 if (typeof window !== 'undefined') {
                     localStorage.removeItem('patrol_is_super_admin');
+                    localStorage.removeItem('patrol_is_karyawan');
                 }
                 setLoading(false);
                 return;
@@ -56,20 +68,31 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
             // Get current user's permissions from backend
             const data: any = await apiClient.get('/auth/me');
 
+            if (data.vendor_id) {
+                setVendorId(String(data.vendor_id));
+            } else {
+                setVendorId(null);
+            }
+
             // Check if super admin (role id = 1 or role name = 'super admin')
             const roles = data.roles || [];
             const isSuperAdminUser = roles.length > 0 && roles.some((role: any) =>
                 role.id === 1 || role.name?.toLowerCase() === 'super admin'
             );
+            const isKaryawanUser = roles.length > 0 && roles.some((role: any) =>
+                role.name?.toLowerCase() === 'karyawan'
+            );
 
-            console.log('[PermissionContext] roles:', roles, '| isSuperAdmin:', isSuperAdminUser);
+            console.log('[PermissionContext] roles:', roles, '| isSuperAdmin:', isSuperAdminUser, '| isKaryawan:', isKaryawanUser);
 
             // Cache to localStorage to avoid flash on re-renders
             if (typeof window !== 'undefined') {
                 localStorage.setItem('patrol_is_super_admin', String(isSuperAdminUser));
+                localStorage.setItem('patrol_is_karyawan', String(isKaryawanUser));
             }
 
             setIsSuperAdmin(isSuperAdminUser);
+            setIsKaryawan(isKaryawanUser);
 
             // If super admin, grant all permissions
             if (isSuperAdminUser) {
@@ -86,8 +109,11 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
             }
             setPermissions([]);
             setIsSuperAdmin(false);
+            setIsKaryawan(false);
+            setVendorId(null);
             if (typeof window !== 'undefined') {
                 localStorage.removeItem('patrol_is_super_admin');
+                localStorage.removeItem('patrol_is_karyawan');
             }
         } finally {
             setLoading(false);
@@ -104,6 +130,16 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
             return true;
         }
 
+        // Karyawan cannot create, edit or delete anything on the web.
+        if (isKaryawan && !isSuperAdmin) {
+            if (permission.endsWith('.create') ||
+                permission.endsWith('.update') ||
+                permission.endsWith('.edit') ||
+                permission.endsWith('.delete')) {
+                return false;
+            }
+        }
+
         return permissions.includes(permission);
     };
 
@@ -113,7 +149,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
             return true;
         }
 
-        return perms.some(p => permissions.includes(p));
+        return perms.some(p => hasPermission(p));
     };
 
     const hasAllPermissions = (perms: string[]): boolean => {
@@ -122,7 +158,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
             return true;
         }
 
-        return perms.every(p => permissions.includes(p));
+        return perms.every(p => hasPermission(p));
     };
 
     const refreshPermissions = async () => {
@@ -160,6 +196,8 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
                 canView,
                 canDetail: (resource: string) => hasPermission(`${resource}.show`) || hasPermission(`${resource}.index`),
                 isSuperAdmin,
+                isKaryawan,
+                vendorId,
                 refreshPermissions
             }}
         >

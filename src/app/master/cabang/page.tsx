@@ -9,8 +9,10 @@ import Swal from 'sweetalert2';
 import clsx from 'clsx';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
+import CabangBoard from './CabangBoard';
 
-type CabangItem = {
+export type CabangItem = {
     kode_cabang: string;
     nama_cabang: string;
     alamat_cabang: string;
@@ -18,19 +20,23 @@ type CabangItem = {
     lokasi_cabang: string;
     radius_cabang: number;
     kode_up3: string | null;
+    vendor_id?: number | null;
     created_at?: string;
     updated_at?: string;
 };
 
 function MasterCabangPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<CabangItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
 
     // Pagination State (Client-side)
     const [currentPage, setCurrentPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
+    const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,7 +48,8 @@ function MasterCabangPage() {
         telepon_cabang: '',
         lokasi_cabang: '',
         radius_cabang: 30,
-        kode_up3: ''
+        kode_up3: '',
+        vendor_id: null
     });
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,7 +58,11 @@ function MasterCabangPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const response: any = await apiClient.get('/master/cabang');
+            let url = '/master/cabang';
+            if (isSuperAdmin && filterVendor) {
+                url += `?vendor_id=${filterVendor}`;
+            }
+            const response: any = await apiClient.get(url);
             if (Array.isArray(response)) {
                 setData(response);
             } else if (response.data && Array.isArray(response.data)) {
@@ -66,9 +77,22 @@ function MasterCabangPage() {
         }
     };
 
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const res: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(res) ? res : (res?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            } catch (error) {
+                console.error("Failed to fetch vendors", error);
+            }
+        }
+    };
+
     useEffect(() => {
         fetchData();
-    }, []);
+        fetchVendors();
+    }, [isSuperAdmin, filterVendor]);
 
     // Filter & Pagination Logic
     const filteredData = useMemo(() => {
@@ -97,7 +121,8 @@ function MasterCabangPage() {
             telepon_cabang: '',
             lokasi_cabang: '',
             radius_cabang: 30,
-            kode_up3: ''
+            kode_up3: '',
+            vendor_id: null
         });
         setIsModalOpen(true);
     };
@@ -183,11 +208,32 @@ function MasterCabangPage() {
         <MainLayout>
             <PageBreadcrumb pageTitle="Data Cabang" />
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
+            <div className={`rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6 ${viewMode === 'board' ? 'pb-0' : ''}`}>
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <h2 className="text-xl font-semibold text-black dark:text-white">
-                        Daftar Cabang
-                    </h2>
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-xl font-semibold text-black dark:text-white">
+                            Daftar Cabang
+                        </h2>
+                        {isSuperAdmin && (
+                            <div className="flex bg-gray-100 p-1.5 rounded-lg dark:bg-meta-4/50 shadow-inner">
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    className={clsx("px-4 py-1.5 text-sm font-semibold rounded-md transition-all duration-200", viewMode === 'list' ? "bg-white text-brand-500 shadow-sm dark:bg-boxdark" : "text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white")}
+                                >
+                                    List View
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setViewMode('board');
+                                        setSearchTerm('');
+                                    }}
+                                    className={clsx("px-4 py-1.5 text-sm font-semibold rounded-md transition-all duration-200", viewMode === 'board' ? "bg-white text-brand-500 shadow-sm dark:bg-boxdark" : "text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white")}
+                                >
+                                    Board View
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     <div className="flex gap-3">
                         <button onClick={() => fetchData()} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
                             <RefreshCw className="h-4 w-4" />
@@ -202,107 +248,134 @@ function MasterCabangPage() {
                     </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <div className="relative col-span-1 md:col-span-2">
-                        <input
-                            type="text"
-                            placeholder="Cari cabang, alamat, kode..."
-                            value={searchTerm}
-                            onChange={e => {
-                                setSearchTerm(e.target.value);
-                                setCurrentPage(1); // Reset page on search
-                            }}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                        />
-                        <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
-                    </div>
-                </div>
-
-                <div className="max-w-full overflow-x-auto">
-                    <table className="w-full table-auto">
-                        <thead>
-                            <tr className="bg-gray-100 text-left dark:bg-gray-800">
-                                <th className="min-w-[50px] px-4 py-4 font-medium text-black dark:text-white text-center">No</th>
-                                <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Kode Cabang</th>
-                                <th className="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white">Nama Cabang</th>
-                                <th className="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white">Alamat</th>
-                                <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Koordinat</th>
-                                <th className="px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
-                            ) : paginatedData.length === 0 ? (
-                                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan</td></tr>
-                            ) : (
-                                paginatedData.map((item, idx) => (
-                                    <tr key={idx} className="border-b border-stroke dark:border-strokedark">
-                                        <td className="px-4 py-4 text-center">
-                                            <p className="text-black dark:text-white text-sm">{(currentPage - 1) * perPage + idx + 1}</p>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className="inline-flex rounded bg-gray-100 px-2 py-1 text-sm font-medium text-black dark:bg-meta-4 dark:text-white">
-                                                {item.kode_cabang}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <h5 className="font-medium text-black dark:text-white text-sm">{item.nama_cabang}</h5>
-                                            <p className="text-xs text-gray-500">{item.telepon_cabang}</p>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <p className="text-black dark:text-white text-sm truncate max-w-[200px]">{item.alamat_cabang}</p>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <a href={`https://www.google.com/maps/search/?api=1&query=${item.lokasi_cabang}`} target="_blank" className="flex items-center gap-1 text-sm text-brand-500 hover:underline">
-                                                <MapPin className="h-3 w-3" />
-                                                {item.lokasi_cabang.split(',').map(c => parseFloat(c).toFixed(4)).join(', ')}
-                                            </a>
-                                            <p className="text-xs text-gray-500">Radius: {item.radius_cabang}m</p>
-                                        </td>
-                                        <td className="px-4 py-4 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                {canUpdate('cabang') && (
-                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-brand-500 text-gray-500 dark:text-gray-400">
-                                                        <Edit className="h-4 w-4" />
-                                                    </button>
-                                                )}
-                                                {canDelete('cabang') && (
-                                                    <button onClick={() => handleDelete(item.kode_cabang)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
-                                                        <Trash className="h-4 w-4" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                {viewMode === 'list' ? (
+                    <>
+                        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <div className="relative col-span-1 md:col-span-2">
+                                <input
+                                    type="text"
+                                    placeholder="Cari cabang, alamat, kode..."
+                                    value={searchTerm}
+                                    onChange={e => {
+                                        setSearchTerm(e.target.value);
+                                        setCurrentPage(1); // Reset page on search
+                                    }}
+                                    className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                                />
+                                <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
+                            </div>
+                            {isSuperAdmin && (
+                                <div>
+                                    <SearchableSelect
+                                        options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                        value={filterVendor}
+                                        onChange={val => setFilterVendor(val)}
+                                        placeholder="Semua Vendor"
+                                    />
+                                </div>
                             )}
-                        </tbody>
-                    </table>
-                </div>
+                        </div>
 
-                {/* Pagination */}
-                {filteredData.length > 0 && (
-                    <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-stroke pt-4 dark:border-strokedark">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Menampilkan {(currentPage - 1) * perPage + 1} - {Math.min(currentPage * perPage, filteredData.length)} dari {filteredData.length} data
+                        <div className="max-w-full overflow-x-auto">
+                            <table className="w-full table-auto">
+                                <thead>
+                                    <tr className="bg-gray-100 text-left dark:bg-gray-800/60">
+                                        <th className="min-w-[50px] px-4 py-4 font-medium text-black dark:text-white text-center">No</th>
+                                        <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Kode Cabang</th>
+                                        <th className="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white">Nama Cabang</th>
+                                        <th className="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white">Alamat</th>
+                                        <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Koordinat</th>
+                                        <th className="px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
+                                    ) : paginatedData.length === 0 ? (
+                                        <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan</td></tr>
+                                    ) : (
+                                        paginatedData.map((item, idx) => (
+                                            <tr key={idx} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors">
+                                                <td className="px-4 py-4 text-center">
+                                                    <p className="text-black dark:text-white text-sm">{(currentPage - 1) * perPage + idx + 1}</p>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="inline-flex rounded bg-gray-100 px-2 py-1 text-sm font-medium text-black dark:bg-meta-4 dark:text-white">
+                                                        {item.kode_cabang}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <h5 className="font-medium text-black dark:text-white text-sm">{item.nama_cabang}</h5>
+                                                        {!item.vendor_id && (
+                                                            <span className="inline-block rounded bg-blue-100 px-2 flex-shrink-0 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800 tracking-wider">GLOBAL</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-gray-500">{item.telepon_cabang}</p>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <p className="text-black dark:text-white text-sm truncate max-w-[200px]">{item.alamat_cabang}</p>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <a href={`https://www.google.com/maps/search/?api=1&query=${item.lokasi_cabang}`} target="_blank" className="flex items-center gap-1 text-sm text-brand-500 hover:underline">
+                                                        <MapPin className="h-3 w-3" />
+                                                        {item.lokasi_cabang.split(',').map(c => parseFloat(c).toFixed(4)).join(', ')}
+                                                    </a>
+                                                    <p className="text-xs text-gray-500 mt-1">Radius: {item.radius_cabang}m</p>
+                                                </td>
+                                                <td className="px-4 py-4 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        {canUpdate('cabang') && (isSuperAdmin || !!item.vendor_id) && (
+                                                            <button onClick={() => handleOpenEdit(item)} className="hover:text-brand-500 text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-meta-4 p-2 rounded transition">
+                                                                <Edit className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                        {canDelete('cabang') && (isSuperAdmin || !!item.vendor_id) && (
+                                                            <button onClick={() => handleDelete(item.kode_cabang)} className="hover:text-red-500 text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-meta-4 p-2 rounded transition">
+                                                                <Trash className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4"
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                            </button>
-                            <button
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                                className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4"
-                            >
-                                <ArrowRight className="h-4 w-4" />
-                            </button>
-                        </div>
+
+                        {/* Pagination */}
+                        {filteredData.length > 0 && (
+                            <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-stroke pt-4 dark:border-strokedark mb-2">
+                                <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                                    Menampilkan <span className="text-black dark:text-white">{(currentPage - 1) * perPage + 1}</span> - <span className="text-black dark:text-white">{Math.min(currentPage * perPage, filteredData.length)}</span> dari <span className="text-black dark:text-white">{filteredData.length}</span> data
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4 transition"
+                                    >
+                                        <ArrowLeft className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="flex h-8 w-8 items-center justify-center rounded border border-stroke hover:bg-gray-100 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4 transition"
+                                    >
+                                        <ArrowRight className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="mt-6 border-t border-stroke pt-6 dark:border-strokedark -mx-5 px-5 sm:-mx-6 sm:px-6">
+                        <CabangBoard
+                            data={filteredData}
+                            vendors={vendorOptions}
+                            onUpdate={fetchData}
+                        />
                     </div>
                 )}
             </div>
@@ -392,6 +465,24 @@ function MasterCabangPage() {
                                         />
                                     </div>
                                 </div>
+
+                                {isSuperAdmin && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-black dark:text-white mb-2">Pilih Vendor (Opsional)</label>
+                                            <select
+                                                className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-form-strokedark dark:bg-form-input dark:focus:border-brand-500"
+                                                value={formData.vendor_id || ''}
+                                                onChange={e => setFormData({ ...formData, vendor_id: e.target.value ? parseInt(e.target.value) : null })}
+                                            >
+                                                <option value="">-- Tanpa Vendor --</option>
+                                                {vendorOptions.map(v => (
+                                                    <option key={v.value} value={v.value}>{v.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>

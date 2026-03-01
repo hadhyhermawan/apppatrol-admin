@@ -36,7 +36,7 @@ type SuratItem = {
 };
 
 function SecuritySuratPage() {
-    const { canUpdate, canDelete } = usePermissions();
+    const { canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [activeTab, setActiveTab] = useState<'masuk' | 'keluar'>('masuk');
     const [data, setData] = useState<SuratItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -45,6 +45,8 @@ function SecuritySuratPage() {
     const [dateEnd, setDateEnd] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
     const [cabangOptions, setCabangOptions] = useState<{ code: string; name: string }[]>([]);
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
     const isFirstRender = useRef(true);
 
     // Pagination State
@@ -63,7 +65,8 @@ function SecuritySuratPage() {
             if (searchTerm) url += `search=${searchTerm}&`;
             if (dateStart) url += `date_start=${dateStart}&`;
             if (dateEnd) url += `date_end=${dateEnd}&`;
-            if (filterCabang) url += `kode_cabang=${filterCabang}`;
+            if (filterCabang) url += `kode_cabang=${filterCabang}&`;
+            if (isSuperAdmin && filterVendor) url += `vendor_id=${filterVendor}&`;
 
             const response: any = await apiClient.get(url);
             if (Array.isArray(response)) {
@@ -81,9 +84,34 @@ function SecuritySuratPage() {
 
     const fetchOptions = async () => {
         try {
-            const resOpts: any = await apiClient.get('/master/options');
-            if (resOpts && resOpts.cabang) {
-                setCabangOptions(resOpts.cabang);
+            const cabParams = new URLSearchParams();
+
+            if (isSuperAdmin && filterVendor) {
+                cabParams.append('vendor_id', filterVendor);
+            }
+
+            const calls: any[] = [
+                // In surat, initially handled via /master/options. Instead fetch /master/cabang directly to allow query filters
+                apiClient.get(`/master/cabang?${cabParams.toString()}`)
+            ];
+
+            if (isSuperAdmin) {
+                calls.push(apiClient.get('/vendors'));
+            }
+
+            const responses = await Promise.all(calls);
+            const cabangRes = responses[0];
+            const vendorRes = isSuperAdmin ? responses[1] : [];
+
+            if (Array.isArray(cabangRes)) {
+                setCabangOptions(cabangRes.map((c: any) => ({ code: c.kode_cabang, name: c.nama_cabang })));
+            } else if (cabangRes && Array.isArray((cabangRes as any).data)) {
+                setCabangOptions((cabangRes as any).data.map((c: any) => ({ code: c.kode_cabang, name: c.nama_cabang })));
+            }
+
+            if (isSuperAdmin) {
+                const vData = Array.isArray(vendorRes) ? vendorRes : (vendorRes?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
             }
         } catch (error) {
             console.error("Failed to fetch options", error);
@@ -95,7 +123,7 @@ function SecuritySuratPage() {
         fetchOptions();
         fetchData();
         isFirstRender.current = false;
-    }, [activeTab]);
+    }, [activeTab, filterVendor, isSuperAdmin]);
 
     useEffect(() => {
         if (isFirstRender.current) return;
@@ -103,7 +131,7 @@ function SecuritySuratPage() {
             fetchData();
         }, 800);
         return () => clearTimeout(timer);
-    }, [searchTerm, dateStart, dateEnd, filterCabang]);
+    }, [searchTerm, dateStart, dateEnd, filterCabang, filterVendor]);
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -255,7 +283,20 @@ function SecuritySuratPage() {
                     </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
+                <div className={`mb-6 grid grid-cols-1 gap-4 ${isSuperAdmin ? 'md:grid-cols-6' : 'md:grid-cols-5'}`}>
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={(val) => {
+                                    setFilterVendor(val);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
                     <div className="relative col-span-2">
                         <input
                             type="text"

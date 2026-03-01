@@ -8,6 +8,8 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
+import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
 
 type SlipRecapItem = {
     nik: string;
@@ -39,6 +41,10 @@ export default function DetailSlipGajiPage() {
     const [originalData, setOriginalData] = useState<SlipRecapItem[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const { isSuperAdmin, isKaryawan } = usePermissions();
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
+
     const fetchHeader = async () => {
         try {
             const response: any = await apiClient.get(`/payroll/slip-gaji/${kode}`);
@@ -52,7 +58,11 @@ export default function DetailSlipGajiPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const response: any = await apiClient.get(`/payroll/slip-gaji/${kode}/recap`);
+            const params = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) {
+                params.append('vendor_id', filterVendor);
+            }
+            const response: any = await apiClient.get(`/payroll/slip-gaji/${kode}/recap?${params.toString()}`);
             if (Array.isArray(response)) {
                 setData(response);
                 setOriginalData(response);
@@ -67,12 +77,25 @@ export default function DetailSlipGajiPage() {
         }
     };
 
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const resV: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(resV) ? resV : (resV?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            } catch (error) {
+                console.error("Failed to fetch vendors", error);
+            }
+        }
+    };
+
     useEffect(() => {
         if (kode) {
             fetchHeader();
             fetchData();
+            fetchVendors();
         }
-    }, [kode]);
+    }, [kode, filterVendor, isSuperAdmin]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -118,24 +141,33 @@ export default function DetailSlipGajiPage() {
                         </div>
                     </div>
                     <div className="flex gap-3">
-                        <div className="relative">
-                            <button className="absolute left-0 top-1/2 -translate-y-1/2 pl-3">
-                                <Search className="h-4 w-4 text-gray-500" />
-                            </button>
-                            <input
-                                type="text"
-                                placeholder="Cari karyawan..."
-                                className="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 text-black outline-none focus:border-brand-500 focus-visible:shadow-none dark:border-strokedark dark:bg-form-input dark:text-white dark:focus:border-brand-500"
-                                onChange={(e) => {
-                                    const term = e.target.value.toLowerCase();
-                                    // Implement basic client-side filtering if needed or trigger fetch
-                                    // For now just console log as placeholder for complex logic
-                                    // In real app, better to filtre 'data' state directly
-                                    if (term === '') setData(originalData);
-                                    else setData(originalData.filter(item => item.nama_karyawan.toLowerCase().includes(term) || item.nik.includes(term)));
-                                }}
-                            />
-                        </div>
+                        {isSuperAdmin && (
+                            <div className="w-48 print:hidden">
+                                <SearchableSelect
+                                    options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                    value={filterVendor}
+                                    onChange={(val) => setFilterVendor(val)}
+                                    placeholder="Semua Vendor"
+                                />
+                            </div>
+                        )}
+                        {!isKaryawan && (
+                            <div className="relative">
+                                <button className="absolute left-0 top-1/2 -translate-y-1/2 pl-3">
+                                    <Search className="h-4 w-4 text-gray-500" />
+                                </button>
+                                <input
+                                    type="text"
+                                    placeholder="Cari karyawan..."
+                                    className="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 text-black outline-none focus:border-brand-500 focus-visible:shadow-none dark:border-strokedark dark:bg-form-input dark:text-white dark:focus:border-brand-500"
+                                    onChange={(e) => {
+                                        const term = e.target.value.toLowerCase();
+                                        if (term === '') setData(originalData);
+                                        else setData(originalData.filter(item => item.nama_karyawan.toLowerCase().includes(term) || item.nik.includes(term)));
+                                    }}
+                                />
+                            </div>
+                        )}
                         <button onClick={fetchData} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>

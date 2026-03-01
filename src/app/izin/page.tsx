@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
 import SearchableSelect from '@/components/form/SearchableSelect';
 import dynamic from 'next/dynamic';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
     ssr: false,
@@ -46,7 +47,10 @@ type DeptOption = {
     nama_dept: string;
 };
 
+type OptionItem = { value: string; label: string };
+
 function PengajuanIzinPage() {
+    const { isSuperAdmin, isKaryawan, hasPermission } = usePermissions();
     const [activeTab, setActiveTab] = useState<'absen' | 'sakit' | 'cuti' | 'dinas'>('absen');
     const [data, setData] = useState<IzinData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -54,6 +58,7 @@ function PengajuanIzinPage() {
     const [searchCabang, setSearchCabang] = useState('');
     const [searchDept, setSearchDept] = useState('');
     const [searchStatus, setSearchStatus] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [badgeCounts, setBadgeCounts] = useState({ absen: 0, sakit: 0, cuti: 0, dinas: 0 });
@@ -77,6 +82,7 @@ function PengajuanIzinPage() {
     const [karyawanOptions, setKaryawanOptions] = useState<KaryawanOption[]>([]);
     const [cabangOptions, setCabangOptions] = useState<BranchOption[]>([]);
     const [deptOptions, setDeptOptions] = useState<DeptOption[]>([]);
+    const [vendorOptions, setVendorOptions] = useState<OptionItem[]>([]);
 
     const getApiEndpoint = () => {
         switch (activeTab) {
@@ -108,13 +114,13 @@ function PengajuanIzinPage() {
     useEffect(() => {
         fetchData();
         fetchBadges();
-    }, [activeTab, searchCabang, searchDept, searchStatus, dateFrom, dateTo]);
+    }, [activeTab, searchCabang, searchDept, searchStatus, dateFrom, dateTo, filterVendor]);
 
     useEffect(() => {
         fetchOptions();
         const interval = setInterval(fetchBadges, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [isSuperAdmin, filterVendor]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -125,6 +131,7 @@ function PengajuanIzinPage() {
             if (searchStatus) params.append('status', searchStatus);
             if (dateFrom) params.append('dari', dateFrom);
             if (dateTo) params.append('sampai', dateTo);
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
 
             const res: any = await apiClient.get(`${getApiEndpoint()}?${params.toString()}`);
             const kodeField = getKodeField();
@@ -143,14 +150,28 @@ function PengajuanIzinPage() {
 
     const fetchOptions = async () => {
         try {
-            const [karyawanRes, cabangRes, deptRes] = await Promise.all([
-                apiClient.get('/master/karyawan/options'),
-                apiClient.get('/master/cabang/options'),
+            const cabParams = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) {
+                cabParams.append('vendor_id', filterVendor);
+            }
+            const calls = [
+                apiClient.get(`/master/karyawan/options?${cabParams.toString()}`),
+                apiClient.get(`/master/cabang/options?${cabParams.toString()}`),
                 apiClient.get('/master/departemen/options')
-            ]);
-            setKaryawanOptions(karyawanRes as any);
-            setCabangOptions(cabangRes as any);
-            setDeptOptions(deptRes as any);
+            ];
+
+            if (isSuperAdmin) {
+                calls.push(apiClient.get('/vendors'));
+            }
+
+            const responses = await Promise.all(calls);
+            setKaryawanOptions(responses[0] as any);
+            setCabangOptions(responses[1] as any);
+            setDeptOptions(responses[2] as any);
+
+            if (isSuperAdmin && Array.isArray(responses[3])) {
+                setVendorOptions(responses[3].map((v: any) => ({ value: v.id.toString(), label: v.nama_vendor })));
+            }
         } catch (error) {
             console.error("Failed options", error);
         }
@@ -438,22 +459,36 @@ function PengajuanIzinPage() {
                             />
                             <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                         </div>
-                        <div>
-                            <SearchableSelect
-                                options={cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))}
-                                value={searchCabang}
-                                onChange={setSearchCabang}
-                                placeholder="Semua Cabang"
-                            />
-                        </div>
-                        <div>
-                            <SearchableSelect
-                                options={deptOptions.map(d => ({ value: d.kode_dept, label: d.nama_dept }))}
-                                value={searchDept}
-                                onChange={setSearchDept}
-                                placeholder="Semua Dept"
-                            />
-                        </div>
+                        {isSuperAdmin && (
+                            <div>
+                                <SearchableSelect
+                                    options={[{ value: "", label: "Semua Vendor" }, ...vendorOptions]}
+                                    value={filterVendor}
+                                    onChange={setFilterVendor}
+                                    placeholder="Semua Vendor"
+                                />
+                            </div>
+                        )}
+                        {!isKaryawan && (
+                            <>
+                                <div>
+                                    <SearchableSelect
+                                        options={cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))}
+                                        value={searchCabang}
+                                        onChange={setSearchCabang}
+                                        placeholder="Semua Cabang"
+                                    />
+                                </div>
+                                <div>
+                                    <SearchableSelect
+                                        options={deptOptions.map(d => ({ value: d.kode_dept, label: d.nama_dept }))}
+                                        value={searchDept}
+                                        onChange={setSearchDept}
+                                        placeholder="Semua Dept"
+                                    />
+                                </div>
+                            </>
+                        )}
                         <div>
                             <select
                                 className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
@@ -538,7 +573,7 @@ function PengajuanIzinPage() {
                                             <td className="px-4 py-4 text-center">
                                                 {item.foto_bukti ? (
                                                     <button
-                                                        onClick={() => window.open(`https://k3guard.com/storage/${item.foto_bukti}`, '_blank')}
+                                                        onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/storage/${item.foto_bukti}`, '_blank')}
                                                         className="inline-flex items-center gap-1 px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium dark:bg-meta-4 dark:hover:bg-meta-4/70 dark:text-gray-300"
                                                     >
                                                         <Eye className="h-3 w-3" />
@@ -559,7 +594,7 @@ function PengajuanIzinPage() {
                                                     <button onClick={() => handleViewDetail(item.kode)} className="hover:text-blue-500 text-gray-500 dark:text-gray-400" title="Detail">
                                                         <Eye className="h-4 w-4" />
                                                     </button>
-                                                    {item.status === '0' && (
+                                                    {!isKaryawan && item.status === '0' && (
                                                         <>
                                                             <button onClick={() => handleEdit(item.kode)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400" title="Edit">
                                                                 <Edit className="h-4 w-4" />
@@ -572,14 +607,16 @@ function PengajuanIzinPage() {
                                                             </button>
                                                         </>
                                                     )}
-                                                    {item.status !== '0' && (
+                                                    {!isKaryawan && item.status !== '0' && (
                                                         <button onClick={() => handleCancelApprove(item.kode)} className="hover:text-orange-500 text-gray-500 dark:text-gray-400" title="Cancel Approval">
                                                             <AlertCircle className="h-4 w-4" />
                                                         </button>
                                                     )}
-                                                    <button onClick={() => handleDelete(item.kode)} className="hover:text-red-500 text-gray-500 dark:text-gray-400" title="Hapus">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
+                                                    {!isKaryawan && (
+                                                        <button onClick={() => handleDelete(item.kode)} className="hover:text-red-500 text-gray-500 dark:text-gray-400" title="Hapus">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -629,12 +666,21 @@ function PengajuanIzinPage() {
                             <div className="flex flex-col gap-6 mb-6">
                                 <div>
                                     <label className="mb-2.5 block text-black dark:text-white font-medium">Karyawan</label>
-                                    <SearchableSelect
-                                        options={karyawanOptions.map(k => ({ value: k.nik, label: k.nama_karyawan }))}
-                                        value={formData.nik}
-                                        onChange={(val) => setFormData({ ...formData, nik: val })}
-                                        placeholder="Pilih Karyawan"
-                                    />
+                                    {!isKaryawan ? (
+                                        <SearchableSelect
+                                            options={karyawanOptions.map(k => ({ value: k.nik, label: k.nama_karyawan }))}
+                                            value={formData.nik}
+                                            onChange={(val) => setFormData({ ...formData, nik: val })}
+                                            placeholder="Pilih Karyawan"
+                                        />
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            disabled
+                                            value={karyawanOptions.find(k => k.nik === formData.nik)?.nama_karyawan || 'Diri Sendiri'}
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-100 px-5 py-2.5 outline-none cursor-not-allowed text-gray-600 dark:border-strokedark dark:bg-meta-4 dark:text-white"
+                                        />
+                                    )}
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>

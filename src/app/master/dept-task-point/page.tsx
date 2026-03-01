@@ -27,16 +27,18 @@ type DeptTaskPointItem = {
 type OptionItem = { code: string; name: string };
 
 function MasterDeptTaskPointPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<DeptTaskPointItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
     const [cabangOptions, setCabangOptions] = useState<OptionItem[]>([]);
     const [deptOptions, setDeptOptions] = useState<OptionItem[]>([]);
+    const [vendorOptions, setVendorOptions] = useState<OptionItem[]>([]);
 
     const [filterCabang, setFilterCabang] = useState('');
     const [filterDept, setFilterDept] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
 
     // Pagination State (Client-side)
     const [currentPage, setCurrentPage] = useState(1);
@@ -62,13 +64,28 @@ function MasterDeptTaskPointPage() {
 
     const fetchOptions = async () => {
         try {
-            const resOpts: any = await apiClient.get('/master/options');
+            let url = '/master/options';
+            if (isSuperAdmin && filterVendor) {
+                url += `?vendor_id=${filterVendor}`;
+            }
+            const resOpts: any = await apiClient.get(url);
             if (resOpts) {
                 setCabangOptions(resOpts.cabang || []);
                 setDeptOptions(resOpts.departemen || []);
             }
+            setFilterCabang('');
         } catch (error) {
             console.error("Failed to fetch options", error);
+        }
+    };
+
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const res: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(res) ? res : (res?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ code: String(v.id), name: v.nama_vendor })));
+            } catch (error) { }
         }
     };
 
@@ -76,9 +93,13 @@ function MasterDeptTaskPointPage() {
         setLoading(true);
         try {
             let url = '/master/dept-task-points?';
-            if (filterCabang) url += `kode_cabang=${filterCabang}&`;
-            if (filterDept) url += `kode_dept=${filterDept}&`;
-            if (searchTerm) url += `search=${searchTerm}`;
+            const params = [];
+            if (filterCabang) params.push(`kode_cabang=${filterCabang}`);
+            if (filterDept) params.push(`kode_dept=${filterDept}`);
+            if (searchTerm) params.push(`search=${searchTerm}`);
+            if (filterVendor && isSuperAdmin) params.push(`vendor_id=${filterVendor}`);
+
+            if (params.length > 0) url += params.join('&');
 
             const response: any = await apiClient.get(url);
             if (Array.isArray(response)) {
@@ -94,12 +115,16 @@ function MasterDeptTaskPointPage() {
     };
 
     useEffect(() => {
+        fetchVendors();
+    }, [isSuperAdmin]);
+
+    useEffect(() => {
         fetchOptions();
-    }, []);
+    }, [filterVendor, isSuperAdmin]);
 
     useEffect(() => {
         fetchData();
-    }, [filterCabang, filterDept, searchTerm]);
+    }, [filterCabang, filterDept, searchTerm, filterVendor]);
 
     // Pagination Logic only since Search is serverside/filtered
     // Actually SearchTerm triggers fetchData, so filteredData is effectively same as data
@@ -254,6 +279,17 @@ function MasterDeptTaskPointPage() {
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
+
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: "", label: "Semua Vendor" }, ...vendorOptions.map(opt => ({ value: opt.code, label: opt.name }))]}
+                                value={filterVendor}
+                                onChange={(val) => setFilterVendor(val)}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
 
                     <div>
                         <SearchableSelect

@@ -6,6 +6,7 @@ import apiClient from '@/lib/api';
 import { Search, RefreshCw, ArrowLeft, ArrowRight } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 import dynamic from 'next/dynamic';
 import SearchableSelect from '@/components/form/SearchableSelect';
 import clsx from 'clsx';
@@ -33,6 +34,7 @@ type PerformanceReportItem = {
 type OptionItem = { value: string; label: string };
 
 function LaporanPerformancePage() {
+    const { isSuperAdmin } = usePermissions();
     const [data, setData] = useState<PerformanceReportItem[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -47,9 +49,11 @@ function LaporanPerformancePage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDept, setFilterDept] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
 
     const [deptOptions, setDeptOptions] = useState<OptionItem[]>([]);
     const [cabangOptions, setCabangOptions] = useState<OptionItem[]>([]);
+    const [vendorOptions, setVendorOptions] = useState<OptionItem[]>([]);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [perPage] = useState(20);
@@ -76,6 +80,14 @@ function LaporanPerformancePage() {
                 if (Array.isArray(cabangRes)) {
                     setCabangOptions(cabangRes.map((c: any) => ({ value: c.kode_cabang, label: c.nama_cabang })));
                 }
+
+                if (isSuperAdmin) {
+                    try {
+                        const vRes: any = await apiClient.get('/vendors');
+                        const vData = Array.isArray(vRes) ? vRes : (vRes?.data || []);
+                        setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+                    } catch (e) { }
+                }
             } catch (e) {
                 console.error("Failed load options", e);
             }
@@ -87,6 +99,7 @@ function LaporanPerformancePage() {
         setLoading(true);
         try {
             let url = `/laporan/performance?start_date=${startDate}&end_date=${endDate}`;
+            if (isSuperAdmin && filterVendor) url += `&vendor_id=${filterVendor}`;
             if (filterCabang) url += `&kode_cabang=${filterCabang}`;
             if (filterDept) url += `&kode_dept=${filterDept}`;
             if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -111,7 +124,7 @@ function LaporanPerformancePage() {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [filterDept, filterCabang, searchTerm, startDate, endDate]);
+    }, [filterVendor, filterDept, filterCabang, searchTerm, startDate, endDate]);
 
     return (
         <MainLayout>
@@ -146,6 +159,20 @@ function LaporanPerformancePage() {
                             />
                         </div>
                     </div>
+
+                    {isSuperAdmin && (
+                        <div className="flex flex-col">
+                            <label className="mb-2 block text-sm font-medium text-black dark:text-white">
+                                Vendor
+                            </label>
+                            <SearchableSelect
+                                options={[{ value: "", label: "Semua Vendor" }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={(val) => setFilterVendor(val)}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
 
                     <div className="flex flex-col">
                         <label className="mb-2 block text-sm font-medium text-black dark:text-white">

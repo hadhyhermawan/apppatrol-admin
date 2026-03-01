@@ -6,6 +6,7 @@ import apiClient from '@/lib/api';
 import { Search, RefreshCw, Printer, FileText } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 import SearchableSelect from '@/components/form/SearchableSelect';
 import clsx from 'clsx';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
@@ -33,6 +34,7 @@ type LaporanGajiItem = {
 type OptionItem = { value: string; label: string };
 
 function LaporanGajiPage() {
+    const { isSuperAdmin } = usePermissions();
     const [data, setData] = useState<LaporanGajiItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [tunjanganCols, setTunjanganCols] = useState<TunjanganColumn[]>([]);
@@ -44,9 +46,11 @@ function LaporanGajiPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDept, setFilterDept] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
 
     const [deptOptions, setDeptOptions] = useState<OptionItem[]>([]);
     const [cabangOptions, setCabangOptions] = useState<OptionItem[]>([]);
+    const [vendorOptions, setVendorOptions] = useState<OptionItem[]>([]);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [perPage] = useState(10);
@@ -86,6 +90,14 @@ function LaporanGajiPage() {
                 if (Array.isArray(cabangRes)) {
                     setCabangOptions(cabangRes.map((c: any) => ({ value: c.kode_cabang, label: c.nama_cabang })));
                 }
+
+                if (isSuperAdmin) {
+                    try {
+                        const vRes: any = await apiClient.get('/vendors');
+                        const vData = Array.isArray(vRes) ? vRes : (vRes?.data || []);
+                        setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+                    } catch (e) { }
+                }
             } catch (e) {
                 console.error("Failed load options", e);
             }
@@ -97,6 +109,7 @@ function LaporanGajiPage() {
         setLoading(true);
         try {
             let url = `/laporan/gaji?bulan=${filterBulan}&tahun=${filterTahun}`;
+            if (isSuperAdmin && filterVendor) url += `&vendor_id=${filterVendor}`;
             if (filterCabang) url += `&kode_cabang=${filterCabang}`;
             if (filterDept) url += `&kode_dept=${filterDept}`;
             if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -124,7 +137,7 @@ function LaporanGajiPage() {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [filterBulan, filterTahun, filterDept, filterCabang, searchTerm]);
+    }, [filterBulan, filterTahun, filterVendor, filterDept, filterCabang, searchTerm]);
 
     const paginatedData = useMemo(() => {
         const start = (currentPage - 1) * perPage;
@@ -197,6 +210,18 @@ function LaporanGajiPage() {
                             />
                         </div>
                     </div>
+
+                    {isSuperAdmin && (
+                        <div className="flex flex-col">
+                            <label className="mb-2 block text-sm font-medium text-black dark:text-white">Vendor</label>
+                            <SearchableSelect
+                                options={[{ value: "", label: "Semua Vendor" }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={(val) => setFilterVendor(val)}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
 
                     <div className="flex flex-col">
                         <label className="mb-2 block text-sm font-medium text-black dark:text-white">Cabang</label>

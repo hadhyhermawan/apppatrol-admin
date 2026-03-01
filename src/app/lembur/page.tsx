@@ -8,6 +8,7 @@ import { Plus, Search, Trash2, Edit, RefreshCw, Clock, ArrowLeft, ArrowRight, Ey
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
 
 type Lembur = {
     id: number;
@@ -40,14 +41,17 @@ type DeptOption = {
     nama_dept: string;
 };
 
+type OptionItem = { value: string; label: string };
+
 function LemburPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<Lembur[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [searchCabang, setSearchCabang] = useState('');
     const [searchDept, setSearchDept] = useState('');
     const [searchStatus, setSearchStatus] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
 
@@ -74,11 +78,15 @@ function LemburPage() {
     const [karyawanOptions, setKaryawanOptions] = useState<KaryawanOption[]>([]);
     const [cabangOptions, setCabangOptions] = useState<BranchOption[]>([]);
     const [deptOptions, setDeptOptions] = useState<DeptOption[]>([]);
+    const [vendorOptions, setVendorOptions] = useState<OptionItem[]>([]);
 
     useEffect(() => {
         fetchData();
+    }, [searchCabang, searchDept, searchStatus, dateFrom, dateTo, filterVendor]);
+
+    useEffect(() => {
         fetchOptions();
-    }, []);
+    }, [isSuperAdmin, filterVendor]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -89,6 +97,7 @@ function LemburPage() {
             if (searchStatus) params.append('status', searchStatus);
             if (dateFrom) params.append('dari', dateFrom);
             if (dateTo) params.append('sampai', dateTo);
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
 
             const res: any = await apiClient.get(`/lembur?${params.toString()}`);
             setData(Array.isArray(res) ? res : []);
@@ -102,14 +111,28 @@ function LemburPage() {
 
     const fetchOptions = async () => {
         try {
-            const [karyawanRes, cabangRes, deptRes] = await Promise.all([
-                apiClient.get('/master/karyawan/options'),
-                apiClient.get('/master/cabang/options'),
+            const cabParams = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) {
+                cabParams.append('vendor_id', filterVendor);
+            }
+            const calls = [
+                apiClient.get(`/master/karyawan/options?${cabParams.toString()}`),
+                apiClient.get(`/master/cabang/options?${cabParams.toString()}`),
                 apiClient.get('/master/departemen/options')
-            ]);
-            setKaryawanOptions(karyawanRes as any);
-            setCabangOptions(cabangRes as any);
-            setDeptOptions(deptRes as any);
+            ];
+
+            if (isSuperAdmin) {
+                calls.push(apiClient.get('/vendors'));
+            }
+
+            const responses = await Promise.all(calls);
+            setKaryawanOptions(responses[0] as any);
+            setCabangOptions(responses[1] as any);
+            setDeptOptions(responses[2] as any);
+
+            if (isSuperAdmin && Array.isArray(responses[3])) {
+                setVendorOptions(responses[3].map((v: any) => ({ value: v.id.toString(), label: v.nama_vendor })));
+            }
         } catch (error) {
             console.error("Failed options", error);
         }
@@ -280,9 +303,9 @@ function LemburPage() {
                         </button>
                         {canCreate('lembur') && (
                             <button onClick={handleCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Lembur</span>
-                        </button>
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Lembur</span>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -301,6 +324,16 @@ function LemburPage() {
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: "", label: "Semua Vendor" }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={setFilterVendor}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
                     <div>
                         <select
                             className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
@@ -426,8 +459,8 @@ function LemburPage() {
                                                 )}
                                                 {canDelete('lembur') && (
                                                     <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400" title="Hapus">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>

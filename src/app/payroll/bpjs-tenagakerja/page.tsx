@@ -43,12 +43,16 @@ type DeptOption = {
 };
 
 function PayrollBpjsTenagakerjaPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<BpjsTkItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [employees, setEmployees] = useState<EmployeeOption[]>([]);
     const [cabangList, setCabangList] = useState<CabangOption[]>([]);
     const [deptList, setDeptList] = useState<DeptOption[]>([]);
+
+    // Vendor State
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -86,6 +90,7 @@ function PayrollBpjsTenagakerjaPage() {
             if (keyword) params.append('keyword', keyword);
             if (kodeCabang) params.append('kode_cabang', kodeCabang);
             if (kodeDept) params.append('kode_dept', kodeDept);
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
             params.append('page', currentPage.toString());
             params.append('per_page', perPage.toString());
 
@@ -112,8 +117,11 @@ function PayrollBpjsTenagakerjaPage() {
 
     const fetchDropdownOptions = async () => {
         try {
+            const empParams = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) empParams.append('vendor_id', filterVendor);
+
             const [empRes, cabangRes, deptRes] = await Promise.all([
-                apiClient.get('/payroll/employees-list'),
+                apiClient.get(`/payroll/employees-list?${empParams.toString()}`),
                 apiClient.get('/master/cabang/options'),
                 apiClient.get('/master/departemen/options')
             ]);
@@ -126,16 +134,29 @@ function PayrollBpjsTenagakerjaPage() {
         }
     };
 
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const resV: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(resV) ? resV : (resV?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            } catch (error) {
+                console.error("Failed to fetch vendors", error);
+            }
+        }
+    };
+
     useEffect(() => {
         const debounce = setTimeout(() => {
             fetchData();
         }, 500);
         return () => clearTimeout(debounce);
-    }, [keyword, kodeCabang, kodeDept, currentPage, perPage]);
+    }, [keyword, kodeCabang, kodeDept, currentPage, perPage, filterVendor]);
 
     useEffect(() => {
         fetchDropdownOptions();
-    }, []);
+        fetchVendors();
+    }, [filterVendor, isSuperAdmin]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -276,7 +297,20 @@ function PayrollBpjsTenagakerjaPage() {
                 </div>
 
                 {/* Filter Section */}
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className={`mb-6 grid grid-cols-1 gap-4 ${isSuperAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={(val) => {
+                                    setFilterVendor(val);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
                     <div className="relative">
                         <input
                             type="text"

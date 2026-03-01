@@ -7,6 +7,8 @@ import apiClient from '@/lib/api';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { Search, Map as MapIcon, RefreshCw, Calendar, User } from 'lucide-react';
 import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
 import 'leaflet/dist/leaflet.css';
 
 // Dynamically import Leaflet components to avoid SSR issues
@@ -47,9 +49,12 @@ type PatrolTrack = {
 };
 
 function MapTrackingPage() {
+    const { isSuperAdmin } = usePermissions();
     const [data, setData] = useState<PatrolTrack[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
 
     useEffect(() => {
         // Set date on client side to prevent hydration match
@@ -70,7 +75,20 @@ function MapTrackingPage() {
                 L.default.Marker.prototype.options.icon = DefaultIcon;
             });
         }
-    }, []);
+
+        const fetchVendors = async () => {
+            if (isSuperAdmin) {
+                try {
+                    const res: any = await apiClient.get('/vendors');
+                    const vData = Array.isArray(res) ? res : (res?.data || []);
+                    setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+                } catch (err) {
+                    console.error("Failed to fetch vendors", err);
+                }
+            }
+        };
+        fetchVendors();
+    }, [isSuperAdmin]);
     const [searchNik, setSearchNik] = useState('');
 
     // Default center (Jakarta)
@@ -83,6 +101,7 @@ function MapTrackingPage() {
             let url = `/security/tracking?limit=500`;
             if (selectedDate) url += `&date_filter=${selectedDate}`;
             if (searchNik) url += `&nik=${searchNik}`;
+            if (isSuperAdmin && filterVendor) url += `&vendor_id=${filterVendor}`;
 
             const response: any = await apiClient.get(url);
             if (Array.isArray(response)) {
@@ -104,7 +123,7 @@ function MapTrackingPage() {
 
     useEffect(() => {
         fetchData();
-    }, [selectedDate]); // Auto fetch on date change
+    }, [selectedDate, filterVendor, isSuperAdmin]); // Auto fetch on date change
 
     // Handler for search
     const handleSearch = (e: React.FormEvent) => {
@@ -120,10 +139,20 @@ function MapTrackingPage() {
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
                         <MapIcon className="w-6 h-6 text-brand-500" />
-                        Monitoring Lokasi Patroli
+                        Monitor Lokasi Patroli
                     </h2>
                     <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                        <div className="w-full sm:w-50">
+                        {isSuperAdmin && (
+                            <div className="w-full sm:w-48">
+                                <SearchableSelect
+                                    options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                    value={filterVendor}
+                                    onChange={(val) => setFilterVendor(val)}
+                                    placeholder="Semua Vendor"
+                                />
+                            </div>
+                        )}
+                        <div className="w-full sm:w-40">
                             <DatePicker
                                 id="date-tracking"
                                 placeholder="Pilih Tanggal"

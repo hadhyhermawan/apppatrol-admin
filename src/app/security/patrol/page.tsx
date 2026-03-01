@@ -49,7 +49,7 @@ type JamKerjaOption = {
 };
 
 function SecurityPatrolPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const router = useRouter();
     const [data, setData] = useState<PatrolItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -62,6 +62,11 @@ function SecurityPatrolPage() {
     const [karyawanList, setKaryawanList] = useState<KaryawanOption[]>([]);
     const [cabangList, setCabangList] = useState<CabangOption[]>([]);
     const [jamKerjaList, setJamKerjaList] = useState<JamKerjaOption[]>([]);
+
+    // Vendor State
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
+
     const isFirstRender = useRef(true);
 
     // Pagination State
@@ -97,7 +102,9 @@ function SecurityPatrolPage() {
     // Fetch Karyawan
     const fetchKaryawan = async () => {
         try {
-            const response: any = await apiClient.get('/master/karyawan?per_page=10000');
+            const params = new URLSearchParams({ per_page: '10000' });
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
+            const response: any = await apiClient.get(`/master/karyawan?${params.toString()}`);
             if (response && response.data && Array.isArray(response.data)) {
                 setKaryawanList(response.data);
             } else if (Array.isArray(response)) {
@@ -110,7 +117,9 @@ function SecurityPatrolPage() {
 
     const fetchCabang = async () => {
         try {
-            const response: any = await apiClient.get('/master/cabang/options');
+            const params = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
+            const response: any = await apiClient.get(`/master/cabang/options?${params.toString()}`);
             setCabangList(response);
         } catch (error) {
             console.error("Failed to fetch cabang options", error);
@@ -135,6 +144,7 @@ function SecurityPatrolPage() {
             if (dateEnd) url += `date_end=${dateEnd}&`;
             if (kodeCabangFilter) url += `kode_cabang=${kodeCabangFilter}&`;
             if (kodeJamKerjaFilter) url += `kode_jam_kerja=${kodeJamKerjaFilter}&`;
+            if (isSuperAdmin && filterVendor) url += `vendor_id=${filterVendor}&`;
 
             const response: any = await apiClient.get(url);
             if (Array.isArray(response)) {
@@ -149,18 +159,31 @@ function SecurityPatrolPage() {
         }
     };
 
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const resV: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(resV) ? resV : (resV?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            } catch (error) {
+                console.error("Failed to fetch vendors", error);
+            }
+        }
+    };
+
     useEffect(() => {
         fetchKaryawan();
         fetchCabang();
         fetchJamKerjaOptions();
-    }, []);
+        fetchVendors();
+    }, [filterVendor, isSuperAdmin]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchTerm, dateStart, dateEnd, kodeCabangFilter, kodeJamKerjaFilter]);
+    }, [searchTerm, dateStart, dateEnd, kodeCabangFilter, kodeJamKerjaFilter, filterVendor]);
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -324,7 +347,20 @@ function SecurityPatrolPage() {
                     </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-6">
+                <div className={`mb-6 grid grid-cols-1 gap-4 ${isSuperAdmin ? 'md:grid-cols-7' : 'md:grid-cols-6'}`}>
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={(val) => {
+                                    setFilterVendor(val);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
                     <div className="relative col-span-2">
                         <input
                             type="text"

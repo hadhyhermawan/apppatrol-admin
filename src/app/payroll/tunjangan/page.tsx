@@ -54,13 +54,17 @@ type DeptOption = {
 };
 
 function PayrollTunjanganPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<TunjanganItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [employees, setEmployees] = useState<EmployeeOption[]>([]);
     const [jenisTunjangan, setJenisTunjangan] = useState<JenisTunjanganOption[]>([]);
     const [cabangList, setCabangList] = useState<CabangOption[]>([]);
     const [deptList, setDeptList] = useState<DeptOption[]>([]);
+
+    // Vendor State
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
 
     // Filters
     const [keyword, setKeyword] = useState('');
@@ -92,6 +96,7 @@ function PayrollTunjanganPage() {
             if (keyword) params.append('keyword', keyword);
             if (kodeCabang) params.append('kode_cabang', kodeCabang);
             if (kodeDept) params.append('kode_dept', kodeDept);
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
             params.append('limit', '50');
 
             const response: any = await apiClient.get(`/payroll/tunjangan?${params.toString()}`);
@@ -110,8 +115,11 @@ function PayrollTunjanganPage() {
 
     const fetchOptions = async () => {
         try {
+            const empParams = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) empParams.append('vendor_id', filterVendor);
+
             const [empResponse, jtResponse, cabangRes, deptRes] = await Promise.all([
-                apiClient.get('/payroll/employees-list'),
+                apiClient.get(`/payroll/employees-list?${empParams.toString()}`),
                 apiClient.get('/payroll/jenis-tunjangan'),
                 apiClient.get('/master/cabang/options'),
                 apiClient.get('/master/departemen/options')
@@ -126,17 +134,30 @@ function PayrollTunjanganPage() {
         }
     };
 
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const resV: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(resV) ? resV : (resV?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            } catch (error) {
+                console.error("Failed to fetch vendors", error);
+            }
+        }
+    };
+
     useEffect(() => {
         fetchData();
         fetchOptions();
-    }, []);
+        fetchVendors();
+    }, [filterVendor, isSuperAdmin]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [keyword, kodeCabang, kodeDept]);
+    }, [keyword, kodeCabang, kodeDept, filterVendor]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -324,7 +345,17 @@ function PayrollTunjanganPage() {
                 </div>
 
                 {/* Filter Section */}
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className={`mb-6 grid grid-cols-1 gap-4 ${isSuperAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={(val) => setFilterVendor(val)}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
                     <div className="relative">
                         <input
                             type="text"

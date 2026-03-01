@@ -117,13 +117,16 @@ function SesiCard({ idx, sesi, onChange, onRemove }: {
 }
 
 function MasterJadwalTugasPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [allData, setAllData] = useState<PatrolScheduleItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     const [cabangOptions, setCabangOptions] = useState<OptionItem[]>([]);
     const [deptOptions, setDeptOptions] = useState<OptionItem[]>([]);
     const [jamKerjaOptions, setJamKerjaOptions] = useState<JamKerjaOption[]>([]);
+    const [vendorOptions, setVendorOptions] = useState<OptionItem[]>([]);
+
+    const [filterVendor, setFilterVendor] = useState('');
 
     const [filterShift, setFilterShift] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
@@ -156,32 +159,55 @@ function MasterJadwalTugasPage() {
     // Single edit form
     const [editForm, setEditForm] = useState({ kode_jam_kerja: '', kode_dept: '', kode_cabang: '', start_time: '', end_time: '', name: '', is_active: 1 });
 
-    // ─── Fetch ────────────────────────────────────────────────────────────────
     const fetchOptions = async () => {
         try {
-            const resOpts: any = await apiClient.get('/master/options');
+            let url = '/master/options';
+            if (isSuperAdmin && filterVendor) {
+                url += `?vendor_id=${filterVendor}`;
+            }
+            const resOpts: any = await apiClient.get(url);
             setCabangOptions(resOpts?.cabang || []);
             setDeptOptions(resOpts?.departemen || []);
-            const resJK: any = await apiClient.get('/master/jamkerja');
+            const resJK: any = await apiClient.get('/master/jamkerja', {
+                params: {
+                    ...(isSuperAdmin && filterVendor ? { vendor_id: filterVendor } : {})
+                }
+            });
             setJamKerjaOptions(Array.isArray(resJK) ? resJK : []);
+            setFilterCabang('');
         } catch { }
+    };
+
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const res: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(res) ? res : (res?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ code: String(v.id), name: v.nama_vendor })));
+            } catch (error) { }
+        }
     };
 
     const fetchData = async () => {
         setLoading(true);
         try {
             let url = '/master/patrol-schedules?';
-            if (filterCabang) url += `kode_cabang=${filterCabang}&`;
-            if (filterDept) url += `kode_dept=${filterDept}&`;
-            if (filterShift) url += `kode_jam_kerja=${filterShift}`;
+            const params = [];
+            if (filterCabang) params.push(`kode_cabang=${filterCabang}`);
+            if (filterDept) params.push(`kode_dept=${filterDept}`);
+            if (filterShift) params.push(`kode_jam_kerja=${filterShift}`);
+            if (filterVendor && isSuperAdmin) params.push(`vendor_id=${filterVendor}`);
+            if (params.length > 0) url += params.join('&');
+
             const response: any = await apiClient.get(url);
             setAllData(Array.isArray(response) ? response : []);
         } catch { setAllData([]); }
         finally { setLoading(false); }
     };
 
-    useEffect(() => { fetchOptions(); }, []);
-    useEffect(() => { fetchData(); }, [filterCabang, filterDept, filterShift]);
+    useEffect(() => { fetchVendors(); }, [isSuperAdmin]);
+    useEffect(() => { fetchOptions(); }, [filterVendor, isSuperAdmin]);
+    useEffect(() => { fetchData(); }, [filterCabang, filterDept, filterShift, filterVendor]);
 
     // ─── Grouping ─────────────────────────────────────────────────────────────
     const groups = useMemo<ScheduleGroup[]>(() => {
@@ -534,14 +560,21 @@ function MasterJadwalTugasPage() {
                         </div>
 
                         {/* Filter */}
-                        <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-5">
-                            <div className="relative col-span-2">
+                        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                            <div className="relative col-span-1 sm:col-span-2 lg:col-span-2">
                                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                                 <input type="text" placeholder="Cari shift / departemen..."
                                     value={searchTerm}
                                     onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                     className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 pl-10 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
                             </div>
+
+                            {isSuperAdmin && (
+                                <SearchableSelect
+                                    options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions.map(o => ({ value: o.code, label: o.name }))]}
+                                    value={filterVendor} onChange={v => { setFilterVendor(v); setCurrentPage(1); }} placeholder="Semua Vendor" />
+                            )}
+
                             <SearchableSelect
                                 options={[{ value: '', label: 'Semua Shift' }, ...jamKerjaOptions.map(j => ({ value: j.kode_jam_kerja, label: `${j.nama_jam_kerja} (${fmt(j.jam_masuk)}–${fmt(j.jam_pulang)})` }))]}
                                 value={filterShift} onChange={v => { setFilterShift(v); setCurrentPage(1); }} placeholder="Semua Shift" />

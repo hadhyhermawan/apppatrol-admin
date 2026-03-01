@@ -26,6 +26,7 @@ interface DailySchedule {
     nama_jam_kerja: string;
     jam_masuk: string;
     jam_pulang: string;
+    source?: string;
 }
 
 interface ExtraSchedule extends DailySchedule {
@@ -430,6 +431,7 @@ export default function SetJamKerjaModal({ nik, onClose, onSuccess }: SetJamKerj
                                                 <td className="px-4 py-2 text-sm border-y border-l border-stroke dark:border-strokedark rounded-l-lg">{item.tanggal}</td>
                                                 <td className="px-4 py-2 text-sm border-y border-stroke dark:border-strokedark">
                                                     {item.nama_jam_kerja} ({item.jam_masuk?.substring(0, 5)} - {item.jam_pulang?.substring(0, 5)})
+                                                    {item.source === 'regu' && <span className="ml-2 text-[10px] bg-brand-500 text-white px-1.5 py-0.5 rounded-sm font-semibold tracking-wide uppercase">Regu</span>}
                                                 </td>
                                                 <td className="px-4 py-2 text-center border-y border-r border-stroke dark:border-strokedark rounded-r-lg">
                                                     <button onClick={() => deleteDailySchedule(item.tanggal)} className="text-red-500 hover:text-red-700">

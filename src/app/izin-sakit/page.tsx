@@ -411,7 +411,7 @@ export default function IzinSakitPage() {
                                             {item.foto_bukti ? (
                                                 <button
                                                     onClick={() => {
-                                                        const imgUrl = `https://k3guard.com/storage/${item.foto_bukti}`;
+                                                        const imgUrl = `${process.env.NEXT_PUBLIC_API_URL}/storage/${item.foto_bukti}`;
                                                         window.open(imgUrl, '_blank');
                                                     }}
                                                     className="inline-flex items-center gap-1 px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium dark:bg-meta-4 dark:hover:bg-meta-4/70 dark:text-gray-300"

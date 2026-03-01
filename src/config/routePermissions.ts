@@ -37,7 +37,7 @@ export const routePermissions: RoutePermission[] = [
     { path: '/security/tamu', permissions: ['tamu.index'] },
     { path: '/security/turlalin', permissions: ['turlalin.index'] },
     { path: '/security/surat', permissions: ['surat.index'] },
-    { path: '/security/teams', permissions: ['teams.index'] },
+    { path: '/master/regu', permissions: ['teams.index'] },
     { path: '/security/map-tracking', permissions: ['tracking.index'] },
     { path: '/security/tracking', permissions: ['tracking.index'] },
     { path: '/security/reports', permissions: ['laporan.index'] },

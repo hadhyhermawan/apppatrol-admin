@@ -25,12 +25,14 @@ type PatrolPointItem = {
 type OptionItem = { code: string; name: string };
 
 function MasterPatrolPointPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<PatrolPointItem[]>([]);
     const [cabangOptions, setCabangOptions] = useState<OptionItem[]>([]);
+    const [vendorOptions, setVendorOptions] = useState<OptionItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
 
     // Pagination State (Client-side)
     const [currentPage, setCurrentPage] = useState(1);
@@ -60,12 +62,27 @@ function MasterPatrolPointPage() {
 
     const fetchOptions = async () => {
         try {
-            const res: any = await apiClient.get('/master/options');
+            let url = '/master/options';
+            if (isSuperAdmin && filterVendor) {
+                url += `?vendor_id=${filterVendor}`;
+            }
+            const res: any = await apiClient.get(url);
             if (res && res.cabang) {
                 setCabangOptions(res.cabang);
             }
+            setFilterCabang('');
         } catch (error) {
             console.error("Failed to fetch options", error);
+        }
+    };
+
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const res: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(res) ? res : (res?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ code: String(v.id), name: v.nama_vendor })));
+            } catch (error) { }
         }
     };
 
@@ -75,8 +92,11 @@ function MasterPatrolPointPage() {
             // Note: Backend supports query params for filter, but we do client side filtering as well for simplicity with pagination
             // Or we can pass params. Let's pass params to be efficient.
             let url = '/master/patrol-points?';
-            if (filterCabang) url += `kode_cabang=${filterCabang}&`;
-            if (searchTerm) url += `search=${searchTerm}`;
+            const params = [];
+            if (filterCabang) params.push(`kode_cabang=${filterCabang}`);
+            if (searchTerm) params.push(`search=${searchTerm}`);
+            if (filterVendor && isSuperAdmin) params.push(`vendor_id=${filterVendor}`);
+            if (params.length > 0) url += params.join('&');
 
             const response: any = await apiClient.get(url);
             if (Array.isArray(response)) {
@@ -92,12 +112,17 @@ function MasterPatrolPointPage() {
     };
 
     useEffect(() => {
+        fetchVendors();
+        // Option fetching will be triggered when filterVendor changes or on mount
+    }, [isSuperAdmin]);
+
+    useEffect(() => {
         fetchOptions();
-    }, []);
+    }, [filterVendor, isSuperAdmin]);
 
     useEffect(() => {
         fetchData();
-    }, [filterCabang, searchTerm]); // Fetch when filters change
+    }, [filterCabang, searchTerm, filterVendor]); // Fetch when filters change
 
     // Grouping Logic
     const groupedData = useMemo(() => {
@@ -263,6 +288,17 @@ function MasterPatrolPointPage() {
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
+
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: "", label: "Semua Vendor" }, ...vendorOptions.map(opt => ({ value: opt.code, label: opt.name }))]}
+                                value={filterVendor}
+                                onChange={(val) => setFilterVendor(val)}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
 
                     <div>
                         <SearchableSelect

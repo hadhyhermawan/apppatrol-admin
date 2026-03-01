@@ -26,7 +26,7 @@ const menuItems: MenuItem[] = [
     {
         name: 'Data Master',
         icon: Database,
-        permissions: ['karyawan.index', 'departemen.index', 'jabatan.index', 'cabang.index'], // Any of these
+        permissions: ['karyawan.index', 'departemen.index', 'jabatan.index', 'cabang.index', 'teams.index'], // Any of these
         submenu: [
             { name: 'Karyawan', href: '/master/karyawan', permissions: ['karyawan.index'] },
             { name: 'Departemen', href: '/master/departemen', permissions: ['departemen.index'] },
@@ -38,6 +38,7 @@ const menuItems: MenuItem[] = [
             { name: 'Jadwal Tugas', href: '/master/jadwal', permissions: ['jadwal.index'] },
             { name: 'Dept Task Point', href: '/master/dept-task-point', permissions: ['depttaskpoint.index'] },
             { name: 'Walkie Channel', href: '/master/walkiechannel', permissions: ['walkiechannel.index'] },
+            { name: 'Manajemen Regu', href: '/master/regu', permissions: ['teams.index'] },
         ]
     },
     {
@@ -57,7 +58,6 @@ const menuItems: MenuItem[] = [
             { name: 'Buku Tamu', href: '/security/tamu', permissions: ['tamu.index'] },
             { name: 'Turlalin', href: '/security/turlalin', permissions: ['turlalin.index'] },
             { name: 'Data Surat', href: '/security/surat', permissions: ['surat.index'] },
-            { name: 'Manajemen Regu', href: '/security/teams', permissions: ['teams.index'] },
             { name: 'Map Tracking', href: '/security/map-tracking', permissions: ['tracking.index'] },
             { name: 'Pelanggaran', href: '/security/violations', permissions: ['giatpatrol.index'] },
             { name: 'Laporan Keamanan', href: '/security/reports', permissions: ['laporan.index'] },
@@ -135,6 +135,7 @@ const menuItems: MenuItem[] = [
             { name: 'Hari Libur', href: '/settings/hari-libur', permissions: ['harilibur.index'] },
             { name: 'Landing Page', href: '/settings/landing-page', permissions: ['super_admin_only'] },
             { name: 'User Management', href: '/settings/users', permissions: ['users.index'] },
+            { name: 'Profil Perusahaan', href: '/settings/vendor-profile', permissions: ['karyawan.index'] },
         ]
     }
 ];

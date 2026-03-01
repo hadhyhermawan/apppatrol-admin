@@ -50,6 +50,7 @@ type KaryawanItem = {
 
 type OptionItem = { code: string; name: string };
 type MasterOptions = {
+    vendor: OptionItem[];
     departemen: OptionItem[];
     jabatan: OptionItem[];
     cabang: OptionItem[];
@@ -62,13 +63,14 @@ type MasterOptions = {
 // ... (keep types)
 
 function MasterKaryawanPage() {
-    const { canCreate, canUpdate, canDelete, canView, canDetail } = usePermissions();
+    const { canCreate, canUpdate, canDelete, canView, canDetail, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<KaryawanItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
     // Filters
-    const [options, setOptions] = useState<MasterOptions>({ departemen: [], jabatan: [], cabang: [], status_kawin: [] });
+    const [options, setOptions] = useState<MasterOptions>({ vendor: [], departemen: [], jabatan: [], cabang: [], status_kawin: [] });
+    const [filterVendor, setFilterVendor] = useState('');
     const [filterDept, setFilterDept] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
     const [filterMasa, setFilterMasa] = useState('');
@@ -86,6 +88,7 @@ function MasterKaryawanPage() {
     useEffect(() => {
         const savedPage = sessionStorage.getItem('karyawan_page');
         const savedSearch = sessionStorage.getItem('karyawan_search');
+        const savedVendor = sessionStorage.getItem('karyawan_vendor');
         const savedDept = sessionStorage.getItem('karyawan_dept');
         const savedCabang = sessionStorage.getItem('karyawan_cabang');
         const savedMasa = sessionStorage.getItem('karyawan_masa');
@@ -93,6 +96,7 @@ function MasterKaryawanPage() {
 
         if (savedPage) setCurrentPage(Number(savedPage));
         if (savedSearch) setSearchTerm(savedSearch);
+        if (savedVendor) setFilterVendor(savedVendor);
         if (savedDept) setFilterDept(savedDept);
         if (savedCabang) setFilterCabang(savedCabang);
         if (savedMasa) setFilterMasa(savedMasa);
@@ -106,11 +110,12 @@ function MasterKaryawanPage() {
         if (!isHydrated) return;
         sessionStorage.setItem('karyawan_page', currentPage.toString());
         sessionStorage.setItem('karyawan_search', searchTerm);
+        sessionStorage.setItem('karyawan_vendor', filterVendor);
         sessionStorage.setItem('karyawan_dept', filterDept);
         sessionStorage.setItem('karyawan_cabang', filterCabang);
         sessionStorage.setItem('karyawan_masa', filterMasa);
         sessionStorage.setItem('karyawan_lock', filterLock);
-    }, [currentPage, searchTerm, filterDept, filterCabang, filterMasa, filterLock, isHydrated]);
+    }, [currentPage, searchTerm, filterVendor, filterDept, filterCabang, filterMasa, filterLock, isHydrated]);
 
     // Toggle Modal Jam Kerja
     const [showJamKerjaModal, setShowJamKerjaModal] = useState(false);
@@ -125,20 +130,33 @@ function MasterKaryawanPage() {
     useEffect(() => {
         const fetchOptions = async () => {
             try {
-                const res: any = await apiClient.get('/master/options');
-                if (res) setOptions(res);
+                let optionsUrl = '/master/options';
+                if (filterVendor) {
+                    optionsUrl += `?vendor_id=${filterVendor}`;
+                }
+                const res: any = await apiClient.get(optionsUrl);
+                let vendorOpts = [];
+                if (isSuperAdmin) {
+                    try {
+                        const vRes: any = await apiClient.get('/vendors');
+                        const vData = Array.isArray(vRes) ? vRes : (vRes?.data || []);
+                        vendorOpts = vData.map((v: any) => ({ code: String(v.id), name: v.nama_vendor }));
+                    } catch (e) { }
+                }
+                if (res) setOptions({ ...res, vendor: vendorOpts });
             } catch (e) {
                 console.error("Failed load options", e);
             }
         };
         fetchOptions();
-    }, []);
+    }, [filterVendor, isSuperAdmin]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             let url = `/master/karyawan?page=${currentPage}&per_page=${perPage}`;
             if (searchTerm) url += `&search=${searchTerm}`;
+            if (isSuperAdmin && filterVendor) url += `&vendor_id=${filterVendor}`;
             if (filterDept) url += `&dept_code=${filterDept}`;
             if (filterCabang) url += `&cabang_code=${filterCabang}`;
             if (filterMasa) url += `&masa_anggota=${filterMasa}`;
@@ -166,20 +184,22 @@ function MasterKaryawanPage() {
         if (!isHydrated) return;
         const timer = setTimeout(() => fetchData(), 300);
         return () => clearTimeout(timer);
-    }, [searchTerm, currentPage, perPage, filterDept, filterCabang, filterMasa, filterLock, isHydrated]);
+    }, [searchTerm, filterVendor, currentPage, perPage, filterDept, filterCabang, filterMasa, filterLock, isHydrated]);
 
     const handleRefresh = () => {
         sessionStorage.removeItem('karyawan_page');
         sessionStorage.removeItem('karyawan_search');
+        sessionStorage.removeItem('karyawan_vendor');
         sessionStorage.removeItem('karyawan_dept');
         sessionStorage.removeItem('karyawan_cabang');
         sessionStorage.removeItem('karyawan_masa');
         sessionStorage.removeItem('karyawan_lock');
 
-        if (searchTerm === '' && filterDept === '' && filterCabang === '' && filterMasa === '' && filterLock === '' && currentPage === 1) {
+        if (searchTerm === '' && filterVendor === '' && filterDept === '' && filterCabang === '' && filterMasa === '' && filterLock === '' && currentPage === 1) {
             fetchData();
         } else {
             setSearchTerm('');
+            setFilterVendor('');
             setFilterDept('');
             setFilterCabang('');
             setFilterMasa('');
@@ -364,6 +384,19 @@ function MasterKaryawanPage() {
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
 
+                    {isSuperAdmin && (
+                        <SearchableSelect
+                            options={options.vendor.map(o => ({ value: o.code, label: o.name }))}
+                            value={filterVendor}
+                            onChange={(val) => {
+                                setFilterVendor(val);
+                                setCurrentPage(1);
+                            }}
+                            placeholder="Semua Vendor"
+                            className="w-full min-w-[200px]"
+                        />
+                    )}
+
                     <SearchableSelect
                         options={options.cabang.map(o => ({ value: o.code, label: o.name }))}
                         value={filterCabang}
@@ -386,21 +419,7 @@ function MasterKaryawanPage() {
                         className="w-full min-w-[200px]"
                     />
 
-                    <SearchableSelect
-                        options={[
-                            { value: 'aktif', label: 'Aktif' },
-                            { value: 'expiring', label: 'Akan Habis' },
-                            { value: 'expired', label: 'Kadaluarsa' }
-                        ]}
-                        value={filterMasa}
-                        onChange={(val) => {
-                            setFilterMasa(val);
-                            setCurrentPage(1);
-                        }}
-                        placeholder="Filter Masa Anggota"
-                        className="w-full min-w-[200px]"
-                    />
-
+                    {/* Filter Masa Anggota removed based on request */}
                     <SearchableSelect
                         options={[
                             { value: 'all', label: 'Semua Status' },
@@ -428,7 +447,7 @@ function MasterKaryawanPage() {
                                 <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Status</th>
 
                                 <th className="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">Kontak</th>
-                                <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Masa Anggota</th>
+                                {/* Masa Anggota hidden */}
                                 <th className="min-w-[280px] px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>
                             </tr>
                         </thead>
@@ -492,22 +511,7 @@ function MasterKaryawanPage() {
                                                 <span className="text-sm text-gray-500">-</span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-4">
-                                            {item.masa_aktif_kartu_anggota ? (
-                                                <div className="flex flex-col gap-1">
-                                                    <p className="text-black dark:text-white text-sm">{formatDate(item.masa_aktif_kartu_anggota)}</p>
-                                                    {item.sisa_hari_anggota !== null && (
-                                                        item.sisa_hari_anggota < 0 ? (
-                                                            <span className="text-xs text-red-500 font-medium">{Math.abs(item.sisa_hari_anggota)} hari lalu</span>
-                                                        ) : (
-                                                            <span className="text-xs text-green-500 font-medium">{item.sisa_hari_anggota} hari lagi</span>
-                                                        )
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <span className="text-sm text-gray-500">-</span>
-                                            )}
-                                        </td>
+                                        {/* <td className="px-4 py-4"> Masa Anggota column hidden </td> */}
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
                                                 {/* Set Jam Kerja */}

@@ -6,6 +6,7 @@ import apiClient from '@/lib/api';
 import { RefreshCw, Search, ArrowLeft, ArrowRight, ClipboardList, MapPin, Download, Filter, Eye, User, X, CheckCircle, AlertTriangle, Check } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 import dynamic from 'next/dynamic';
 import clsx from 'clsx';
 import SearchableSelect from '@/components/form/SearchableSelect';
@@ -93,6 +94,7 @@ const UNITS = [
 ];
 
 function LaporanTugasPage() {
+    const { isSuperAdmin } = usePermissions();
     const [selectedUnit, setSelectedUnit] = useState('UCS');
     const [viewMode, setViewMode] = useState<'personal' | 'regu'>('personal'); // Default 'personal'
 
@@ -107,6 +109,10 @@ function LaporanTugasPage() {
     const [dateEnd, setDateEnd] = useState('');
     const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+    // Vendor Filter
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string; label: string }[]>([]);
+
     // Filters for Regu View
     const [cabangOptions, setCabangOptions] = useState<{ kode_cabang: string; nama_cabang: string }[]>([]);
     const [selectedCabang, setSelectedCabang] = useState('');
@@ -117,18 +123,35 @@ function LaporanTugasPage() {
 
     const fetchCabang = async () => {
         try {
-            const res: any = await apiClient.get('/master/cabang');
+            const params: any = {};
+            if (isSuperAdmin && filterVendor) params.vendor_id = filterVendor;
+            const res: any = await apiClient.get('/master/cabang', { params });
             if (Array.isArray(res)) setCabangOptions(res);
         } catch (e) {
             console.error("Failed fetch cabang", e);
         }
     };
 
+    const fetchVendors = async () => {
+        try {
+            const response: any = await apiClient.get('/vendors');
+            if (Array.isArray(response)) {
+                setVendorOptions(response.map(v => ({ value: v.id.toString(), label: v.nama_vendor })));
+            }
+        } catch (error) {
+            console.error("Failed to fetch vendors", error);
+        }
+    };
+
+    useEffect(() => {
+        if (isSuperAdmin) fetchVendors();
+    }, [isSuperAdmin]);
+
     useEffect(() => {
         if (selectedUnit === 'UK3' && viewMode === 'regu') {
             fetchCabang();
         }
-    }, [selectedUnit, viewMode]);
+    }, [selectedUnit, viewMode, isSuperAdmin, filterVendor]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -138,6 +161,7 @@ function LaporanTugasPage() {
                     // Fetch Monitoring Regu
                     let url = `/monitoring-regu?tanggal=${dateStart || new Date().toISOString().slice(0, 10)}`;
                     if (selectedCabang) url += `&kode_cabang=${selectedCabang}`;
+                    if (isSuperAdmin && filterVendor) url += `&vendor_id=${filterVendor}`;
 
                     const response: any = await apiClient.get(url);
                     if (response && response.regu_groups) {
@@ -152,7 +176,8 @@ function LaporanTugasPage() {
                     let url = '/security/patrol?';
                     if (searchTerm) url += `search=${searchTerm}&`;
                     if (dateStart) url += `date_start=${dateStart}&`;
-                    if (dateEnd) url += `date_end=${dateEnd}`;
+                    if (dateEnd) url += `date_end=${dateEnd}&`;
+                    if (isSuperAdmin && filterVendor) url += `vendor_id=${filterVendor}&`;
 
                     const response: any = await apiClient.get(url);
                     if (Array.isArray(response)) {
@@ -166,7 +191,8 @@ function LaporanTugasPage() {
                 let url = `/security/tasks?kode_dept=${selectedUnit}&`;
                 if (searchTerm) url += `search=${searchTerm}&`;
                 if (dateStart) url += `date_start=${dateStart}&`;
-                if (dateEnd) url += `date_end=${dateEnd}`;
+                if (dateEnd) url += `date_end=${dateEnd}&`;
+                if (isSuperAdmin && filterVendor) url += `vendor_id=${filterVendor}&`;
 
                 const response: any = await apiClient.get(url);
                 if (Array.isArray(response)) {
@@ -194,7 +220,7 @@ function LaporanTugasPage() {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchTerm, dateStart, dateEnd, selectedCabang]);
+    }, [searchTerm, dateStart, dateEnd, selectedCabang, isSuperAdmin, filterVendor]);
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -303,7 +329,18 @@ function LaporanTugasPage() {
                 </div>
 
                 {/* Filters */}
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4 items-end">
+                    {isSuperAdmin && (
+                        <div className="md:col-span-2 lg:col-span-1 border-r border-stroke dark:border-strokedark pr-4">
+                            <label className="block text-sm font-medium mb-1 dark:text-gray-300">Filter Vendor</label>
+                            <SearchableSelect
+                                options={[{ value: "", label: "Semua Vendor" }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={setFilterVendor}
+                                placeholder="Semua Vendor..."
+                            />
+                        </div>
+                    )}
                     {viewMode === 'personal' ? (
                         <>
                             <div className="relative col-span-2">

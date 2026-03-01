@@ -43,12 +43,16 @@ type DeptOption = {
 };
 
 function PayrollBpjsKesehatanPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<BpjsKesehatanItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [employees, setEmployees] = useState<EmployeeOption[]>([]);
     const [cabangList, setCabangList] = useState<CabangOption[]>([]);
     const [deptList, setDeptList] = useState<DeptOption[]>([]);
+
+    // Vendor State
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
 
     // Filters
     const [keyword, setKeyword] = useState('');
@@ -80,6 +84,7 @@ function PayrollBpjsKesehatanPage() {
             if (keyword) params.append('keyword', keyword);
             if (kodeCabang) params.append('kode_cabang', kodeCabang);
             if (kodeDept) params.append('kode_dept', kodeDept);
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
             params.append('limit', '50');
 
             const response: any = await apiClient.get(`/payroll/bpjs-kesehatan?${params.toString()}`);
@@ -98,8 +103,11 @@ function PayrollBpjsKesehatanPage() {
 
     const fetchDropdownOptions = async () => {
         try {
+            const empParams = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) empParams.append('vendor_id', filterVendor);
+
             const [empRes, cabangRes, deptRes] = await Promise.all([
-                apiClient.get('/payroll/employees-list'),
+                apiClient.get(`/payroll/employees-list?${empParams.toString()}`),
                 apiClient.get('/master/cabang/options'),
                 apiClient.get('/master/departemen/options')
             ]);
@@ -112,16 +120,29 @@ function PayrollBpjsKesehatanPage() {
         }
     };
 
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const resV: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(resV) ? resV : (resV?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            } catch (error) {
+                console.error("Failed to fetch vendors", error);
+            }
+        }
+    };
+
     useEffect(() => {
         const debounce = setTimeout(() => {
             fetchData();
         }, 500);
         return () => clearTimeout(debounce);
-    }, [keyword, kodeCabang, kodeDept]);
+    }, [keyword, kodeCabang, kodeDept, filterVendor]);
 
     useEffect(() => {
         fetchDropdownOptions();
-    }, []);
+        fetchVendors();
+    }, [filterVendor, isSuperAdmin]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -251,7 +272,17 @@ function PayrollBpjsKesehatanPage() {
                 </div>
 
                 {/* Filter Section */}
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className={`mb-6 grid grid-cols-1 gap-4 ${isSuperAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={(val) => setFilterVendor(val)}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
                     <div className="relative z-20 bg-white dark:bg-form-input">
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 z-30">
                             <Search className="h-5 w-5 text-gray-400" />

@@ -7,6 +7,7 @@ import apiClient from '@/lib/api';
 import { Search, Calendar, MapPin, ArrowLeft, ArrowRight, RefreshCw, Download, Printer, X, Eye } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { withPermission } from '@/hoc/withPermission';
+import { usePermissions } from '@/contexts/PermissionContext';
 import dynamic from 'next/dynamic';
 import SearchableSelect from '@/components/form/SearchableSelect';
 import clsx from 'clsx';
@@ -41,6 +42,7 @@ type PresensiReportItem = {
 type OptionItem = { value: string; label: string };
 
 function LaporanPresensiPage() {
+    const { isSuperAdmin } = usePermissions();
     const [data, setData] = useState<PresensiReportItem[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -52,9 +54,11 @@ function LaporanPresensiPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDept, setFilterDept] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
 
     const [deptOptions, setDeptOptions] = useState<OptionItem[]>([]);
     const [cabangOptions, setCabangOptions] = useState<OptionItem[]>([]);
+    const [vendorOptions, setVendorOptions] = useState<OptionItem[]>([]);
 
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [rekapData, setRekapData] = useState<any[]>([]);
@@ -105,6 +109,14 @@ function LaporanPresensiPage() {
                 if (Array.isArray(cabangRes)) {
                     setCabangOptions(cabangRes.map((c: any) => ({ value: c.kode_cabang, label: c.nama_cabang })));
                 }
+
+                if (isSuperAdmin) {
+                    try {
+                        const vRes: any = await apiClient.get('/vendors');
+                        const vData = Array.isArray(vRes) ? vRes : (vRes?.data || []);
+                        setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+                    } catch (e) { }
+                }
             } catch (e) {
                 console.error("Failed load options", e);
             }
@@ -131,6 +143,7 @@ function LaporanPresensiPage() {
             }
 
             let url = `/laporan/presensi?start_date=${start_date}&end_date=${end_date}`;
+            if (isSuperAdmin && filterVendor) url += `&vendor_id=${filterVendor}`;
             if (filterCabang) url += `&kode_cabang=${filterCabang}`;
             if (filterDept) url += `&kode_dept=${filterDept}`;
             if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -145,6 +158,7 @@ function LaporanPresensiPage() {
             } else {
                 // Rekap URL would be /laporan/rekap-presensi
                 url = `/laporan/rekap-presensi?start_date=${start_date}&end_date=${end_date}`;
+                if (isSuperAdmin && filterVendor) url += `&vendor_id=${filterVendor}`;
                 if (filterCabang) url += `&kode_cabang=${filterCabang}`;
                 if (filterDept) url += `&kode_dept=${filterDept}`;
                 if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -173,7 +187,7 @@ function LaporanPresensiPage() {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [dateRange, filterDept, filterCabang, searchTerm, viewMode, startDate, endDate]);
+    }, [dateRange, filterVendor, filterDept, filterCabang, searchTerm, viewMode, startDate, endDate]);
 
     const getStatusBadge = (status: string) => {
         const s = status ? status.toUpperCase().trim() : '';
@@ -212,23 +226,8 @@ function LaporanPresensiPage() {
 
     const getImageUrl = (filename: string | null) => {
         if (!filename) return null;
-        // In this case, backend returns logic to determine if full url or not.
-        // Assuming backend master.get_full_image_url logic is applied or filename is relative.
-        // If relative, prepend API_URL/storage? 
-        // Actually the backend `laporan.py` returns `presensi.foto_in`. 
-        // `presensi.foto_in` in DB is just filename.
-        // We probably need to prepend storage URL if it's not full. 
-        // Let's assume generic storage path for now or check how `presensi/page.tsx` did it.
-        // `presensi/page.tsx` just used `getImageUrl(item.foto_in) || ""` and `getImageUrl` just returned filename.
-        // So `Image` component `src` handles it? Or `next.config.js`?
-        // Wait, `presensi/page.tsx` line 350: `src={getImageUrl(item.foto_in) || ""}`. 
-        // If it's just filename, Next Image needs domain. 
-        // Ah, maybe the API response in `presensi/page.tsx` (Laravel) already gives full URL?
-        // In Python `laporan.py` I just return `presensi.foto_in`. 
-        // I should probably fix Python backend to return full URL or handle it here.
-        // Let's handle it here: `/api/storage/uploads/absensi/${filename}`
         if (filename.startsWith('http')) return filename;
-        return `/api/storage/uploads/absensi/${filename}`;
+        return `${process.env.NEXT_PUBLIC_API_URL}/storage/uploads/absensi/${filename}`;
     };
 
     return (
@@ -290,6 +289,20 @@ function LaporanPresensiPage() {
                             />
                         </div>
                     </div>
+
+                    {isSuperAdmin && (
+                        <div className="flex flex-col">
+                            <label className="mb-2 block text-sm font-medium text-black dark:text-white">
+                                Vendor
+                            </label>
+                            <SearchableSelect
+                                options={[{ value: "", label: "Semua Vendor" }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={(val) => setFilterVendor(val)}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
 
                     {/* Cabang Filter */}
                     <div className="flex flex-col">

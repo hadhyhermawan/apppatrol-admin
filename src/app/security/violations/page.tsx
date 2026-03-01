@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { RefreshCw, Search, X, Eye, FileText, ArrowLeft, ArrowRight, Calendar, Plus, Save, Trash, AlertTriangle, User, ScanLine, Clock, UserX, MapPinOff, ShieldX, WifiOff, Slash, Smartphone, ShieldAlert, List } from 'lucide-react';
+import { RefreshCw, Search, X, Eye, FileText, ArrowLeft, ArrowRight, Calendar, Plus, Save, Trash, AlertTriangle, User, ScanLine, Clock, UserX, MapPinOff, ShieldX, WifiOff, Slash, Smartphone, ShieldAlert, List, CreditCard } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Image from 'next/image';
 import { withPermission } from '@/hoc/withPermission';
@@ -62,10 +62,11 @@ const VIOLATION_TYPES = [
     { id: 'fake_gps', label: 'Fake GPS', icon: Slash },
     { id: 'root_device', label: 'HP Root', icon: Smartphone },
     { id: 'blocked_user', label: 'Akun Terblokir', icon: ShieldAlert },
+    { id: 'expired_card', label: 'Kartu Anggota Habis', icon: CreditCard },
 ];
 
 function ViolationPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [viewMode, setViewMode] = useState<'list' | 'scan'>('list');
 
     // List Mode States
@@ -89,8 +90,10 @@ function ViolationPage() {
     // Dynamic Filter states
     const [filterDept, setFilterDept] = useState('');
     const [filterCabang, setFilterCabang] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
     const [deptOptions, setDeptOptions] = useState<OptionItem[]>([]);
     const [cabangOptions, setCabangOptions] = useState<OptionItem[]>([]);
+    const [vendorOptions, setVendorOptions] = useState<OptionItem[]>([]);
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -114,7 +117,10 @@ function ViolationPage() {
     // Fetch Karyawan
     const fetchKaryawan = async () => {
         try {
-            const response: any = await apiClient.get('/master/karyawan?per_page=10000');
+            let url = '/master/karyawan?per_page=10000';
+            if (isSuperAdmin && filterVendor) url += `&vendor_id=${filterVendor}`;
+
+            const response: any = await apiClient.get(url);
             if (response && response.data && Array.isArray(response.data)) {
                 setKaryawanList(response.data);
             } else if (Array.isArray(response)) {
@@ -135,6 +141,7 @@ function ViolationPage() {
             if (filterType !== 'all') url += `type=${filterType}&`;
             if (filterCabang) url += `kode_cabang=${filterCabang}&`;
             if (filterDept) url += `kode_dept=${filterDept}&`;
+            if (isSuperAdmin && filterVendor) url += `vendor_id=${filterVendor}&`;
 
             try {
                 const response: any = await apiClient.get(url);
@@ -179,10 +186,23 @@ function ViolationPage() {
     useEffect(() => {
         const fetchOptions = async () => {
             try {
-                const [deptRes, cabangRes] = await Promise.all([
+                const cabParams = new URLSearchParams();
+                if (isSuperAdmin && filterVendor) {
+                    cabParams.append('vendor_id', filterVendor);
+                }
+                const calls = [
                     apiClient.get('/master/departemen/options'),
-                    apiClient.get('/master/cabang/options')
-                ]);
+                    apiClient.get(`/master/cabang/options?${cabParams.toString()}`)
+                ];
+
+                if (isSuperAdmin) {
+                    calls.push(apiClient.get('/vendors'));
+                }
+
+                const responses = await Promise.all(calls);
+                const deptRes = responses[0];
+                const cabangRes = responses[1];
+                const vendorRes = isSuperAdmin ? responses[2] : [];
 
                 if (Array.isArray(deptRes)) {
                     setDeptOptions(deptRes.map((d: any) => ({ value: d.kode_dept, label: d.nama_dept })));
@@ -191,6 +211,10 @@ function ViolationPage() {
                 if (Array.isArray(cabangRes)) {
                     setCabangOptions(cabangRes.map((c: any) => ({ value: c.kode_cabang, label: c.nama_cabang })));
                 }
+
+                if (isSuperAdmin && Array.isArray(vendorRes)) {
+                    setVendorOptions(vendorRes.map((v: any) => ({ value: v.id.toString(), label: v.nama_vendor })));
+                }
             } catch (e) {
                 console.error("Failed load options", e);
             }
@@ -198,7 +222,7 @@ function ViolationPage() {
         fetchOptions();
         fetchKaryawan();
         fetchData();
-    }, []);
+    }, [isSuperAdmin, filterVendor]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -206,7 +230,7 @@ function ViolationPage() {
             setCurrentPage(1);
         }, 800);
         return () => clearTimeout(timer);
-    }, [searchTerm, dateStart, dateEnd, filterType, filterCabang, filterDept]);
+    }, [searchTerm, dateStart, dateEnd, filterType, filterCabang, filterDept, filterVendor]);
 
     // Pagination Logic
     const paginatedData = useMemo(() => {
@@ -432,6 +456,17 @@ function ViolationPage() {
                                     placeholder="Semua Cabang"
                                 />
                             </div>
+                            {isSuperAdmin && (
+                                <div className="col-span-1">
+                                    <label className="mb-1 block text-sm font-medium text-black dark:text-white">Vendor</label>
+                                    <SearchableSelect
+                                        options={[{ value: "", label: "Semua Vendor" }, ...vendorOptions]}
+                                        value={filterVendor}
+                                        onChange={(val) => setFilterVendor(val)}
+                                        placeholder="Semua Vendor"
+                                    />
+                                </div>
+                            )}
                             <div className="col-span-1">
                                 <label className="mb-1 block text-sm font-medium text-black dark:text-white">Departemen</label>
                                 <SearchableSelect

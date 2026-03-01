@@ -8,6 +8,8 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import clsx from 'clsx';
 import Image from 'next/image';
+import { usePermissions } from '@/contexts/PermissionContext';
+import SearchableSelect from '@/components/form/SearchableSelect';
 
 type BeritaItem = {
     id: number;
@@ -16,6 +18,7 @@ type BeritaItem = {
     foto_url: string | null;
     kode_dept_target: string | null;
     nama_dept_target: string | null;
+    vendor_id: number | null;
     author: string | null;
     created_at?: string;
     updated_at?: string;
@@ -27,10 +30,13 @@ type DepartemenOption = {
 };
 
 export default function BeritaPage() {
+    const { isSuperAdmin } = usePermissions();
     const [data, setData] = useState<BeritaItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [deptOptions, setDeptOptions] = useState<DepartemenOption[]>([]);
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
 
     // Pagination State (Client-side)
     const [currentPage, setCurrentPage] = useState(1);
@@ -44,11 +50,13 @@ export default function BeritaPage() {
         judul: string;
         isi: string;
         kode_dept_target: string;
+        vendor_id: string | null;
         foto: File | null;
     }>({
         judul: '',
         isi: '',
         kode_dept_target: '',
+        vendor_id: null,
         foto: null
     });
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -58,7 +66,11 @@ export default function BeritaPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const response: any = await apiClient.get('/berita');
+            const response: any = await apiClient.get('/berita', {
+                params: {
+                    ...(isSuperAdmin && filterVendor ? { vendor_id: filterVendor } : {})
+                }
+            });
             console.log("DEBUG BERITA DATA:", response);
             if (response.data && Array.isArray(response.data)) {
                 setData(response.data);
@@ -79,6 +91,11 @@ export default function BeritaPage() {
             if (response.departemen) {
                 setDeptOptions(response.departemen);
             }
+            if (isSuperAdmin) {
+                const resV: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(resV) ? resV : (resV?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            }
         } catch (error) {
             console.error("Failed to fetch options", error);
         }
@@ -87,7 +104,7 @@ export default function BeritaPage() {
     useEffect(() => {
         fetchData();
         fetchOptions();
-    }, []);
+    }, [filterVendor, isSuperAdmin]);
 
     // Filter & Pagination Logic
     const filteredData = useMemo(() => {
@@ -114,6 +131,7 @@ export default function BeritaPage() {
             judul: '',
             isi: '',
             kode_dept_target: '',
+            vendor_id: null,
             foto: null
         });
         setPreviewImage(null);
@@ -130,6 +148,7 @@ export default function BeritaPage() {
             judul: item.judul,
             isi: item.isi,
             kode_dept_target: item.kode_dept_target || '',
+            vendor_id: item.vendor_id ? String(item.vendor_id) : null,
             foto: null
         });
 
@@ -165,6 +184,9 @@ export default function BeritaPage() {
             data.append('isi', formData.isi);
             if (formData.kode_dept_target) {
                 data.append('kode_dept_target', formData.kode_dept_target);
+            }
+            if (isSuperAdmin && formData.vendor_id) {
+                data.append('vendor_id', formData.vendor_id);
             }
             if (formData.foto) {
                 data.append('foto', formData.foto);
@@ -269,6 +291,16 @@ export default function BeritaPage() {
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={val => setFilterVendor(val)}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-4">
@@ -398,6 +430,22 @@ export default function BeritaPage() {
                                         ))}
                                     </select>
                                 </div>
+
+                                {isSuperAdmin && (
+                                    <div>
+                                        <label className="block text-sm font-semibold text-black dark:text-white mb-2">Vendor</label>
+                                        <select
+                                            className="w-full rounded border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
+                                            value={formData.vendor_id || ''}
+                                            onChange={(e) => setFormData({ ...formData, vendor_id: e.target.value || null })}
+                                        >
+                                            <option value="">-- Tanpa Vendor --</option>
+                                            {vendorOptions.map(v => (
+                                                <option key={v.value} value={v.value}>{v.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Isi Berita</label>

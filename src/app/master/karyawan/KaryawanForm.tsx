@@ -61,6 +61,7 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
     const [formData, setFormData] = useState<any>({});
     const [filePreview, setFilePreview] = useState<any>({});
     const [files, setFiles] = useState<any>({});
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     useEffect(() => {
         if (initialData && mode === 'edit') {
@@ -81,9 +82,27 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                 kode_jadwal: initialData.kode_jadwal || '',
                 jenis_kelamin: initialData.jenis_kelamin || 'L',
                 status_karyawan: initialData.status_karyawan || 'C',
+                status_aktif_karyawan: initialData.status_aktif_karyawan !== undefined ? String(initialData.status_aktif_karyawan) : '1',
+                tanggal_masuk: initialData.tanggal_masuk || '',
+
+                kontak_darurat_nama: initialData.kontak_darurat_nama || '',
+                kontak_darurat_hp: initialData.kontak_darurat_hp || '',
+                kontak_darurat_alamat: initialData.kontak_darurat_alamat || '',
+
+                pendidikan_terakhir: initialData.pendidikan_terakhir || '',
+                no_ijazah: initialData.no_ijazah || '',
+                no_ijazah_terakhir: initialData.no_ijazah_terakhir || '',
+                no_sim: initialData.no_sim || '',
+                pin: initialData.pin || '',
+
+                lock_location: initialData.lock_location !== undefined ? String(initialData.lock_location) : '1',
+                lock_device_login: initialData.lock_device_login !== undefined ? String(initialData.lock_device_login) : '0',
+                allow_multi_device: initialData.allow_multi_device !== undefined ? String(initialData.allow_multi_device) : '0',
+                lock_jam_kerja: initialData.lock_jam_kerja !== undefined ? String(initialData.lock_jam_kerja) : '1',
+                lock_patrol: initialData.lock_patrol !== undefined ? String(initialData.lock_patrol) : '1',
 
                 masa_aktif_kartu_anggota: initialData.masa_aktif_kartu_anggota || '',
-                no_kartu_anggota: initialData.nik, // Force sync with NIK
+                no_kartu_anggota: initialData.no_kartu_anggota || initialData.nik,
 
                 // Files
                 foto: null,
@@ -124,6 +143,7 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                 kode_status_kawin: '1',
                 pendidikan_terakhir: 'SMA',
                 no_ijazah: '',
+                no_ijazah_terakhir: '',
                 no_sim: '',
                 kode_jadwal: '',
                 no_kartu_anggota: '',
@@ -228,6 +248,31 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
 
     return (
         <div className="flex flex-col gap-6">
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <img
+                        src={previewImage}
+                        alt="Preview"
+                        className="max-h-[90vh] max-w-full rounded-lg shadow-2xl object-contain cursor-pointer"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(previewImage, '_blank');
+                        }}
+                    />
+                    <button
+                        className="absolute top-5 right-5 text-white bg-black/50 rounded-full p-2 hover:bg-white/20 z-50 pointer-events-auto"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                    <div className="absolute top-5 right-16 text-white text-xs bg-black/50 px-3 py-2 rounded-full pointer-events-none">
+                        Klik gambar untuk membuka ukuran penuh di tab baru
+                    </div>
+                </div>
+            )}
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
                 <div className="flex flex-col border-b border-gray-200 lg:flex-row dark:border-gray-800">
                     {/* Sidebar Tabs */}
@@ -360,6 +405,7 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                         <option value="S3">S3</option>
                                     </select>
                                 </InputGroup>
+
                             </div>
                         </div>
 
@@ -484,6 +530,14 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                                 placeholder="YYYY-MM-DD"
                                             />
                                         </div>
+
+                                        <InputGroup label="Nomor Ijazah Satpam" required>
+                                            <input type="text" name="no_ijazah" value={formData.no_ijazah || ''} onChange={handleChange} className={inputClass} placeholder="Nomor Ijazah Satpam (Misal: Polda Jabar)" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Nomor Ijazah Terakhir" required>
+                                            <input type="text" name="no_ijazah_terakhir" value={formData.no_ijazah_terakhir || ''} onChange={handleChange} className={inputClass} placeholder="Nomor Ijazah (Contoh: SMA, D1, D3, S1, S2)" />
+                                        </InputGroup>
                                     </>
                                 )}
                             </div>
@@ -533,7 +587,9 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                 <div className="col-span-1 md:col-span-2 flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg dark:border-gray-600">
                                     <div className="mb-4 h-32 w-32 relative overflow-hidden rounded-full bg-gray-100">
                                         {filePreview.foto ? (
-                                            <Image src={filePreview.foto} alt="Preview" fill className="object-cover" unoptimized />
+                                            <div onClick={() => setPreviewImage(filePreview.foto)} className="block w-full h-full relative cursor-pointer group">
+                                                <Image src={filePreview.foto} alt="Preview" fill className="object-cover group-hover:opacity-80 transition-opacity" unoptimized />
+                                            </div>
                                         ) : (
                                             <User className="h-full w-full p-6 text-gray-400" />
                                         )}
@@ -572,14 +628,23 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                     <div key={doc.id} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
                                         <h4 className="mb-3 text-sm font-medium">{doc.label}</h4>
                                         {filePreview[doc.id] && (
-                                            <div className="mb-3 relative h-32 w-full rounded bg-gray-200">
-                                                <Image src={filePreview[doc.id]} alt="Preview" fill className="object-cover rounded" unoptimized />
+                                            <div className="mb-3 relative h-32 w-full rounded bg-gray-200 overflow-hidden flex items-center justify-center">
+                                                {(typeof filePreview[doc.id] === 'string' && filePreview[doc.id].toLowerCase().endsWith('.pdf')) || (files[doc.id] && files[doc.id].type === 'application/pdf') ? (
+                                                    <div className="flex flex-col items-center justify-center p-4 h-full">
+                                                        <FileText className="h-10 w-10 text-red-500 mb-2" />
+                                                        <a href={filePreview[doc.id]} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline z-10 p-2 bg-white rounded-md shadow">Lihat / Buka PDF</a>
+                                                    </div>
+                                                ) : (
+                                                    <div onClick={() => setPreviewImage(filePreview[doc.id])} className="block w-full h-full relative cursor-pointer group">
+                                                        <Image src={filePreview[doc.id]} alt="Preview" fill className="object-cover rounded group-hover:opacity-80 transition-opacity" unoptimized />
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                         <input
                                             type="file"
                                             className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-gray-700 dark:file:text-white"
-                                            accept="image/*"
+                                            accept="image/*,application/pdf"
                                             onChange={(e) => handleFileChange(e, doc.id)}
                                         />
                                     </div>

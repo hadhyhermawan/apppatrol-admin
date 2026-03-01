@@ -4,6 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
+import { usePermissions } from "@/contexts/PermissionContext";
+import { getRequiredPermissions } from "@/config/routePermissions";
 import apiClient from "@/lib/api";
 import {
   LayoutDashboard,
@@ -41,8 +43,9 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  subItems?: { name: string; path: string; pro?: boolean; new?: boolean; superAdminOnly?: boolean }[];
   sectionHeader?: string;
+  superAdminOnly?: boolean;
 };
 
 const navItems: NavItem[] = [
@@ -55,6 +58,7 @@ const navItems: NavItem[] = [
     name: 'Data Master',
     icon: <Database size={20} />,
     subItems: [
+      { name: 'Vendor', path: '/master/vendor', superAdminOnly: true },
       { name: 'Karyawan', path: '/master/karyawan' },
       { name: 'Departemen', path: '/master/departemen' },
       { name: 'Jabatan', path: '/master/jabatan' },
@@ -65,6 +69,7 @@ const navItems: NavItem[] = [
       { name: 'Cuti', path: '/master/cuti' },
       { name: 'Jam Kerja', path: '/master/jamkerja' },
       { name: 'Jadwal Tugas', path: '/master/jadwal' },
+      { name: 'Manajemen Regu', path: '/master/regu' },
     ]
   },
   {
@@ -98,7 +103,7 @@ const navItems: NavItem[] = [
     sectionHeader: 'Departemen Keamanan'
   },
   {
-    name: 'Manajemen Regu',
+    name: 'Manajemen Patroli',
     path: '/security/teams',
     icon: <Users size={20} />
   },
@@ -188,6 +193,7 @@ const navItems: NavItem[] = [
       { name: 'Jam Kerja Departemen', path: '/settings/jam-kerja-dept' },
       { name: 'Syarat & Ketentuan', path: '/settings/terms' },
       { name: 'Kebijakan Privasi', path: '/settings/privacy' },
+      { name: 'Profil Perusahaan', path: '/settings/vendor-profile' },
     ]
   },
   {
@@ -225,6 +231,7 @@ const navItems: NavItem[] = [
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { isSuperAdmin, isKaryawan, hasAnyPermission, hasAllPermissions } = usePermissions();
   const pathname = usePathname();
 
   const [izinCount, setIzinCount] = useState<number>(0);
@@ -305,57 +312,92 @@ const AppSidebar: React.FC = () => {
     });
   };
 
-  const renderMenuItems = (navItems: NavItem[]) => (
-    <ul className="flex flex-col gap-4">
-      {navItems.map((nav, index) => (
-        <React.Fragment key={nav.name}>
-          {nav.sectionHeader && (isExpanded || isHovered || isMobileOpen) && (
-            <li className="mt-4 mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              {nav.sectionHeader}
-            </li>
-          )}
-          <li key={nav.name}>
-            {nav.subItems ? (
-              <button
-                onClick={() => handleSubmenuToggle(index)}
-                className={`menu-item group ${openSubmenu?.type === "main" && openSubmenu?.index === index
-                  ? "menu-item-active"
-                  : "menu-item-inactive"
-                  } cursor-pointer ${!isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "lg:justify-start"
-                  }`}
-              >
-                <span
-                  className={`${openSubmenu?.type === "main" && openSubmenu?.index === index
-                    ? "menu-item-icon-active"
-                    : "menu-item-icon-inactive"
-                    }`}
-                >
-                  {nav.icon}
-                </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className={`menu-item-text`}>{nav.name}</span>
-                )}
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <ChevronDown
-                    className={`ml-auto w-5 h-5 transition-transform duration-200 ${openSubmenu?.type === "main" &&
-                      openSubmenu?.index === index
-                      ? "rotate-180 text-brand-500"
-                      : ""
-                      }`}
-                  />
-                )}
-              </button>
-            ) : (
-              nav.path && (
-                <Link
-                  href={nav.path}
-                  className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+  const renderMenuItems = (navItems: NavItem[]) => {
+    const filteredNavItems = navItems.map(nav => {
+      if (nav.subItems) {
+        return {
+          ...nav,
+          subItems: nav.subItems.filter(sub => {
+            if (sub.superAdminOnly && !isSuperAdmin) return false;
+            if (isSuperAdmin) return true;
+            if (sub.path) {
+              const routePerm = getRequiredPermissions(sub.path);
+              if (routePerm && routePerm.permissions.length > 0) {
+                if (routePerm.requireAll) {
+                  return hasAllPermissions(routePerm.permissions);
+                } else {
+                  return hasAnyPermission(routePerm.permissions);
+                }
+              } else {
+                if (isKaryawan && !isSuperAdmin) {
+                  return false;
+                }
+              }
+            }
+            return true;
+          })
+        };
+      }
+      return nav;
+    }).filter(nav => {
+      if (nav.superAdminOnly && !isSuperAdmin) return false;
+
+      if (nav.subItems) {
+        return nav.subItems.length > 0;
+      }
+
+      if (isSuperAdmin) return true;
+
+      if (nav.path) {
+        const routePerm = getRequiredPermissions(nav.path);
+        if (routePerm && routePerm.permissions.length > 0) {
+          if (routePerm.requireAll) {
+            return hasAllPermissions(routePerm.permissions);
+          } else {
+            return hasAnyPermission(routePerm.permissions);
+          }
+        } else {
+          // For Karyawans, if a path doesn't explicitly have an empty permission list []
+          // mapped in routePermissions, and it's a top level menu, we block it by default
+          // unless it's explicitly Dashboard which has []
+          if (isKaryawan && !isSuperAdmin) {
+            if (nav.path !== '/dashboard') {
+              return false;
+            }
+          }
+        }
+      }
+      // Top level items without specific permissions and without subItems
+      if (isKaryawan && !isSuperAdmin && !nav.path && !nav.subItems) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return (
+      <ul className="flex flex-col gap-4">
+        {filteredNavItems.map((nav, index) => (
+          <React.Fragment key={nav.name}>
+            {nav.sectionHeader && (isExpanded || isHovered || isMobileOpen) && (
+              <li className="mt-4 mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                {nav.sectionHeader}
+              </li>
+            )}
+            <li key={nav.name}>
+              {nav.subItems ? (
+                <button
+                  onClick={() => handleSubmenuToggle(index)}
+                  className={`menu-item group ${openSubmenu?.type === "main" && openSubmenu?.index === index
+                    ? "menu-item-active"
+                    : "menu-item-inactive"
+                    } cursor-pointer ${!isExpanded && !isHovered
+                      ? "lg:justify-center"
+                      : "lg:justify-start"
                     }`}
                 >
                   <span
-                    className={`${isActive(nav.path)
+                    className={`${openSubmenu?.type === "main" && openSubmenu?.index === index
                       ? "menu-item-icon-active"
                       : "menu-item-icon-inactive"
                       }`}
@@ -363,73 +405,102 @@ const AppSidebar: React.FC = () => {
                     {nav.icon}
                   </span>
                   {(isExpanded || isHovered || isMobileOpen) && (
-                    <span className={`menu-item-text flex-1`}>{nav.name}</span>
+                    <span className={`menu-item-text`}>{nav.name}</span>
                   )}
-                  {nav.name === 'Pengajuan Absen' && izinCount > 0 && (
-                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center ml-auto">
-                      {izinCount}
+                  {(isExpanded || isHovered || isMobileOpen) && (
+                    <ChevronDown
+                      className={`ml-auto w-5 h-5 transition-transform duration-200 ${openSubmenu?.type === "main" &&
+                        openSubmenu?.index === index
+                        ? "rotate-180 text-brand-500"
+                        : ""
+                        }`}
+                    />
+                  )}
+                </button>
+              ) : (
+                nav.path && (
+                  <Link
+                    href={nav.path}
+                    className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                      }`}
+                  >
+                    <span
+                      className={`${isActive(nav.path)
+                        ? "menu-item-icon-active"
+                        : "menu-item-icon-inactive"
+                        }`}
+                    >
+                      {nav.icon}
                     </span>
-                  )}
-                </Link>
-              )
-            )}
-            {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
-              <div
-                ref={(el) => {
-                  subMenuRefs.current[`main-${index}`] = el;
-                }}
-                className="overflow-hidden transition-all duration-300"
-                style={{
-                  height:
-                    openSubmenu?.type === "main" && openSubmenu?.index === index
-                      ? `${subMenuHeight[`main-${index}`]}px`
-                      : "0px",
-                }}
-              >
-                <ul className="mt-2 space-y-1 ml-9">
-                  {nav.subItems.map((subItem) => (
-                    <li key={subItem.name}>
-                      <Link
-                        href={subItem.path}
-                        className={`menu-dropdown-item ${isActive(subItem.path)
-                          ? "menu-dropdown-item-active"
-                          : "menu-dropdown-item-inactive"
-                          }`}
-                      >
-                        {subItem.name}
-                        <span className="flex items-center gap-1 ml-auto">
-                          {subItem.new && (
-                            <span
-                              className={`ml-auto ${isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                                } menu-dropdown-badge `}
-                            >
-                              new
-                            </span>
-                          )}
-                          {subItem.pro && (
-                            <span
-                              className={`ml-auto ${isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                                } menu-dropdown-badge `}
-                            >
-                              pro
-                            </span>
-                          )}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </li>
-        </React.Fragment>
-      ))}
-    </ul>
-  );
+                    {(isExpanded || isHovered || isMobileOpen) && (
+                      <span className={`menu-item-text flex-1`}>{nav.name}</span>
+                    )}
+                    {nav.name === 'Pengajuan Absen' && izinCount > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center ml-auto">
+                        {izinCount}
+                      </span>
+                    )}
+                  </Link>
+                )
+              )}
+              {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
+                <div
+                  ref={(el) => {
+                    subMenuRefs.current[`main-${index}`] = el;
+                  }}
+                  className="overflow-hidden transition-all duration-300"
+                  style={{
+                    height:
+                      openSubmenu?.type === "main" && openSubmenu?.index === index
+                        ? `${subMenuHeight[`main-${index}`]}px`
+                        : "0px",
+                  }}
+                >
+                  <ul className="mt-2 space-y-1 ml-9">
+                    {nav.subItems.map((subItem) => (
+                      <li key={subItem.name}>
+                        <Link
+                          href={subItem.path}
+                          className={`menu-dropdown-item ${isActive(subItem.path)
+                            ? "menu-dropdown-item-active"
+                            : "menu-dropdown-item-inactive"
+                            }`}
+                        >
+                          {subItem.name}
+                          <span className="flex items-center gap-1 ml-auto">
+                            {subItem.new && (
+                              <span
+                                className={`ml-auto ${isActive(subItem.path)
+                                  ? "menu-dropdown-badge-active"
+                                  : "menu-dropdown-badge-inactive"
+                                  } menu-dropdown-badge `}
+                              >
+                                new
+                              </span>
+                            )}
+                            {subItem.pro && (
+                              <span
+                                className={`ml-auto ${isActive(subItem.path)
+                                  ? "menu-dropdown-badge-active"
+                                  : "menu-dropdown-badge-inactive"
+                                  } menu-dropdown-badge `}
+                              >
+                                pro
+                              </span>
+                            )}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </li>
+          </React.Fragment>
+        ))}
+      </ul>
+    );
+  };
 
   return (
     <aside

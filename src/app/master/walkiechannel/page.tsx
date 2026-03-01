@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
 import MultiSelect from '@/components/form/MultiSelect';
+import SearchableSelect from '@/components/form/SearchableSelect';
 
 type WalkieChannel = {
     id: number;
@@ -19,6 +20,7 @@ type WalkieChannel = {
     active: number;
     auto_join: number;
     priority: number;
+    vendor_id?: number | null;
     dept_members: string[];
     cabang_members: string[];
 };
@@ -30,10 +32,12 @@ type MultiSelectOption = {
 };
 
 function WalkieChannelPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<WalkieChannel[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<WalkieChannel | null>(null);
 
@@ -44,6 +48,7 @@ function WalkieChannelPage() {
         active: 1,
         auto_join: 1,
         priority: 100,
+        vendor_id: null as number | null,
         cabang_members: [] as string[],
         dept_members: [] as string[]
     });
@@ -55,7 +60,10 @@ function WalkieChannelPage() {
         setLoading(true);
         try {
             const response: any = await apiClient.get('/master/walkiechannel', {
-                params: { search: searchTerm }
+                params: {
+                    search: searchTerm,
+                    ...(isSuperAdmin && filterVendor ? { vendor_id: filterVendor } : {})
+                }
             });
             setData(response.data || []);
         } catch (error) {
@@ -67,20 +75,34 @@ function WalkieChannelPage() {
 
     const fetchOptions = async () => {
         try {
-            const cabangs: any = await apiClient.get('/master/walkiechannel/options/cabang');
+            const params = isSuperAdmin && filterVendor ? { vendor_id: filterVendor } : {};
+            const cabangs: any = await apiClient.get('/master/walkiechannel/options/cabang', { params });
             setCabangOptions(cabangs.map((c: any) => ({ value: c.kode_cabang, text: c.nama_cabang, selected: false })));
 
-            const depts: any = await apiClient.get('/master/walkiechannel/options/departemen');
+            const depts: any = await apiClient.get('/master/walkiechannel/options/departemen', { params });
             setDeptOptions(depts.map((d: any) => ({ value: d.kode_dept, text: d.nama_dept, selected: false })));
         } catch (error) {
             console.error("Failed to fetch options", error);
         }
     };
 
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const res: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(res) ? res : (res?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            } catch (error) {
+                console.error("Failed to fetch vendors", error);
+            }
+        }
+    };
+
     useEffect(() => {
         fetchData();
         fetchOptions();
-    }, [searchTerm]);
+        fetchVendors();
+    }, [searchTerm, filterVendor, isSuperAdmin]);
 
     const handleCreate = () => {
         setEditingItem(null);
@@ -90,6 +112,7 @@ function WalkieChannelPage() {
             active: 1,
             auto_join: 1,
             priority: 100,
+            vendor_id: null,
             cabang_members: [],
             dept_members: []
         });
@@ -104,6 +127,7 @@ function WalkieChannelPage() {
             active: item.active,
             auto_join: item.auto_join,
             priority: item.priority,
+            vendor_id: item.vendor_id || null,
             cabang_members: item.cabang_members,
             dept_members: item.dept_members
         });
@@ -163,28 +187,42 @@ function WalkieChannelPage() {
 
             <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex flex-1 gap-4 max-w-md">
-                        <div className="relative w-full">
-                            <button className="absolute left-0 top-1/2 -translate-y-1/2 pl-3">
-                                <Search className="h-4 w-4 text-gray-500" />
+                    <h2 className="text-xl font-semibold text-black dark:text-white">
+                        Daftar Walkie Channel
+                    </h2>
+                    <div className="flex gap-3">
+                        {canCreate('walkiechannel') && (
+                            <button
+                                onClick={handleCreate}
+                                className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm"
+                            >
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Channel</span>
                             </button>
-                            <input
-                                type="text"
-                                placeholder="Cari channel..."
-                                className="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 text-black outline-none focus:border-brand-500 focus-visible:shadow-none dark:border-strokedark dark:bg-form-input dark:text-white dark:focus:border-brand-500"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                        )}
+                    </div>
+                </div>
+
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="relative col-span-1 md:col-span-2">
+                        <input
+                            type="text"
+                            placeholder="Cari channel..."
+                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
+                    </div>
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={val => setFilterVendor(val)}
+                                placeholder="Semua Vendor"
                             />
                         </div>
-                    </div>
-                    {canCreate('walkiechannel') && (
-                        <button
-                            onClick={handleCreate}
-                            className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition lg:px-8 xl:px-10"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Tambah Channel
-                        </button>
                     )}
                 </div>
 
@@ -283,6 +321,21 @@ function WalkieChannelPage() {
                                         placeholder="Regional Jawa Timur"
                                     />
                                 </div>
+                                {isSuperAdmin && (
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-black dark:text-white">Vendor (Opsional)</label>
+                                        <select
+                                            className="w-full rounded border border-stroke bg-transparent px-4 py-3 outline-none transition focus:border-brand-500 dark:border-strokedark dark:bg-form-input"
+                                            value={formData.vendor_id || ''}
+                                            onChange={(e) => setFormData({ ...formData, vendor_id: e.target.value ? parseInt(e.target.value) : null })}
+                                        >
+                                            <option value="">-- Tanpa Vendor --</option>
+                                            {vendorOptions.map(v => (
+                                                <option key={v.value} value={v.value}>{v.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

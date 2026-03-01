@@ -2,7 +2,7 @@ export const getPhotoUrl = (folder: string, filename: string | null | undefined)
     if (!filename) return null;
     // Assuming backend URL is configurable or hardcoded for now
     // You might want to pull this from env variables later
-    const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://k3guard.com:8000';
+    const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://frontend.k3guard.com/api-py';
 
     // Check if filename is already a full URL
     if (filename.startsWith('http')) return filename;

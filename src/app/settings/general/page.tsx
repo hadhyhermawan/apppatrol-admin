@@ -237,6 +237,19 @@ function GeneralSettingPage() {
                                 </div>
 
                                 <div>
+                                    <label className="mb-2.5 block text-black dark:text-white">
+                                        Batas Jam Buka Absen Masuk (Toleransi Awal)
+                                        <span className="ml-1 text-xs text-gray-400 font-normal">— contoh: 3 = tombol absen terbuka 3 jam sebelum shift</span>
+                                    </label>
+                                    <Input
+                                        type="number"
+                                        name="toleransi_awal_masuk_jam"
+                                        defaultValue={formData.toleransi_awal_masuk_jam}
+                                        onChange={handleInputChange}
+                                    />
+                                </div>
+
+                                <div>
                                     <label className="mb-2.5 block text-black dark:text-white">Batas Presensi Lintashari (Jam Reset)</label>
                                     <Input
                                         type="time"

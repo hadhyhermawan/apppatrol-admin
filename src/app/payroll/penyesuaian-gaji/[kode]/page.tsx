@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import SearchableSelect from '@/components/form/SearchableSelect';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 type DetailItem = {
     kode_penyesuaian_gaji: string;
@@ -42,6 +43,10 @@ export default function DetailPenyesuaianGajiPage() {
     const [employees, setEmployees] = useState<EmployeeOption[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const { isSuperAdmin } = usePermissions();
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
+
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -72,7 +77,11 @@ export default function DetailPenyesuaianGajiPage() {
     const fetchDetails = async () => {
         setLoading(true);
         try {
-            const response: any = await apiClient.get(`/payroll/penyesuaian-gaji/${kode}/details`);
+            const params = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) {
+                params.append('vendor_id', filterVendor);
+            }
+            const response: any = await apiClient.get(`/payroll/penyesuaian-gaji/${kode}/details?${params.toString()}`);
             if (Array.isArray(response)) {
                 setDetails(response);
             } else {
@@ -87,7 +96,10 @@ export default function DetailPenyesuaianGajiPage() {
 
     const fetchEmployees = async () => {
         try {
-            const response: any = await apiClient.get('/payroll/employees-list');
+            const params = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
+
+            const response: any = await apiClient.get(`/payroll/employees-list?${params.toString()}`);
             if (Array.isArray(response)) {
                 setEmployees(response);
             }
@@ -96,13 +108,26 @@ export default function DetailPenyesuaianGajiPage() {
         }
     };
 
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const resV: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(resV) ? resV : (resV?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            } catch (error) {
+                console.error("Failed to fetch vendors", error);
+            }
+        }
+    };
+
     useEffect(() => {
         if (kode) {
             fetchHeader();
             fetchDetails();
             fetchEmployees();
+            fetchVendors();
         }
-    }, [kode]);
+    }, [kode, filterVendor, isSuperAdmin]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -248,6 +273,16 @@ export default function DetailPenyesuaianGajiPage() {
                         </div>
                     </div>
                     <div className="flex gap-3">
+                        {isSuperAdmin && (
+                            <div className="w-64">
+                                <SearchableSelect
+                                    options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                    value={filterVendor}
+                                    onChange={(val) => setFilterVendor(val)}
+                                    placeholder="Semua Vendor"
+                                />
+                            </div>
+                        )}
                         <button onClick={fetchDetails} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>

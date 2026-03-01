@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { Search, MapPin, Eye, Printer, ArrowLeft } from 'lucide-react';
+import { MapPin, Eye, Printer, ArrowLeft, ArrowRight, X } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { withPermission } from '@/hoc/withPermission';
 import clsx from 'clsx';
@@ -14,6 +14,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import idLocale from '@fullcalendar/core/locales/id';
+import Link from 'next/link';
 
 type PresensiDetailItem = {
     tanggal: string;
@@ -52,10 +53,7 @@ function LaporanDetailKaryawanPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
-    // NIK from URL param
     const nik = params?.id as string;
-
-    // Date Range from Query Params
     const startDate = searchParams.get('startDate') || new Date().toISOString().split('T')[0];
     const endDate = searchParams.get('endDate') || new Date().toISOString().split('T')[0];
 
@@ -68,13 +66,7 @@ function LaporanDetailKaryawanPage() {
     const getImageUrl = (filename: string | null) => {
         if (!filename) return null;
         if (filename.startsWith('http')) return filename;
-        return `/api/storage/uploads/absensi/${filename}`;
-    };
-
-    const getProfileUrl = (filename: string | null) => {
-        if (!filename) return "/images/user/user-01.png"; // Placeholder
-        if (filename.startsWith('http')) return filename;
-        return `/api/storage/uploads/karyawan/${filename}`;
+        return `${process.env.NEXT_PUBLIC_API_URL}/storage/uploads/absensi/${filename}`;
     };
 
     const getMapsUrl = (coords: string | null) => {
@@ -84,12 +76,14 @@ function LaporanDetailKaryawanPage() {
 
     const getStatusColors = (status: string) => {
         const s = status ? status.toLowerCase() : '';
-        if (s === 'h' || s === 'hadir') return '#10B981'; // Green
-        if (s === 'i' || s === 'izin') return '#3B82F6'; // Blue
-        if (s === 's' || s === 'sakit') return '#EAB308'; // Yellow
-        if (s === 'a' || s === 'alpha') return '#EF4444'; // Red
-        if (s === 'c' || s === 'cuti') return '#8B5CF6'; // Purple
-        return '#6B7280'; // Gray
+        if (s === 'h' || s === 'hadir') return '#10B981';
+        if (s === 'i' || s === 'izin') return '#3B82F6';
+        if (s === 's' || s === 'sakit') return '#EAB308';
+        if (s === 'a' || s === 'alpha') return '#EF4444';
+        if (s === 'c' || s === 'cuti') return '#8B5CF6';
+        if (s === 'libr' || s === 'lb' || s === 'libur') return '#9CA3AF';
+        if (s === 'ta') return '#6B7280';
+        return '#6B7280';
     };
 
     const getStatusBadge = (status: string) => {
@@ -112,10 +106,16 @@ function LaporanDetailKaryawanPage() {
         } else if (s === 'c' || s === 'cuti') {
             badgeClass = "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400";
             label = "Cuti";
+        } else if (s === 'libr' || s === 'lb' || s === 'libur') {
+            badgeClass = "bg-gray-100 text-gray-500 dark:bg-gray-700/20 dark:text-gray-400";
+            label = "Libur";
+        } else if (s === 'ta') {
+            badgeClass = "bg-gray-200 text-gray-800 dark:bg-gray-600/20 dark:text-gray-300";
+            label = "TA";
         }
 
         return (
-            <span className={clsx("inline-flex rounded-full px-3 py-1 text-xs font-medium", badgeClass)}>
+            <span className={clsx("inline-flex rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap", badgeClass)}>
                 {label}
             </span>
         );
@@ -124,20 +124,13 @@ function LaporanDetailKaryawanPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Use existing presensi endpoint but filter by search=NIK
             const url = `/laporan/presensi?start_date=${startDate}&end_date=${endDate}&search=${nik}`;
             const response: any = await apiClient.get(url);
 
             if (response.status && response.data.length > 0) {
-                // The API returns a list of presensi records.
-                // We need to extract employee info from the first record if available, 
-                // OR we might need a separate endpoint for employee details if presensi is empty.
-                // However, the user is clicking from a list where data exists, so likely presensi exists or at least employee exists.
-                // But wait, if an employee has NO attendance, the list won't return anything for them?
-                // The Search logic in backend filters by Name or NIK. 
-
                 const records = response.data;
-                setData(records);
+                const sortedRecords = records.sort((a: any, b: any) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime());
+                setData(sortedRecords);
 
                 if (records.length > 0) {
                     const first = records[0];
@@ -146,8 +139,8 @@ function LaporanDetailKaryawanPage() {
                         nama_karyawan: first.nama_karyawan,
                         nama_dept: first.nama_dept,
                         nama_cabang: first.nama_cabang,
-                        nama_jabatan: first.nama_jabatan || "-", // Add jabatan to DTO if missing
-                        foto: first.foto_karyawan || null // Add foto to DTO if missing
+                        nama_jabatan: first.nama_jabatan || "-",
+                        foto: first.foto_karyawan || null
                     });
                 }
             } else {
@@ -173,10 +166,11 @@ function LaporanDetailKaryawanPage() {
         if (s === 's' || s === 'sakit') return 'Sakit';
         if (s === 'a' || s === 'alpha') return 'Alpha';
         if (s === 'c' || s === 'cuti') return 'Cuti';
+        if (s === 'libr' || s === 'lb' || s === 'libur') return 'Libur';
+        if (s === 'ta') return 'TA';
         return status;
     };
 
-    // Calendar Events
     const events = data.map(item => ({
         title: `${getStatusLabel(item.status)} (${item.jam_in || '-'} - ${item.jam_out || '-'})`,
         start: item.tanggal,
@@ -188,14 +182,14 @@ function LaporanDetailKaryawanPage() {
 
     return (
         <MainLayout>
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between screen-only">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <PageBreadcrumb pageTitle="Detail Presensi Karyawan" />
                 <div className="flex items-center gap-3">
                     <div className="flex bg-gray-100 rounded-lg p-1 dark:bg-meta-4">
                         <button
                             onClick={() => setViewMode('table')}
                             className={clsx(
-                                "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                                "px-4 py-2 text-sm font-medium rounded-md transition-all",
                                 viewMode === 'table'
                                     ? "bg-white text-black shadow-sm dark:bg-boxdark dark:text-white"
                                     : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -206,7 +200,7 @@ function LaporanDetailKaryawanPage() {
                         <button
                             onClick={() => setViewMode('calendar')}
                             className={clsx(
-                                "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                                "px-4 py-2 text-sm font-medium rounded-md transition-all",
                                 viewMode === 'calendar'
                                     ? "bg-white text-black shadow-sm dark:bg-boxdark dark:text-white"
                                     : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -216,17 +210,18 @@ function LaporanDetailKaryawanPage() {
                         </button>
                     </div>
 
-                    <button
-                        onClick={() => window.print()}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-opacity-90 transition shadow-sm"
+                    <Link
+                        href={`/reports/presensi/${nik}/cetak?startDate=${startDate}&endDate=${endDate}`}
+                        target="_blank"
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition shadow-sm"
                     >
                         <Printer className="h-4 w-4" />
-                        Cetak
-                    </button>
+                        Cetak Laporan
+                    </Link>
 
                     <button
                         onClick={() => router.back()}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-boxdark dark:text-gray-300 dark:border-strokedark dark:hover:bg-meta-4"
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 dark:bg-boxdark dark:text-gray-300 dark:border-strokedark dark:hover:bg-meta-4"
                     >
                         <ArrowLeft className="w-4 h-4" />
                         Kembali
@@ -235,55 +230,88 @@ function LaporanDetailKaryawanPage() {
             </div>
 
             {previewImage && (
-                <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in"
-                    onClick={() => setPreviewImage(null)}
-                >
-                    <img
-                        src={previewImage}
-                        alt="Preview"
-                        className="max-h-[90vh] max-w-full rounded-lg shadow-2xl object-contain"
-                    />
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setPreviewImage(null)}>
+                    <img src={previewImage} alt="Preview" className="max-h-[90vh] max-w-full rounded-lg shadow-2xl object-contain" />
+                    <button className="absolute top-5 right-5 text-white bg-black/50 rounded-full p-2 hover:bg-white/20 transition" onClick={() => setPreviewImage(null)}>
+                        <X className="w-6 h-6" />
+                    </button>
                 </div>
             )}
 
-            <div id="print-area">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6">
-                    {/* Employee Card */}
-                    <div className="md:col-span-3 rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-                        <div className="flex flex-col md:flex-row gap-6 mb-6 items-center md:items-start">
-                            {/* Photo Placeholder */}
-                            <div className="h-24 w-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                                {/* <img src={getProfileUrl(employee?.foto)} alt="Profile" className="w-full h-full object-cover"/> */}
-                                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                    <span className="text-2xl font-bold">{employee?.nama_karyawan?.charAt(0) || "U"}</span>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 text-center md:text-left">
-                                <h3 className="text-2xl font-semibold text-black dark:text-white mb-1">
-                                    {employee?.nama_karyawan || "Memuat..."}
-                                </h3>
-                                <div className="flex flex-col md:flex-row gap-4 md:gap-8 text-sm text-gray-600 dark:text-gray-400">
-                                    <div className="space-y-1">
-                                        <p><span className="font-semibold">NIK:</span> {employee?.nik || "-"}</p>
-                                        <p><span className="font-semibold">Jabatan:</span> {employee?.nama_jabatan || "-"}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p><span className="font-semibold">Departemen:</span> {employee?.nama_dept || "-"}</p>
-                                        <p><span className="font-semibold">Cabang:</span> {employee?.nama_cabang || "-"}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p><span className="font-semibold">Periode:</span> {new Date(startDate).toLocaleDateString('id-ID')} - {new Date(endDate).toLocaleDateString('id-ID')}</p>
-                                    </div>
-                                </div>
-                            </div>
+            {/* Profile Header */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6 mb-6">
+                <div className="flex items-center gap-6">
+                    <div className="h-24 w-24 rounded-2xl bg-gray-200 overflow-hidden flex-shrink-0 border border-gray-100 dark:border-strokedark dark:bg-meta-4">
+                        <div className="w-full h-full flex items-center justify-center bg-brand-50 text-brand-600 dark:bg-brand-500/20 dark:text-brand-300">
+                            <span className="text-3xl font-bold uppercase">{employee?.nama_karyawan?.charAt(0) || "U"}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="text-2xl font-extrabold text-black dark:text-white mb-1 tracking-tight">
+                            {employee?.nama_karyawan || "Memuat..."}
+                        </h3>
+                        <p className="font-mono text-sm text-gray-500 dark:text-gray-400 mb-3">{employee?.nik || "-"}</p>
+                        <div className="flex flex-wrap gap-2">
+                            <span className="px-3 py-1 bg-gray-100 dark:bg-meta-4 border border-gray-200 dark:border-strokedark rounded-full text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                {employee?.nama_jabatan || "-"}
+                            </span>
+                            <span className="px-3 py-1 bg-gray-100 dark:bg-meta-4 border border-gray-200 dark:border-strokedark rounded-full text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                {employee?.nama_dept || "-"}
+                            </span>
+                            <span className="px-3 py-1 bg-gray-100 dark:bg-meta-4 border border-gray-200 dark:border-strokedark rounded-full text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                {employee?.nama_cabang || "-"}
+                            </span>
                         </div>
                     </div>
                 </div>
 
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-8">
+                    <div className="bg-white dark:bg-boxdark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-strokedark flex flex-col justify-center items-center text-center">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Total Hadir</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black text-green-600 dark:text-green-500">{data.filter(d => ['h', 'hadir'].includes(d.status?.toLowerCase())).length}</span>
+                            <span className="text-xs font-medium text-gray-400">hari</span>
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-boxdark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-strokedark flex flex-col justify-center items-center text-center">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Terlambat</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black text-orange-500">{data.filter(d => d.terlambat !== '-').length}</span>
+                            <span className="text-xs font-medium text-gray-400">kali</span>
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-boxdark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-strokedark flex flex-col justify-center items-center text-center">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Alpha</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black text-red-500">{data.filter(d => ['a', 'alpha'].includes(d.status?.toLowerCase())).length}</span>
+                            <span className="text-xs font-medium text-gray-400">hari</span>
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-boxdark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-strokedark flex flex-col justify-center items-center text-center">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Izin/Cuti/Sakit</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black text-blue-600">{data.filter(d => ['i', 'c', 's', 'izin', 'cuti', 'sakit'].includes(d.status?.toLowerCase())).length}</span>
+                            <span className="text-xs font-medium text-gray-400">hari</span>
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-boxdark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-strokedark flex flex-col justify-center items-center text-center">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1 flex flex-col items-center">
+                            TA
+                            <span className="text-[9px] font-medium capitalize tracking-normal text-gray-400 mt-0.5 leading-tight">(Tidak Absen Pulang)</span>
+                        </span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black text-gray-800 dark:text-gray-300">{data.filter(d => ['ta', 'tidak absen'].includes(d.status?.toLowerCase())).length}</span>
+                            <span className="text-xs font-medium text-gray-400">hari</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content Display */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6 mb-6">
                 {viewMode === 'calendar' ? (
-                    <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1 print:shadow-none print:border-none">
+                    <div className="calendar-wrapper">
                         <FullCalendar
                             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
                             initialView="dayGridMonth"
@@ -302,172 +330,133 @@ function LaporanDetailKaryawanPage() {
                                 month: 'Bulan',
                                 list: 'List'
                             }}
-                            eventClick={(info) => {
-                                // Optional: Show modal or alert
-                                alert(`Status: ${info.event.title}\nTanggal: ${info.event.start?.toLocaleDateString('id-ID')}`);
-                            }}
                         />
                     </div>
                 ) : (
-                    <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1 print:shadow-none print:border-none">
-                        <div className="max-w-full overflow-x-auto">
-                            <table className="w-full table-auto text-sm print:text-xs">
-                                <thead>
-                                    <tr className="bg-gray-2 text-left dark:bg-meta-4">
-                                        <th className="min-w-[50px] px-4 py-4 font-medium text-black dark:text-white text-center">No</th>
-                                        <th className="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">Tanggal</th>
-                                        <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Jadwal</th>
-                                        <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white">Masuk</th>
-                                        <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white">Pulang</th>
-                                        <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Terlambat</th>
-                                        <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Status</th>
+                    <div className="max-w-full overflow-x-auto">
+                        <table className="w-full table-auto">
+                            <thead>
+                                <tr className="bg-gray-100 text-left dark:bg-gray-800">
+                                    <th className="min-w-[50px] px-4 py-4 font-medium text-black dark:text-white text-center">No</th>
+                                    <th className="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">Tanggal</th>
+                                    <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Jadwal</th>
+                                    <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white border-l border-gray-200 dark:border-strokedark">Masuk</th>
+                                    <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white border-l border-gray-200 dark:border-strokedark">Pulang</th>
+                                    <th className="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white text-center border-l border-gray-200 dark:border-strokedark">Terlambat</th>
+                                    <th className="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Memuat data presensi...</td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
-                                        </tr>
-                                    ) : data.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Tidak ada data presensi pada periode ini.</td>
-                                        </tr>
-                                    ) : (
-                                        data.map((item, key) => (
-                                            <tr key={key} className="border-b border-[#eee] dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/10">
-                                                <td className="px-4 py-3 text-center border-r border-[#eee] dark:border-strokedark">
-                                                    {key + 1}
-                                                </td>
-                                                <td className="px-4 py-3 border-r border-[#eee] dark:border-strokedark">
-                                                    <p className="text-black dark:text-white">
-                                                        {new Date(item.tanggal).toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}
-                                                    </p>
-                                                </td>
-                                                <td className="px-4 py-3 border-r border-[#eee] dark:border-strokedark">
-                                                    <div className="flex flex-col text-xs">
-                                                        <span className="font-semibold text-black dark:text-white">{item.nama_jam_kerja || "-"}</span>
-                                                        <span>{item.jam_masuk_jadwal} - {item.jam_pulang_jadwal}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 border-r border-[#eee] dark:border-strokedark">
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="font-medium text-black dark:text-white">{item.jam_in || "-"}</span>
+                                ) : data.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Tidak ada data untuk periode ini.</td>
+                                    </tr>
+                                ) : (
+                                    data.map((item, key) => (
+                                        <tr key={key} className={clsx(
+                                            "border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors align-top",
+                                            item.jam_out === '-' || !item.jam_out ? "bg-amber-50/60 dark:bg-amber-900/10" : ""
+                                        )}>
+                                            <td className="px-4 py-4 text-center">
+                                                <p className="text-black dark:text-white text-sm">{key + 1}</p>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <div className="font-semibold text-black dark:text-white text-sm">
+                                                    {new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                </div>
+                                                <div className="text-xs text-gray-500 font-medium mt-0.5">
+                                                    {new Date(item.tanggal).toLocaleDateString('id-ID', { weekday: 'long' })}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <div className="font-medium text-black dark:text-white text-sm">{item.nama_jam_kerja || "-"}</div>
+                                                <div className="text-xs text-brand-500 font-mono tracking-tighter mt-0.5 bg-brand-50 dark:bg-brand-500/20 w-fit px-1.5 rounded">{item.jam_masuk_jadwal} - {item.jam_pulang_jadwal}</div>
+                                            </td>
+                                            <td className="px-4 py-4 border-l border-gray-200 dark:border-strokedark">
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-medium text-sm font-mono tracking-tight text-black dark:text-white">{item.jam_in || "-"}</span>
                                                         {item.foto_in && (
-                                                            <button onClick={() => setPreviewImage(getImageUrl(item.foto_in))} className="text-xs text-blue-500 hover:underline flex items-center gap-1">
-                                                                <Eye size={12} /> Foto
-                                                            </button>
-                                                        )}
-                                                        {item.lokasi_in && (
-                                                            <a href={getMapsUrl(item.lokasi_in)} target="_blank" className="text-xs text-blue-500 hover:underline flex items-center gap-1">
-                                                                <MapPin size={12} /> Peta
-                                                            </a>
+                                                            <div className="h-9 w-9 rounded-md border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200 shadow-sm cursor-pointer hover:opacity-80 transition hover:scale-105" onClick={() => setPreviewImage(getImageUrl(item.foto_in))}>
+                                                                <img src={getImageUrl(item.foto_in) || undefined} alt="In" className="h-full w-full object-cover" />
+                                                            </div>
                                                         )}
                                                     </div>
-                                                </td>
-                                                <td className="px-4 py-3 border-r border-[#eee] dark:border-strokedark">
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="font-medium text-black dark:text-white">{item.jam_out || "-"}</span>
-                                                        {item.foto_out && (
-                                                            <button onClick={() => setPreviewImage(getImageUrl(item.foto_out))} className="text-xs text-blue-500 hover:underline flex items-center gap-1">
-                                                                <Eye size={12} /> Foto
-                                                            </button>
-                                                        )}
-                                                        {item.lokasi_out && (
-                                                            <a href={getMapsUrl(item.lokasi_out)} target="_blank" className="text-xs text-blue-500 hover:underline flex items-center gap-1">
-                                                                <MapPin size={12} /> Peta
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-center border-r border-[#eee] dark:border-strokedark">
-                                                    {item.terlambat !== "-" ? (
-                                                        <span className="text-red-500 text-xs font-semibold">{item.terlambat}</span>
-                                                    ) : (
-                                                        <span className="text-green-500 text-xs">-</span>
+                                                    {item.lokasi_in && (
+                                                        <a href={getMapsUrl(item.lokasi_in)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-brand-500 hover:underline w-fit">
+                                                            <MapPin className="h-3 w-3" /> Peta Lokasi
+                                                        </a>
                                                     )}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 border-l border-gray-200 dark:border-strokedark">
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-medium text-sm font-mono tracking-tight text-black dark:text-white">{item.jam_out || "-"}</span>
+                                                        {item.foto_out && (
+                                                            <div className="h-9 w-9 rounded-md border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200 shadow-sm cursor-pointer hover:opacity-80 transition hover:scale-105" onClick={() => setPreviewImage(getImageUrl(item.foto_out))}>
+                                                                <img src={getImageUrl(item.foto_out) || undefined} alt="Out" className="h-full w-full object-cover" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {item.lokasi_out && (
+                                                        <a href={getMapsUrl(item.lokasi_out)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-brand-500 hover:underline w-fit">
+                                                            <MapPin className="h-3 w-3" /> Peta Lokasi
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 text-center border-l border-gray-200 dark:border-strokedark">
+                                                {item.terlambat !== "-" ? (
+                                                    <span className="text-orange-600 dark:text-orange-400 font-bold text-xs bg-orange-50 dark:bg-orange-500/20 px-2.5 py-1 rounded-md">{item.terlambat}</span>
+                                                ) : (
+                                                    <span className="text-gray-300 dark:text-gray-600">-</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-4 text-center">
+                                                <div className="flex flex-col items-center gap-1.5">
                                                     {getStatusBadge(item.status)}
-                                                    {item.keterangan && <p className="text-xs text-gray-500 mt-1 italic">{item.keterangan}</p>}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                                {data.length > 0 && (
-                                    <tfoot>
-                                        <tr className="bg-gray-100 dark:bg-meta-4 font-semibold">
-                                            <td colSpan={2} className="px-4 py-3 text-right">Total Kehadiran:</td>
-                                            <td className="px-4 py-3 text-center text-brand-500">
-                                                {data.filter(d => d.status === 'h').length} Hari
+                                                    {item.keterangan && <span className="text-[10px] text-gray-500 italic max-w-[120px] text-center leading-tight bg-gray-50 dark:bg-meta-4 p-1 rounded font-medium">{item.keterangan}</span>}
+                                                </div>
                                             </td>
-                                            <td colSpan={2} className="px-4 py-3 text-right">Total Terlambat:</td>
-                                            <td className="px-4 py-3 text-center text-red-500">
-                                                {data.filter(d => d.terlambat !== '-').length} Kali
-                                            </td>
-                                            <td></td>
                                         </tr>
-                                    </tfoot>
+                                    ))
                                 )}
-                            </table>
-                        </div>
+                            </tbody>
+                        </table>
                     </div>
                 )}
             </div>
 
             <style jsx global>{`
-                @media print {
-                    @page {
-                        size: A4; 
-                        margin: 10mm;
-                    }
-                    body * {
-                        visibility: hidden;
-                    }
-                    /* Select the main content wrapper we want to print */
-                    #print-area, #print-area * {
-                        visibility: visible;
-                    }
-                    #print-area {
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                    }
-                    
-                    /* Hide non-printable elements */
-                    header, aside, .sidebar, .header-area, button, a {
-                        display: none !important;
-                    }
-                    
-                    /* Reset backgrounds and shadows for clean print */
-                    .shadow-default, .shadow-2xl {
-                        box-shadow: none !important;
-                    }
-                    .bg-white, .dark\:bg-boxdark {
-                        background-color: white !important;
-                    }
-                    .border-stroke, .dark\:border-strokedark {
-                        border: 1px solid #ddd !important;
-                    }
-                     /* Force table details */
-                    table {
-                        width: 100% !important;
-                        border-collapse: collapse !important;
-                        font-size: 10pt !important;
-                    }
-                    th, td {
-                        border: 1px solid #000 !important;
-                        padding: 4px !important;
-                        color: black !important;
-                    }
-                    thead th {
-                        background-color: #f0f0f0 !important;
-                        -webkit-print-color-adjust: exact; 
-                    }
+                .calendar-wrapper .fc {
+                    --fc-border-color: #e5e7eb;
+                    --fc-button-text-color: #374151;
+                    --fc-button-bg-color: #f3f4f6;
+                    --fc-button-border-color: #d1d5db;
+                    --fc-button-hover-bg-color: #e5e7eb;
+                    --fc-button-hover-border-color: #d1d5db;
+                    --fc-button-active-bg-color: #d1d5db;
+                    --fc-button-active-border-color: #9ca3af;
+                }
+                .dark .calendar-wrapper .fc {
+                    --fc-border-color: #374151;
+                    --fc-button-text-color: #e5e7eb;
+                    --fc-button-bg-color: #1f2937;
+                    --fc-button-border-color: #374151;
+                    --fc-button-hover-bg-color: #374151;
+                    --fc-button-hover-border-color: #4b5563;
+                    --fc-button-active-bg-color: #4b5563;
+                    --fc-button-active-border-color: #4b5563;
+                    --fc-page-bg-color: transparent;
+                    --fc-neutral-bg-color: rgba(255, 255, 255, 0.05);
                 }
             `}</style>
-        </MainLayout >
+        </MainLayout>
     );
 }
 

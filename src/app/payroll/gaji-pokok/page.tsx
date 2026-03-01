@@ -43,12 +43,16 @@ type DeptOption = {
 };
 
 function PayrollGajiPokokPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<GajiPokokItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [employees, setEmployees] = useState<EmployeeOption[]>([]);
     const [cabangList, setCabangList] = useState<CabangOption[]>([]);
     const [deptList, setDeptList] = useState<DeptOption[]>([]);
+
+    // Vendor State
+    const [filterVendor, setFilterVendor] = useState('');
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
 
     // Filters
     const [keyword, setKeyword] = useState('');
@@ -86,6 +90,7 @@ function PayrollGajiPokokPage() {
             if (keyword) params.append('keyword', keyword);
             if (kodeCabang) params.append('kode_cabang', kodeCabang);
             if (kodeDept) params.append('kode_dept', kodeDept);
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
             params.append('page', currentPage.toString());
             params.append('per_page', perPage.toString());
 
@@ -112,7 +117,9 @@ function PayrollGajiPokokPage() {
 
     const fetchEmployees = async () => {
         try {
-            const response: any = await apiClient.get('/payroll/employees-list');
+            const params = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
+            const response: any = await apiClient.get(`/payroll/employees-list?${params.toString()}`);
             if (Array.isArray(response)) {
                 setEmployees(response);
             }
@@ -135,17 +142,30 @@ function PayrollGajiPokokPage() {
         }
     };
 
+    const fetchVendors = async () => {
+        if (isSuperAdmin) {
+            try {
+                const resV: any = await apiClient.get('/vendors');
+                const vData = Array.isArray(resV) ? resV : (resV?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            } catch (error) {
+                console.error("Failed to fetch vendors", error);
+            }
+        }
+    };
+
     useEffect(() => {
         fetchEmployees();
         fetchOptions();
-    }, []);
+        fetchVendors();
+    }, [filterVendor, isSuperAdmin]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [keyword, kodeCabang, kodeDept, currentPage, perPage]);
+    }, [keyword, kodeCabang, kodeDept, currentPage, perPage, filterVendor]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -278,7 +298,20 @@ function PayrollGajiPokokPage() {
                 </div>
 
                 {/* Filter Section */}
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className={`mb-6 grid grid-cols-1 gap-4 ${isSuperAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={(val) => {
+                                    setFilterVendor(val);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
                     <div className="relative">
                         <input
                             type="text"
