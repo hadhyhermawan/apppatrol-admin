@@ -587,12 +587,40 @@ function PresensiPage() {
                                             <div className="flex items-center justify-center -space-x-2">
                                                 {item.foto_in && (
                                                     <div className="h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200">
-                                                        <Image src={item.foto_in} alt="In" width={40} height={40} className="h-full w-full object-cover cursor-pointer hover:opacity-80 transition" unoptimized onError={(e: any) => e.target.style.display = 'none'} onClick={() => setPreviewImage(item.foto_in)} />
+                                                        <img
+                                                            src={item.foto_in.replace(/\.(jpg|jpeg|png)$/i, '_thumb.$1')}
+                                                            alt="In"
+                                                            className="h-full w-full object-cover cursor-pointer hover:opacity-80 transition"
+                                                            loading="lazy"
+                                                            decoding="async"
+                                                            onError={(e: any) => {
+                                                                if (e.target.src.includes('_thumb')) {
+                                                                    e.target.src = item.foto_in;
+                                                                } else {
+                                                                    e.target.style.display = 'none';
+                                                                }
+                                                            }}
+                                                            onClick={() => setPreviewImage(item.foto_in)}
+                                                        />
                                                     </div>
                                                 )}
                                                 {item.foto_out && (
                                                     <div className="h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200">
-                                                        <Image src={item.foto_out} alt="Out" width={40} height={40} className="h-full w-full object-cover cursor-pointer hover:opacity-80 transition" unoptimized onError={(e: any) => e.target.style.display = 'none'} onClick={() => setPreviewImage(item.foto_out)} />
+                                                        <img
+                                                            src={item.foto_out.replace(/\.(jpg|jpeg|png)$/i, '_thumb.$1')}
+                                                            alt="Out"
+                                                            className="h-full w-full object-cover cursor-pointer hover:opacity-80 transition"
+                                                            loading="lazy"
+                                                            decoding="async"
+                                                            onError={(e: any) => {
+                                                                if (e.target.src.includes('_thumb')) {
+                                                                    e.target.src = item.foto_out;
+                                                                } else {
+                                                                    e.target.style.display = 'none';
+                                                                }
+                                                            }}
+                                                            onClick={() => setPreviewImage(item.foto_out)}
+                                                        />
                                                     </div>
                                                 )}
                                                 {!item.foto_in && !item.foto_out && <span className="text-xs text-gray-500">-</span>}
