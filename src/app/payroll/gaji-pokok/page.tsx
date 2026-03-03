@@ -273,6 +273,36 @@ function PayrollGajiPokokPage() {
         }
     };
 
+    const handleDeleteAll = async () => {
+        const result = await Swal.fire({
+            title: 'Hapus SEMUA Data?',
+            text: "AWAS! Tindakan ini akan menghapus KESELURUHAN data Gaji Pokok karyawan yang ada di sistem (All Vendor) dan tidak dapat dibatalkan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus Semua!',
+            cancelButtonText: 'Batal'
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            await apiClient.delete('/payroll/gaji-pokok-all');
+            Swal.fire({
+                title: 'Terhapus!',
+                text: 'Seluruh data gaji pokok berhasil dihapus permanen.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            fetchData();
+        } catch (error: any) {
+            console.error(error);
+            Swal.fire('Gagal!', error.response?.data?.detail || "Gagal menghapus data.", 'error');
+        }
+    };
+
     return (
         <MainLayout>
             <PageBreadcrumb pageTitle="Gaji Pokok" />
@@ -288,6 +318,12 @@ function PayrollGajiPokokPage() {
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
+                        {isSuperAdmin && canDelete('gajipokok') && (
+                            <button onClick={handleDeleteAll} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-red-600 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
+                                <Trash2 className="h-4 w-4" />
+                                <span>Hapus Semua</span>
+                            </button>
+                        )}
                         {canCreate('gajipokok') && (
                             <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
                                 <Plus className="h-4 w-4" />

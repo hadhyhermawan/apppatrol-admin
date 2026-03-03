@@ -27,7 +27,9 @@ type SuratItem = {
     nik_satpam: string;
     nama_satpam?: string;
     foto?: string;
+    foto_thumb?: string | null;
     foto_penerima?: string;
+    foto_penerima_thumb?: string | null;
     nama_penerima?: string;
     status_surat?: string;
     status_penerimaan?: string;
@@ -122,11 +124,13 @@ function SecuritySuratPage() {
         setCurrentPage(1);
         fetchOptions();
         fetchData();
-        isFirstRender.current = false;
     }, [activeTab, filterVendor, isSuperAdmin]);
 
     useEffect(() => {
-        if (isFirstRender.current) return;
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
         const timer = setTimeout(() => {
             fetchData();
         }, 800);
@@ -409,7 +413,7 @@ function SecuritySuratPage() {
                                                 {item.foto && (
                                                     <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Surat">
                                                         <Image
-                                                            src={item.foto}
+                                                            src={item.foto_thumb || item.foto}
                                                             alt="Foto Surat"
                                                             width={40}
                                                             height={40}
@@ -423,7 +427,7 @@ function SecuritySuratPage() {
                                                 {item.foto_penerima && (
                                                     <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Penerima">
                                                         <Image
-                                                            src={item.foto_penerima}
+                                                            src={item.foto_penerima_thumb || item.foto_penerima}
                                                             alt="Foto Penerima"
                                                             width={40}
                                                             height={40}
@@ -443,27 +447,27 @@ function SecuritySuratPage() {
                                             <div className="flex items-center justify-center gap-2">
                                                 <button
                                                     onClick={() => handleView(item)}
-                                                    className="inline-flex items-center justify-center p-2 rounded-full hover:bg-gray-100 text-brand-500 dark:hover:bg-meta-4 transition"
+                                                    className="hover:text-blue-500 text-gray-500 dark:text-gray-400 transition"
                                                     title="Lihat Detail"
                                                 >
-                                                    <Eye className="h-5 w-5" />
+                                                    <Eye className="h-4 w-4" />
                                                 </button>
                                                 {canUpdate('surat') && (
                                                     <button
                                                         onClick={() => handleEdit(item)}
-                                                        className="inline-flex items-center justify-center p-2 rounded-full hover:bg-blue-100 text-blue-500 dark:hover:bg-meta-4 transition"
+                                                        className="hover:text-yellow-500 text-gray-500 dark:text-gray-400 transition"
                                                         title="Edit Data"
                                                     >
-                                                        <Edit className="h-5 w-5" />
+                                                        <Edit className="h-4 w-4" />
                                                     </button>
                                                 )}
                                                 {canDelete('surat') && (
                                                     <button
                                                         onClick={() => handleDelete(item.id)}
-                                                        className="inline-flex items-center justify-center p-2 rounded-full hover:bg-red-100 text-red-500 dark:hover:bg-meta-4 transition"
+                                                        className="hover:text-red-500 text-gray-500 dark:text-gray-400 transition"
                                                         title="Hapus Data"
                                                     >
-                                                        <Trash2 className="h-5 w-5" />
+                                                        <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 )}
                                             </div>

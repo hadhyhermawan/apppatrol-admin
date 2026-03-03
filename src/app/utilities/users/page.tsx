@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
 import Pagination from '@/components/tables/Pagination';
@@ -21,7 +21,7 @@ type UserItem = {
 };
 
 function UtilitiesUsersPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<UserItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -31,10 +31,27 @@ function UtilitiesUsersPage() {
     const perPage = 25;
 
     const [roles, setRoles] = useState<any[]>([]);
+    const [vendors, setVendors] = useState<any[]>([]);
+    const [filterVendor, setFilterVendor] = useState('');
     const [showModal, setShowModal] = useState(false);
-    const [modalData, setModalData] = useState<any>({ name: '', username: '', email: '', password: '', role_id: '' });
+    const [modalData, setModalData] = useState<any>({ name: '', username: '', email: '', password: '', role_id: '', vendor_id: '' });
     const [isEditing, setIsEditing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const isFirstRender = useRef(true);
+
+    const fetchVendors = async () => {
+        if (!isSuperAdmin) return;
+        try {
+            const res: any = await apiClient.get('/vendors');
+            if (res && res.data && Array.isArray(res.data)) {
+                setVendors(res.data);
+            } else if (Array.isArray(res)) {
+                setVendors(res);
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     const fetchRoles = async () => {
         try {
@@ -51,6 +68,7 @@ function UtilitiesUsersPage() {
         try {
             let url = `/utilities/users?limit=${perPage}&page=${currentPage}`;
             if (searchTerm) url += `&search=${searchTerm}`;
+            if (isSuperAdmin && filterVendor) url += `&vendor_id=${filterVendor}`;
 
             const response: any = await apiClient.get(url);
             if (response && response.data && Array.isArray(response.data)) {
@@ -77,15 +95,20 @@ function UtilitiesUsersPage() {
 
     useEffect(() => {
         fetchRoles();
-    }, []);
+        fetchVendors();
+    }, [isSuperAdmin]);
 
     useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
         setPage(1);
         const timer = setTimeout(() => {
             fetchData(1);
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchTerm]);
+    }, [searchTerm, filterVendor]);
 
     const handleSave = async () => {
         if (!modalData.name || !modalData.username || !modalData.email) return;
@@ -147,7 +170,7 @@ function UtilitiesUsersPage() {
 
     const openCreateModal = () => {
         setIsEditing(false);
-        setModalData({ name: '', username: '', email: '', password: '', role_id: '' });
+        setModalData({ name: '', username: '', email: '', password: '', role_id: '', vendor_id: filterVendor });
         setShowModal(true);
     };
 
@@ -160,7 +183,8 @@ function UtilitiesUsersPage() {
             username: user.username,
             email: user.email,
             password: '',
-            role_id: roleMatch ? roleMatch.id : ''
+            role_id: roleMatch ? roleMatch.id : '',
+            vendor_id: '' // Not modifying vendor on edit for now
         });
         setShowModal(true);
     };
@@ -186,11 +210,20 @@ function UtilitiesUsersPage() {
                             />
                             <Search className="absolute right-4 top-3 h-4 w-4 text-gray-400" />
                         </div>
+                        {isSuperAdmin && (
+                            <SearchableSelect
+                                options={vendors.map(v => ({ value: String(v.id), label: v.nama_vendor }))}
+                                value={filterVendor}
+                                onChange={(val) => setFilterVendor(val)}
+                                placeholder="Semua Vendor"
+                                className="w-[200px]"
+                            />
+                        )}
                         <button onClick={() => fetchData()} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
-                        {canCreate && (
+                        {canCreate('users') && (
                             <button onClick={openCreateModal} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-brand-600 transition shadow-sm">
                                 <Plus className="h-4 w-4" />
                                 <span className="hidden sm:inline">User Baru</span>
@@ -209,7 +242,7 @@ function UtilitiesUsersPage() {
                                 <th className="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white">Email</th>
                                 <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Role</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-center">Bergabung</th>
-                                {(canUpdate || canDelete) && <th className="px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>}
+                                {(canUpdate('users') || canDelete('users')) && <th className="px-4 py-4 font-medium text-black dark:text-white text-center">Aksi</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -243,15 +276,15 @@ function UtilitiesUsersPage() {
                                         <td className="px-4 py-4 text-center text-sm text-gray-500">
                                             {item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID') : '-'}
                                         </td>
-                                        {(canUpdate || canDelete) && (
+                                        {(canUpdate('users') || canDelete('users')) && (
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center justify-center space-x-2">
-                                                    {canUpdate && (
+                                                    {canUpdate('users') && (
                                                         <button onClick={() => openEditModal(item)} className="p-1.5 text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
                                                             <Edit className="w-4 h-4" />
                                                         </button>
                                                     )}
-                                                    {canDelete && (
+                                                    {canDelete('users') && (
                                                         <button onClick={() => handleDelete(item.id)} className="p-1.5 text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
@@ -321,6 +354,18 @@ function UtilitiesUsersPage() {
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Password {isEditing ? <span className="font-normal text-xs text-brand-500">(Kosongi jika tidak diubah)</span> : <span className="text-red-500">*</span>}</label>
                                     <input type="password" value={modalData.password} onChange={e => setModalData({ ...modalData, password: e.target.value })} className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input text-black dark:text-white" placeholder="Masukkan password" />
                                 </div>
+                                {!isEditing && isSuperAdmin && (
+                                    <div>
+                                        <label className="block text-sm font-semibold text-black dark:text-white mb-2">Pilih Vendor (Khusus Super Admin)</label>
+                                        <SearchableSelect
+                                            options={vendors.map(v => ({ value: String(v.id), label: v.nama_vendor }))}
+                                            value={modalData.vendor_id?.toString() || ''}
+                                            onChange={(val) => setModalData({ ...modalData, vendor_id: val })}
+                                            placeholder="-- Default (Global) --"
+                                            usePortal={true}
+                                        />
+                                    </div>
+                                )}
                                 <div>
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">Role <span className="text-red-500">*</span></label>
                                     <SearchableSelect

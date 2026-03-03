@@ -33,9 +33,11 @@ type TurlalinItem = {
     nik: string;
     keterangan: string | null;
     foto: string | null;
+    foto_thumb?: string | null;
     jam_keluar: string | null;
     nik_keluar: string | null;
     foto_keluar: string | null;
+    foto_keluar_thumb?: string | null;
     created_at?: string;
     updated_at?: string;
     nama_guard_masuk?: string;
@@ -493,7 +495,7 @@ function SecurityTurlalinPage() {
                                                 {item.foto && (
                                                     <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Masuk">
                                                         <Image
-                                                            src={item.foto}
+                                                            src={item.foto_thumb || item.foto}
                                                             alt="In"
                                                             width={40}
                                                             height={40}
@@ -507,7 +509,7 @@ function SecurityTurlalinPage() {
                                                 {item.foto_keluar && (
                                                     <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Keluar">
                                                         <Image
-                                                            src={item.foto_keluar}
+                                                            src={item.foto_keluar_thumb || item.foto_keluar}
                                                             alt="Out"
                                                             width={40}
                                                             height={40}
@@ -529,13 +531,13 @@ function SecurityTurlalinPage() {
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
                                                 {canUpdate('turlalin') && (
-                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-yellow-400">
-                                                        <Edit className="h-5 w-5" />
+                                                    <button onClick={() => handleOpenEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400">
+                                                        <Edit className="h-4 w-4" />
                                                     </button>
                                                 )}
                                                 {canDelete('turlalin') && (
-                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-red-500">
-                                                        <Trash className="h-5 w-5" />
+                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400">
+                                                        <Trash className="h-4 w-4" />
                                                     </button>
                                                 )}
                                             </div>

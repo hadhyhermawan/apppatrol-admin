@@ -26,7 +26,9 @@ type BarangItem = {
     kode_cabang: string | null;
     penerima: string | null;
     image: string | null;
+    image_thumb?: string | null;
     foto_keluar: string | null;
+    foto_keluar_thumb?: string | null;
     created_at?: string;
     updated_at?: string;
     petugas_penerima?: string;
@@ -437,7 +439,7 @@ function SecurityBarangPage() {
                                                 {item.image && (
                                                     <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Masuk">
                                                         <Image
-                                                            src={item.image}
+                                                            src={item.image_thumb || item.image}
                                                             alt="Masuk"
                                                             width={40}
                                                             height={40}
@@ -451,7 +453,7 @@ function SecurityBarangPage() {
                                                 {item.foto_keluar && (
                                                     <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Keluar">
                                                         <Image
-                                                            src={item.foto_keluar}
+                                                            src={item.foto_keluar_thumb || item.foto_keluar}
                                                             alt="Keluar"
                                                             width={40}
                                                             height={40}

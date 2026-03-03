@@ -220,7 +220,7 @@ function MasterCutiPage() {
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
-                        {canCreate('cuti') && (
+                        {isSuperAdmin && canCreate('cuti') && (
                             <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
                                 <Plus className="h-4 w-4" />
                                 <span>Tambah Data</span>

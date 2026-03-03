@@ -139,6 +139,15 @@ export default function CetakLaporanPresensiKaryawan() {
         if (nik) fetchData();
     }, [nik, startDate, endDate]);
 
+    useEffect(() => {
+        if (!loading && data.length > 0) {
+            const timer = setTimeout(() => {
+                window.print();
+            }, 500); // Beri sedikit waktu agar gambar termuat penuh sebelum print dialog muncul
+            return () => clearTimeout(timer);
+        }
+    }, [loading, data]);
+
     if (loading) {
         return <div className="flex items-center justify-center h-screen">Memuat Laporan...</div>;
     }

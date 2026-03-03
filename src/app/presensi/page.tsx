@@ -237,9 +237,9 @@ function PresensiPage() {
             {/* ─── Edit Modal ───────────────────────────────────────────────── */}
             {editItem && (
                 <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
                         {/* Header */}
-                        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex-shrink-0 flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
                             <div>
                                 <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                     <Edit size={18} className="text-blue-500" /> Edit Presensi
@@ -254,89 +254,143 @@ function PresensiPage() {
                         </div>
 
                         {/* Body */}
-                        <div className="p-5 space-y-4">
-                            {/* Shift */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Shift / Jam Kerja</label>
-                                <select
-                                    value={editForm.kode_jam_kerja}
-                                    onChange={e => setEditForm(f => ({ ...f, kode_jam_kerja: e.target.value }))}
-                                    className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                >
-                                    <option value="">— Pilih Shift —</option>
-                                    {jamKerjaOptions.map(j => (
-                                        <option key={j.kode} value={j.kode}>
-                                            {j.nama} {j.jam_masuk && j.jam_pulang ? `(${j.jam_masuk.substring(0, 5)} – ${j.jam_pulang.substring(0, 5)})` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                        <div className="flex-1 overflow-y-auto p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                            {/* Jam Masuk */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1.5">
-                                    <Clock size={14} className="text-green-500" /> Jam Masuk
-                                </label>
-                                <input
-                                    type="text"
-                                    value={editForm.jam_in}
-                                    onChange={e => {
-                                        let v = e.target.value.replace(/[^0-9:]/g, '');
-                                        if (v.length === 2 && !v.includes(':') && editForm.jam_in.length === 1) v = v + ':';
-                                        if (v.length > 5) v = v.slice(0, 5);
-                                        setEditForm(f => ({ ...f, jam_in: v }));
-                                    }}
-                                    placeholder="HH:MM  (contoh: 08:00)"
-                                    maxLength={5}
-                                    className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm font-mono focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-                                />
-                            </div>
-
-                            {/* Jam Pulang */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1.5">
-                                    <Clock size={14} className="text-blue-500" /> Jam Pulang
-                                </label>
-                                <input
-                                    type="text"
-                                    value={editForm.jam_out}
-                                    onChange={e => {
-                                        let v = e.target.value.replace(/[^0-9:]/g, '');
-                                        if (v.length === 2 && !v.includes(':') && editForm.jam_out.length === 1) v = v + ':';
-                                        if (v.length > 5) v = v.slice(0, 5);
-                                        setEditForm(f => ({ ...f, jam_out: v }));
-                                    }}
-                                    placeholder="HH:MM  (contoh: 17:00)"
-                                    maxLength={5}
-                                    className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                />
-                                <p className="text-xs text-gray-400 mt-1">Kosongkan jika belum pulang</p>
-                            </div>
-
-                            {/* Status */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status Kehadiran</label>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {STATUS_OPTIONS.map(s => (
-                                        <button
-                                            key={s.value}
-                                            onClick={() => setEditForm(f => ({ ...f, status: s.value }))}
-                                            className={clsx(
-                                                'py-2 rounded-xl text-sm font-medium border-2 transition-all',
-                                                editForm.status === s.value
-                                                    ? s.value === 'H' ? 'bg-green-500 border-green-500 text-white'
-                                                        : s.value === 'I' ? 'bg-blue-500 border-blue-500 text-white'
-                                                            : s.value === 'S' ? 'bg-yellow-500 border-yellow-500 text-white'
-                                                                : 'bg-red-500 border-red-500 text-white'
-                                                    : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-400'
-                                            )}
+                            {/* Kiri: Bukti & Lokasi */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-semibold border-b border-gray-200 dark:border-gray-700 pb-2 text-gray-800 dark:text-gray-200">Bukti Kehadiran</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Masuk */}
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-medium text-gray-500 text-center">Absen Masuk</p>
+                                        <div
+                                            className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden relative border border-gray-200 dark:border-gray-600 group cursor-pointer"
+                                            onClick={() => { if (editItem.foto_in) setPreviewImage(editItem.foto_in); }}
                                         >
-                                            {s.label}
-                                        </button>
-                                    ))}
+                                            {editItem.foto_in ? (
+                                                <Image src={editItem.foto_in} alt="Masuk" fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                                            ) : (
+                                                <div className="flex items-center justify-center w-full h-full text-xs text-gray-400">Tak ada foto</div>
+                                            )}
+                                        </div>
+                                        {editItem.lokasi_in && (
+                                            <a href={`https://maps.google.com/?q=${editItem.lokasi_in}`} target="_blank" rel="noreferrer" className="flex items-start gap-1 p-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:underline rounded-lg text-[10px] leading-tight">
+                                                <MapPin size={12} className="flex-shrink-0 mt-0.5" />
+                                                <span className="line-clamp-2" title={editItem.lokasi_in}>{editItem.lokasi_in}</span>
+                                            </a>
+                                        )}
+                                    </div>
+
+                                    {/* Pulang */}
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-medium text-gray-500 text-center">Absen Pulang</p>
+                                        <div
+                                            className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden relative border border-gray-200 dark:border-gray-600 group cursor-pointer"
+                                            onClick={() => { if (editItem.foto_out) setPreviewImage(editItem.foto_out); }}
+                                        >
+                                            {editItem.foto_out ? (
+                                                <Image src={editItem.foto_out} alt="Pulang" fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                                            ) : (
+                                                <div className="flex items-center justify-center w-full h-full text-xs text-gray-400">Tak ada foto</div>
+                                            )}
+                                        </div>
+                                        {editItem.lokasi_out && (
+                                            <a href={`https://maps.google.com/?q=${editItem.lokasi_out}`} target="_blank" rel="noreferrer" className="flex items-start gap-1 p-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:underline rounded-lg text-[10px] leading-tight">
+                                                <MapPin size={12} className="flex-shrink-0 mt-0.5" />
+                                                <span className="line-clamp-2" title={editItem.lokasi_out}>{editItem.lokasi_out}</span>
+                                            </a>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+
+                            {/* Kanan: Form Koreksi */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-semibold border-b border-gray-200 dark:border-gray-700 pb-2 text-gray-800 dark:text-gray-200">Form Koreksi</h3>
+                                {/* Shift */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Shift / Jam Kerja</label>
+                                    <select
+                                        value={editForm.kode_jam_kerja}
+                                        onChange={e => setEditForm(f => ({ ...f, kode_jam_kerja: e.target.value }))}
+                                        className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                    >
+                                        <option value="">— Pilih Shift —</option>
+                                        {jamKerjaOptions.map(j => (
+                                            <option key={j.kode} value={j.kode}>
+                                                {j.nama} {j.jam_masuk && j.jam_pulang ? `(${j.jam_masuk.substring(0, 5)} – ${j.jam_pulang.substring(0, 5)})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Jam Masuk */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1.5">
+                                        <Clock size={14} className="text-green-500" /> Jam Masuk
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editForm.jam_in}
+                                        onChange={e => {
+                                            let v = e.target.value.replace(/[^0-9:]/g, '');
+                                            if (v.length === 2 && !v.includes(':') && editForm.jam_in.length === 1) v = v + ':';
+                                            if (v.length > 5) v = v.slice(0, 5);
+                                            setEditForm(f => ({ ...f, jam_in: v }));
+                                        }}
+                                        placeholder="HH:MM  (contoh: 08:00)"
+                                        maxLength={5}
+                                        className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm font-mono focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                                    />
+                                </div>
+
+                                {/* Jam Pulang */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1.5">
+                                        <Clock size={14} className="text-blue-500" /> Jam Pulang
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editForm.jam_out}
+                                        onChange={e => {
+                                            let v = e.target.value.replace(/[^0-9:]/g, '');
+                                            if (v.length === 2 && !v.includes(':') && editForm.jam_out.length === 1) v = v + ':';
+                                            if (v.length > 5) v = v.slice(0, 5);
+                                            setEditForm(f => ({ ...f, jam_out: v }));
+                                        }}
+                                        placeholder="HH:MM  (contoh: 17:00)"
+                                        maxLength={5}
+                                        className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1">Kosongkan jika belum pulang</p>
+                                </div>
+
+                                {/* Status */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status Kehadiran</label>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {STATUS_OPTIONS.map(s => (
+                                            <button
+                                                key={s.value}
+                                                onClick={() => setEditForm(f => ({ ...f, status: s.value }))}
+                                                className={clsx(
+                                                    'py-2 rounded-xl text-sm font-medium border-2 transition-all',
+                                                    editForm.status === s.value
+                                                        ? s.value === 'H' ? 'bg-green-500 border-green-500 text-white'
+                                                            : s.value === 'I' ? 'bg-blue-500 border-blue-500 text-white'
+                                                                : s.value === 'S' ? 'bg-yellow-500 border-yellow-500 text-white'
+                                                                    : 'bg-red-500 border-red-500 text-white'
+                                                        : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-400'
+                                                )}
+                                            >
+                                                {s.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                            </div> {/* End Kanan */}
+                        </div> {/* End Body */}
 
                         {/* Footer */}
                         <div className="flex gap-3 p-5 border-t border-gray-200 dark:border-gray-700">
@@ -547,17 +601,17 @@ function PresensiPage() {
                                         <td className="px-4 py-4 text-center">{getStatusBadge(item.status_kehadiran)}</td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <Link href={`/presensi/${item.id}`} title="Detail" className="hover:text-blue-500 text-blue-400">
-                                                    <Eye className="h-5 w-5" />
+                                                <Link href={`/presensi/${item.id}`} title="Detail" className="hover:text-blue-500 text-gray-500 dark:text-gray-400 transition">
+                                                    <Eye className="h-4 w-4" />
                                                 </Link>
                                                 {canUpdate('presensi') && (
-                                                    <button onClick={() => openEdit(item)} title="Edit" className="hover:text-yellow-500 text-yellow-400 transition">
-                                                        <Edit className="h-5 w-5" />
+                                                    <button onClick={() => openEdit(item)} title="Edit" className="hover:text-yellow-500 text-gray-500 dark:text-gray-400 transition">
+                                                        <Edit className="h-4 w-4" />
                                                     </button>
                                                 )}
                                                 {canDelete('presensi') && (
-                                                    <button onClick={() => handleDelete(item.id)} title="Hapus" className="hover:text-red-500 text-red-500 transition">
-                                                        <Trash className="h-5 w-5" />
+                                                    <button onClick={() => handleDelete(item.id)} title="Hapus" className="hover:text-red-500 text-gray-500 dark:text-gray-400 transition">
+                                                        <Trash className="h-4 w-4" />
                                                     </button>
                                                 )}
                                             </div>

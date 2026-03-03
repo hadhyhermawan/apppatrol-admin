@@ -49,8 +49,21 @@ export default function DashboardPage() {
     const [filterVendor, setFilterVendor] = useState('');
     const [vendorOptions, setVendorOptions] = useState<any[]>([]);
 
+    const [vendorFeatures, setVendorFeatures] = useState<any>({});
+
     useEffect(() => {
         fetchDashboardData();
+
+        // Check vendor features
+        if (!isSuperAdmin) {
+            apiClient.get('/auth/me').then((me: any) => {
+                if (me && me.vendor_id) {
+                    apiClient.get(`/vendors/${me.vendor_id}/profile`).then((res: any) => {
+                        setVendorFeatures(res.features || {});
+                    }).catch(() => { });
+                }
+            }).catch(() => { });
+        }
 
         // Start polling security alerts
         const loadAlerts = async () => {
@@ -227,7 +240,7 @@ export default function DashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 mt-2">
                 <PageBreadcrumb pageTitle="Dashboard" />
                 {isSuperAdmin && (
-                    <div className="w-full sm:w-64 z-[9999] relative">
+                    <div className="w-full sm:w-64 z-30 relative">
                         <SearchableSelect
                             options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
                             value={filterVendor}
@@ -441,34 +454,40 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* Bottom Stats Grid */}
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {[
                     {
                         label: 'Presensi Terbuka',
                         value: dashData?.stats?.presensi_open || 0,
                         subtitle: 'Belum absen pulang',
-                        icon: Clock
+                        icon: Clock,
+                        featureKey: 'presensi'
                     },
                     {
                         label: 'Patroli Target',
                         value: dashData?.stats?.target_patroli || 0,
                         subtitle: 'Jadwal Aktif',
-                        icon: Shield
+                        icon: Shield,
                     },
                     {
                         label: 'Tamu Hari Ini',
                         value: dashData?.stats?.tamu_hari_ini || 0,
                         subtitle: 'Pengunjung terdaftar',
-                        icon: Users
+                        icon: Users,
+                        featureKey: 'tamu'
                     },
                     {
                         label: 'Barang Keluar/Masuk',
                         value: dashData?.stats?.barang_hari_ini || 0,
                         subtitle: 'Total transaksi barang',
-                        icon: Briefcase
+                        icon: Briefcase,
+                        featureKey: 'barang'
                     }
-                ].map((stat, idx) => {
+                ].filter(stat => {
+                    if (isSuperAdmin) return true;
+                    if (stat.featureKey && vendorFeatures[stat.featureKey] !== true) return false;
+                    return true;
+                }).map((stat, idx) => {
                     const Icon = stat.icon;
                     return (
                         <div

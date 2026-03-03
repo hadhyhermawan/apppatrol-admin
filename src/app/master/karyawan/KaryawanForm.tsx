@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Briefcase, Contact, FileText, Settings, Save, Lock, ArrowLeft, Image as ImageIcon, Calendar } from 'lucide-react';
+import { User, Briefcase, Contact, FileText, Settings, Save, Lock, ArrowLeft, Image as ImageIcon, Calendar, Wallet } from 'lucide-react';
 import apiClient from '@/lib/api';
 import Swal from 'sweetalert2';
 import Image from 'next/image';
@@ -103,6 +103,9 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
 
                 masa_aktif_kartu_anggota: initialData.masa_aktif_kartu_anggota || '',
                 no_kartu_anggota: initialData.no_kartu_anggota || initialData.nik,
+                status_ptkp: initialData.status_ptkp || 'TK/0',
+                memiliki_npwp: initialData.memiliki_npwp !== undefined ? String(initialData.memiliki_npwp) : '0',
+                metode_pajak: initialData.metode_pajak || 'Gross',
 
                 // Files
                 foto: null,
@@ -149,6 +152,9 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                 no_kartu_anggota: '',
                 masa_aktif_kartu_anggota: '',
                 pin: '',
+                status_ptkp: 'TK/0',
+                memiliki_npwp: '0',
+                metode_pajak: 'Gross',
 
                 lock_location: '1',
                 lock_device_login: '0',
@@ -171,6 +177,30 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
             setFilePreview((prev: any) => ({ ...prev, [field]: URL.createObjectURL(file) }));
         }
     };
+
+    // Auto-sync Status PTKP based on Status Perkawinan
+    useEffect(() => {
+        if (!formData.kode_status_kawin) return;
+
+        // Map kode_status_kawin to status_ptkp
+        let mappedPtkp = 'TK/0';
+        switch (formData.kode_status_kawin) {
+            case 'K0': mappedPtkp = 'K/0'; break;
+            case 'K1': mappedPtkp = 'K/1'; break;
+            case 'K2': mappedPtkp = 'K/2'; break;
+            case 'K3': mappedPtkp = 'K/3'; break;
+            case 'TK': mappedPtkp = 'TK/0'; break;
+            case 'HB': mappedPtkp = 'TK/0'; break; // Cerai/Janda/Duda fallback to TK/0 unless they have dependent, defaults to TK/0 for safety
+            default: mappedPtkp = 'TK/0';
+        }
+
+        // Only update if it's different and we are in create mode, OR if user specifically just changed the dropdown
+        // To avoid overriding it continuously if they want a manual override, we only trigger on actual change of status kawin
+        setFormData((prev: any) => {
+            if (prev.status_ptkp === mappedPtkp) return prev;
+            return { ...prev, status_ptkp: mappedPtkp };
+        });
+    }, [formData.kode_status_kawin]);
 
     const handleSubmit = async () => {
         if (!formData.nik || !formData.nama_karyawan) {
@@ -243,6 +273,7 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
         { id: 'pekerjaan', label: 'Data Pekerjaan', icon: Briefcase },
         { id: 'kontak', label: 'Kontak & Darurat', icon: Contact },
         { id: 'file', label: 'File & Dokumen', icon: FileText },
+        { id: 'payroll', label: 'Payroll & Pajak', icon: Wallet },
         { id: 'setting', label: 'System & Setting', icon: Settings },
     ];
 
@@ -343,6 +374,17 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                             }
                                         }}
                                         className={inputClass}
+                                    />
+                                </InputGroup>
+
+                                <InputGroup label="Nomor NPWP">
+                                    <input
+                                        type="text"
+                                        name="npwp"
+                                        value={formData.npwp || ''}
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                        placeholder="Contoh: 12.345.678.9-012.000"
                                     />
                                 </InputGroup>
 
@@ -487,17 +529,7 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                 </InputGroup>
 
 
-                                <div className="mb-4">
-                                    <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
-                                        Jadwal Kerja (Shift)
-                                    </label>
-                                    <SearchableSelect
-                                        options={options?.jadwal?.map(j => ({ value: j.code, label: j.name })) || []}
-                                        value={formData.kode_jadwal}
-                                        onChange={(val) => setFormData({ ...formData, kode_jadwal: val })}
-                                        placeholder="Pilih Jadwal"
-                                    />
-                                </div>
+                                {/* Jadwal Kerja has been removed because it is managed separately from the Karyawan list view using the clock icon */}
 
                                 <div className="mb-4">
                                     <DatePicker
@@ -652,7 +684,59 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                             </div>
                         </div>
 
-                        {/* 5. SYSTEM SETTINGS */}
+                        {/* 5. PAYROLL */}
+                        <div className={activeTab === 'payroll' ? 'block' : 'hidden'}>
+                            <SectionTitle title="Informasi Payroll & PPh 21" icon={Wallet} />
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <h4 className="font-medium text-gray-900 dark:text-white">Pengaturan Pajak (TER)</h4>
+
+                                    <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                                        <span className="text-sm">Status PTKP</span>
+                                        <select name="status_ptkp" value={formData.status_ptkp} onChange={handleChange} className="rounded border bg-transparent p-1 text-sm">
+                                            <option value="TK/0">TK/0</option>
+                                            <option value="TK/1">TK/1</option>
+                                            <option value="TK/2">TK/2</option>
+                                            <option value="TK/3">TK/3</option>
+                                            <option value="K/0">K/0</option>
+                                            <option value="K/1">K/1</option>
+                                            <option value="K/2">K/2</option>
+                                            <option value="K/3">K/3</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                                        <span className="text-sm">Memiliki NPWP</span>
+                                        <select name="memiliki_npwp" value={formData.memiliki_npwp} onChange={handleChange} className="rounded border bg-transparent p-1 text-sm">
+                                            <option value="1">Ya</option>
+                                            <option value="0">Tidak</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                                        <span className="text-sm">Metode Pajak</span>
+                                        <select name="metode_pajak" value={formData.metode_pajak} onChange={handleChange} className="rounded border bg-transparent p-1 text-sm">
+                                            <option value="Gross">Gross</option>
+                                            <option value="Gross Up">Gross Up</option>
+                                            <option value="Net">Net</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="mb-6 rounded-lg bg-blue-50 p-4 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+                                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                                            Informasi Payroll
+                                        </p>
+                                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                                            Pengaturan Gaji Pokok, Tunjangan Aktif, dan BPJS dikelola terpisah melalui menu <strong>Setup Payroll</strong> pada Data Master karena sifatnya yang dapat berubah historisnya. Pengaturan ini hanya mengaktifkan metode potongan pajak penghasilan bulanan di resi gaji.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 6. SYSTEM SETTINGS */}
                         <div className={activeTab === 'setting' ? 'block' : 'hidden'}>
                             <SectionTitle title="Pengaturan Sistem & Keamanan" icon={Settings} />
 
@@ -713,6 +797,7 @@ export default function KaryawanForm({ mode, initialData, options }: KaryawanFor
                                             <option value="0">Tidak</option>
                                         </select>
                                     </div>
+
                                 </div>
                             </div>
                         </div>

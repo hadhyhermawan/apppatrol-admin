@@ -10,6 +10,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { usePermissions } from '@/contexts/PermissionContext';
 import SearchableSelect from '@/components/form/SearchableSelect';
+import clsx from 'clsx';
 
 type SlipRecapItem = {
     nik: string;
@@ -19,6 +20,7 @@ type SlipRecapItem = {
     tunjangan: number;
     bpjs_kesehatan: number;
     bpjs_tenagakerja: number;
+    pph21_bulanan: number;
     penambah: number;
     pengurang: number;
     gaji_bersih: number;
@@ -44,6 +46,7 @@ export default function DetailSlipGajiPage() {
     const { isSuperAdmin, isKaryawan } = usePermissions();
     const [filterVendor, setFilterVendor] = useState('');
     const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
+    const [isPrinting, setIsPrinting] = useState(false);
 
     const fetchHeader = async () => {
         try {
@@ -105,8 +108,9 @@ export default function DetailSlipGajiPage() {
         return new Date(0, month - 1).toLocaleString('id-ID', { month: 'long' });
     };
 
-    const handlePrint = () => {
-        window.print();
+    const handlePrintClick = () => {
+        setIsPrinting(true);
+        setTimeout(() => setIsPrinting(false), 3000);
     };
 
     if (!header) {
@@ -172,16 +176,29 @@ export default function DetailSlipGajiPage() {
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
-                        <button onClick={handlePrint} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-gray-600 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Printer className="h-4 w-4" />
-                            <span>Cetak Rekap</span>
+                        <button
+                            onClick={handlePrintClick}
+                            disabled={isPrinting}
+                            className={clsx(
+                                "inline-flex items-center justify-center gap-2.5 rounded-lg px-4 py-2 text-center font-medium text-white transition shadow-sm",
+                                isPrinting ? "bg-gray-400 cursor-not-allowed" : "bg-gray-600 hover:bg-opacity-90"
+                            )}
+                        >
+                            {isPrinting ? (
+                                <><RefreshCw className="w-4 h-4 animate-spin" /> <span>Menyiapkan...</span></>
+                            ) : (
+                                <><Printer className="h-4 w-4" /> <span>Cetak Rekap</span></>
+                            )}
                         </button>
                     </div>
-                </div>
 
-                <div className="hidden print:block mb-8 text-center">
-                    <h1 className="text-2xl font-bold text-black">REKAPITULASI GAJI KARYAWAN</h1>
-                    <p className="text-lg">Periode: {getMonthName(header.bulan)} {header.tahun}</p>
+                    {isPrinting && (
+                        <iframe
+                            src={`/payroll/slip-gaji/${kode}/cetak-rekap${filterVendor ? `?vendor_id=${filterVendor}` : ''}`}
+                            style={{ position: 'absolute', width: '0', height: '0', border: 'none' }}
+                            title="Print Frame"
+                        />
+                    )}
                 </div>
 
                 <div className="max-w-full overflow-x-auto">
@@ -193,6 +210,7 @@ export default function DetailSlipGajiPage() {
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-right print:border print:border-gray-800 print:py-2 print:px-2">Gaji Pokok</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-right print:border print:border-gray-800 print:py-2 print:px-2">Tunjangan</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-right print:border print:border-gray-800 print:py-2 print:px-2">BPJS (-)</th>
+                                <th className="px-4 py-4 font-medium text-black dark:text-white text-right print:border print:border-gray-800 print:py-2 print:px-2">PPh 21 (-)</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-right print:border print:border-gray-800 print:py-2 print:px-2">Penyesuaian (+/-)</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-right font-bold print:border print:border-gray-800 print:py-2 print:px-2">Gaji Bersih</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white text-center print:hidden">Aksi</th>
@@ -224,6 +242,9 @@ export default function DetailSlipGajiPage() {
                                         <td className="px-4 py-4 text-right font-medium text-red-600 dark:text-red-400 print:border print:border-gray-800 print:px-2 print:py-2">
                                             {formatCurrency(item.bpjs_kesehatan + item.bpjs_tenagakerja)}
                                         </td>
+                                        <td className="px-4 py-4 text-right font-medium text-red-600 dark:text-red-400 print:border print:border-gray-800 print:px-2 print:py-2">
+                                            {formatCurrency(item.pph21_bulanan || 0)}
+                                        </td>
                                         <td className="px-4 py-4 text-right font-medium text-gray-600 dark:text-gray-300 print:border print:border-gray-800 print:px-2 print:py-2">
                                             {formatCurrency(item.penambah - item.pengurang)}
                                         </td>
@@ -253,6 +274,7 @@ export default function DetailSlipGajiPage() {
                                     <td className="px-4 py-4 text-right print:border print:border-gray-800 print:px-2 print:py-2">{formatCurrency(data.reduce((s, i) => s + i.gaji_pokok, 0))}</td>
                                     <td className="px-4 py-4 text-right print:border print:border-gray-800 print:px-2 print:py-2">{formatCurrency(data.reduce((s, i) => s + i.tunjangan, 0))}</td>
                                     <td className="px-4 py-4 text-right text-red-600 print:border print:border-gray-800 print:px-2 print:py-2">{formatCurrency(data.reduce((s, i) => s + i.bpjs_kesehatan + i.bpjs_tenagakerja, 0))}</td>
+                                    <td className="px-4 py-4 text-right text-red-600 print:border print:border-gray-800 print:px-2 print:py-2">{formatCurrency(data.reduce((s, i) => s + (i.pph21_bulanan || 0), 0))}</td>
                                     <td className="px-4 py-4 text-right print:border print:border-gray-800 print:px-2 print:py-2">{formatCurrency(data.reduce((s, i) => s + i.penambah - i.pengurang, 0))}</td>
                                     <td className="px-4 py-4 text-right text-green-700 print:border print:border-gray-800 print:px-2 print:py-2">{formatCurrency(data.reduce((s, i) => s + i.gaji_bersih, 0))}</td>
                                     <td className="print:hidden"></td>

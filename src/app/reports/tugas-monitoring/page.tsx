@@ -108,6 +108,21 @@ function LaporanTugasPage() {
     const [dateStart, setDateStart] = useState<string>(new Date().toISOString().slice(0, 10)); // Default to today
     const [dateEnd, setDateEnd] = useState('');
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [isPrinting, setIsPrinting] = useState(false);
+
+    const handlePrintClick = () => {
+        setIsPrinting(true);
+        setTimeout(() => setIsPrinting(false), 3000);
+    };
+
+    const getThumbUrl = (url: string | null) => {
+        if (!url) return null;
+        const lastDotIndex = url.lastIndexOf('.');
+        if (lastDotIndex > url.lastIndexOf('/')) {
+            return url.substring(0, lastDotIndex) + '_thumb.jpg';
+        }
+        return url;
+    };
 
     // Vendor Filter
     const [filterVendor, setFilterVendor] = useState('');
@@ -148,10 +163,8 @@ function LaporanTugasPage() {
     }, [isSuperAdmin]);
 
     useEffect(() => {
-        if (selectedUnit === 'UK3' && viewMode === 'regu') {
-            fetchCabang();
-        }
-    }, [selectedUnit, viewMode, isSuperAdmin, filterVendor]);
+        fetchCabang();
+    }, [isSuperAdmin, filterVendor]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -177,6 +190,7 @@ function LaporanTugasPage() {
                     if (searchTerm) url += `search=${searchTerm}&`;
                     if (dateStart) url += `date_start=${dateStart}&`;
                     if (dateEnd) url += `date_end=${dateEnd}&`;
+                    if (selectedCabang) url += `kode_cabang=${selectedCabang}&`;
                     if (isSuperAdmin && filterVendor) url += `vendor_id=${filterVendor}&`;
 
                     const response: any = await apiClient.get(url);
@@ -192,6 +206,7 @@ function LaporanTugasPage() {
                 if (searchTerm) url += `search=${searchTerm}&`;
                 if (dateStart) url += `date_start=${dateStart}&`;
                 if (dateEnd) url += `date_end=${dateEnd}&`;
+                if (selectedCabang) url += `kode_cabang=${selectedCabang}&`;
                 if (isSuperAdmin && filterVendor) url += `vendor_id=${filterVendor}&`;
 
                 const response: any = await apiClient.get(url);
@@ -321,12 +336,31 @@ function LaporanTugasPage() {
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
-                        <button onClick={() => window.print()} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
-                            <Download className="h-4 w-4" />
-                            <span className="hidden sm:inline">Export / Print</span>
+                        <button
+                            onClick={handlePrintClick}
+                            disabled={isPrinting}
+                            className={clsx(
+                                "inline-flex items-center justify-center gap-2.5 rounded-lg border px-4 py-2 text-center font-medium transition shadow-sm",
+                                isPrinting
+                                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-meta-4/50 dark:border-strokedark"
+                                    : "border-stroke bg-white text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90"
+                            )}>
+                            {isPrinting ? (
+                                <><span className="animate-spin w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full"></span> <span className="hidden sm:inline">Menyiapkan...</span></>
+                            ) : (
+                                <><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export / Print</span></>
+                            )}
                         </button>
                     </div>
                 </div>
+
+                {isPrinting && (
+                    <iframe
+                        src={`/reports/tugas-monitoring/cetak?unit=${selectedUnit}&viewMode=${viewMode}&startDate=${dateStart}&endDate=${dateEnd}&search=${searchTerm}&cabang=${selectedCabang}&vendorId=${filterVendor}`}
+                        style={{ position: 'absolute', width: '0', height: '0', border: 'none' }}
+                        title="Print Frame"
+                    />
+                )}
 
                 {/* Filters */}
                 <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4 items-end">
@@ -343,10 +377,10 @@ function LaporanTugasPage() {
                     )}
                     {viewMode === 'personal' ? (
                         <>
-                            <div className="relative col-span-2">
+                            <div className="relative">
                                 <input
                                     type="text"
-                                    placeholder="Cari NIK atau Nama Petugas..."
+                                    placeholder="Cari NIK atau Nama..."
                                     value={searchTerm}
                                     onChange={e => {
                                         setSearchTerm(e.target.value);
@@ -355,6 +389,18 @@ function LaporanTugasPage() {
                                     className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                                 />
                                 <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
+                            </div>
+                            <div className="relative z-[100] bg-white dark:bg-form-input rounded-lg">
+                                <SearchableSelect
+                                    value={selectedCabang}
+                                    onChange={setSelectedCabang}
+                                    options={[
+                                        { value: '', label: 'Semua Cabang' },
+                                        ...cabangOptions.map(opt => ({ value: opt.kode_cabang, label: opt.nama_cabang }))
+                                    ]}
+                                    placeholder="Pilih Cabang..."
+                                    usePortal={true}
+                                />
                             </div>
                             <div>
                                 <DatePicker
@@ -413,14 +459,17 @@ function LaporanTugasPage() {
                                         <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Waktu Tugas</th>
                                         <th className="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">Lokasi & Shift</th>
                                         <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Status</th>
-                                        <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Foto</th>
+                                        <th className="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white text-center">Foto Utama</th>
+                                        {selectedUnit === 'UK3' && (
+                                            <th className="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white text-center">Giat Patroli Titik (Rute)</th>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {loading ? (
-                                        <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
+                                        <tr><td colSpan={selectedUnit === 'UK3' ? 7 : 6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
                                     ) : paginatedData.length === 0 ? (
-                                        <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan</td></tr>
+                                        <tr><td colSpan={selectedUnit === 'UK3' ? 7 : 6} className="px-4 py-8 text-center text-gray-500">Tidak ada data ditemukan</td></tr>
                                     ) : (
                                         paginatedData.map((item, idx) => (
                                             <tr key={item.id} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/20">
@@ -476,10 +525,16 @@ function LaporanTugasPage() {
                                                     {item.foto_absen ? (
                                                         <div className="flex justify-center">
                                                             <img
-                                                                src={item.foto_absen}
+                                                                src={getThumbUrl(item.foto_absen) || undefined}
                                                                 alt="Foto Absen"
                                                                 className="h-10 w-10 rounded-full border-2 border-white dark:border-boxdark object-cover cursor-pointer hover:opacity-80 transition shadow-sm bg-gray-200"
                                                                 onClick={() => setPreviewImage(item.foto_absen)}
+                                                                onError={(e) => {
+                                                                    const target = e.currentTarget;
+                                                                    if (target.src.includes('_thumb.jpg') && item.foto_absen) {
+                                                                        target.src = item.foto_absen.startsWith('http') ? item.foto_absen : `${process.env.NEXT_PUBLIC_API_URL}/storage/uploads/absensi/${item.foto_absen}`;
+                                                                    }
+                                                                }}
                                                             />
                                                         </div>
                                                     ) : (
@@ -490,6 +545,36 @@ function LaporanTugasPage() {
                                                         </div>
                                                     )}
                                                 </td>
+                                                {selectedUnit === 'UK3' && (
+                                                    <td className="px-4 py-4">
+                                                        <div className="flex flex-wrap gap-2 items-start">
+                                                            {item.patrol_points && item.patrol_points.length > 0 ? item.patrol_points.map((pt: any, idx_pt: number) => (
+                                                                pt.foto ? (
+                                                                    <div key={idx_pt} className="flex flex-col items-center gap-1 group relative">
+                                                                        <img
+                                                                            src={getThumbUrl(pt.foto) || undefined}
+                                                                            onClick={() => setPreviewImage(pt.foto)}
+                                                                            className="h-8 w-8 rounded object-cover cursor-pointer border border-gray-300 hover:scale-110 transition-transform shadow-sm"
+                                                                            title={pt.nama_titik}
+                                                                            onError={(e) => {
+                                                                                const target = e.currentTarget;
+                                                                                if (target.src.includes('_thumb.jpg') && pt.foto) {
+                                                                                    target.src = pt.foto.startsWith('http') ? pt.foto : `${process.env.NEXT_PUBLIC_API_URL}/storage/uploads/absensi/${pt.foto}`;
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                        <span className="text-[9px] text-gray-500 max-w-[48px] truncate text-center leading-tight" title={pt.nama_titik}>{pt.nama_titik}</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div key={idx_pt} className="flex flex-col items-center gap-1 opacity-50" title={`Belum: ${pt.nama_titik}`}>
+                                                                        <div className="h-8 w-8 rounded border border-dashed border-gray-400 bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 font-bold">?</div>
+                                                                        <span className="text-[9px] text-gray-400 max-w-[48px] truncate text-center leading-tight">{pt.nama_titik}</span>
+                                                                    </div>
+                                                                )
+                                                            )) : <span className="text-xs text-gray-400 italic">Belum ada titik rute</span>}
+                                                        </div>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))
                                     )}
@@ -660,7 +745,7 @@ function LaporanTugasPage() {
                     </div>
                 )}
             </div>
-        </MainLayout>
+        </MainLayout >
     );
 }
 

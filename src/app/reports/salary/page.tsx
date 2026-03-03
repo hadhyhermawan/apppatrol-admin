@@ -27,6 +27,9 @@ type LaporanGajiItem = {
     bpjs_tenagakerja: number;
     penambah: number;
     pengurang: number;
+    bruto_pajak: number;
+    pph21_bulanan: number;
+    status_ptkp: string;
     gaji_bersih: number;
     tunjangan_detail: Record<string, number>;
 };
@@ -154,6 +157,25 @@ function LaporanGajiPage() {
         }).format(angka || 0);
     };
 
+    const exportBupot = () => {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        // Minimal e-Bupot CSV format
+        csvContent += "NIK,Nama Karyawan,Penghasilan Bruto,Status PTKP,PPh 21 Dipotong\n";
+
+        data.forEach(item => {
+            let row = `"${item.nik}","${item.nama_karyawan}",${item.bruto_pajak || 0},"${item.status_ptkp || ''}",${item.pph21_bulanan || 0}`;
+            csvContent += row + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `ebupot_${filterBulan}_${filterTahun}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <MainLayout>
             <PageBreadcrumb pageTitle="Laporan Gaji Karyawan" />
@@ -165,6 +187,9 @@ function LaporanGajiPage() {
                         Laporan Rekapitulasi Gaji
                     </h2>
                     <div className="flex gap-3">
+                        <button onClick={exportBupot} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
+                            <span className="hidden sm:inline">Export e-Bupot CSV</span>
+                        </button>
                         <button onClick={() => fetchData()} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
@@ -262,6 +287,7 @@ function LaporanGajiPage() {
                                 <th className="px-4 py-4 font-medium text-red-600 dark:text-red-400 border-b border-gray-200 dark:border-gray-700 bg-red-50 dark:bg-red-900/20">(-) Pengurang</th>
                                 <th className="px-4 py-4 font-medium text-red-600 dark:text-red-400 border-b border-gray-200 dark:border-gray-700 bg-red-50 dark:bg-red-900/20">(-) BPJS Kes</th>
                                 <th className="px-4 py-4 font-medium text-red-600 dark:text-red-400 border-b border-gray-200 dark:border-gray-700 bg-red-50 dark:bg-red-900/20">(-) BPJS TK</th>
+                                <th className="px-4 py-4 font-medium text-red-600 dark:text-red-400 border-b border-gray-200 dark:border-gray-700 bg-red-50 dark:bg-red-900/20">(-) PPh 21</th>
                                 <th className="px-4 py-4 font-medium text-black dark:text-white border-b border-gray-200 dark:border-gray-700 font-bold bg-gray-50 dark:bg-meta-4 text-right">Gaji Bersih</th>
                             </tr>
                         </thead>
@@ -309,6 +335,12 @@ function LaporanGajiPage() {
                                         </td>
                                         <td className="px-4 py-4 text-sm text-red-600 dark:text-red-400 border-b border-gray-100 dark:border-gray-800">
                                             {formatRupiah(item.bpjs_tenagakerja)}
+                                        </td>
+                                        <td className="px-4 py-4 text-sm text-red-600 dark:text-red-400 border-b border-gray-100 dark:border-gray-800">
+                                            <div className="flex flex-col">
+                                                <span>{formatRupiah(item.pph21_bulanan || 0)}</span>
+                                                <span className="text-[10px] text-gray-500">{item.status_ptkp}</span>
+                                            </div>
                                         </td>
                                         <td className="px-4 py-4 font-bold text-black dark:text-white bg-gray-50 dark:bg-meta-4 text-right border-b border-gray-200 dark:border-gray-700">
                                             {formatRupiah(item.gaji_bersih)}

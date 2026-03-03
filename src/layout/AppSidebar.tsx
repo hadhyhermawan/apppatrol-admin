@@ -43,7 +43,8 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean; superAdminOnly?: boolean }[];
+  featureKey?: string;
+  subItems?: { name: string; path: string; pro?: boolean; new?: boolean; superAdminOnly?: boolean; featureKey?: string; }[];
   sectionHeader?: string;
   superAdminOnly?: boolean;
 };
@@ -63,7 +64,7 @@ const navItems: NavItem[] = [
       { name: 'Departemen', path: '/master/departemen' },
       { name: 'Jabatan', path: '/master/jabatan' },
       { name: 'Cabang', path: '/master/cabang' },
-      { name: 'Walkie Channel', path: '/master/walkiechannel' },
+      { name: 'Walkie Channel', path: '/master/walkiechannel', featureKey: 'ptt' },
       { name: 'Patrol Point', path: '/master/patrolpoint' },
       { name: 'Titik Tugas Dept', path: '/master/dept-task-point' },
       { name: 'Cuti', path: '/master/cuti' },
@@ -93,7 +94,8 @@ const navItems: NavItem[] = [
   {
     name: 'Monitoring Presensi',
     path: '/presensi',
-    icon: <Clock size={20} />
+    icon: <Clock size={20} />,
+    featureKey: 'presensi'
   },
   // Departemen Keamanan
   {
@@ -110,27 +112,32 @@ const navItems: NavItem[] = [
   {
     name: 'Turlalin VIP',
     path: '/security/turlalin',
-    icon: <Cone size={20} />
+    icon: <Cone size={20} />,
+    featureKey: 'turlalin'
   },
   {
     name: 'Safety Briefing',
     path: '/security/safety',
-    icon: <HardHat size={20} />
+    icon: <HardHat size={20} />,
+    featureKey: 'safety'
   },
   {
     name: 'Barang',
     path: '/security/barang',
-    icon: <Package size={20} />
+    icon: <Package size={20} />,
+    featureKey: 'barang'
   },
   {
     name: 'Surat',
     path: '/security/surat',
-    icon: <Mail size={20} />
+    icon: <Mail size={20} />,
+    featureKey: 'surat'
   },
   {
     name: 'Tamu',
     path: '/security/tamu',
-    icon: <UserCheck size={20} />
+    icon: <UserCheck size={20} />,
+    featureKey: 'tamu'
   },
   {
     name: 'Employee Tracking',
@@ -186,13 +193,14 @@ const navItems: NavItem[] = [
     name: 'Konfigurasi',
     icon: <Settings size={20} />,
     subItems: [
-      { name: 'General Setting', path: '/settings/general' },
-      { name: 'Pengaturan Reminder', path: '/settings/reminder' },
-      { name: 'Denda', path: '/settings/denda' },
-      { name: 'Hari Libur', path: '/settings/hari-libur' },
-      { name: 'Jam Kerja Departemen', path: '/settings/jam-kerja-dept' },
-      { name: 'Syarat & Ketentuan', path: '/settings/terms' },
-      { name: 'Kebijakan Privasi', path: '/settings/privacy' },
+      { name: 'General Setting', path: '/settings/general', superAdminOnly: true },
+      { name: 'Pengaturan Reminder', path: '/settings/reminder', superAdminOnly: true },
+      { name: 'Denda', path: '/settings/denda', superAdminOnly: true },
+      { name: 'Hari Libur', path: '/settings/hari-libur', superAdminOnly: true },
+      { name: 'Jam Kerja Departemen', path: '/settings/jam-kerja-dept', superAdminOnly: true },
+      { name: 'Syarat & Ketentuan', path: '/settings/terms', superAdminOnly: true },
+      { name: 'Kebijakan Privasi', path: '/settings/privacy', superAdminOnly: true },
+      { name: 'Hapus Akun & Data', path: '/settings/hapus-akun', superAdminOnly: true },
       { name: 'Profil Perusahaan', path: '/settings/vendor-profile' },
     ]
   },
@@ -200,7 +208,12 @@ const navItems: NavItem[] = [
     name: 'Laporan',
     icon: <FileText size={20} />,
     subItems: [
-      { name: 'Laporan Presensi', path: '/reports/presensi' },
+      { name: 'Laporan Presensi', path: '/reports/presensi', featureKey: 'presensi' },
+      { name: 'Laporan Safety Briefing', path: '/reports/safety', featureKey: 'safety' },
+      { name: 'Laporan Turlalin', path: '/reports/turlalin', featureKey: 'turlalin' },
+      { name: 'Laporan Buku Tamu', path: '/reports/tamu', featureKey: 'tamu' },
+      { name: 'Laporan Buku Barang', path: '/reports/barang', featureKey: 'barang' },
+      { name: 'Laporan Surat Keluar Masuk', path: '/reports/surat', featureKey: 'surat' },
       { name: 'Laporan Gaji', path: '/reports/salary' },
       { name: 'Laporan Tugas', path: '/reports/tugas-monitoring' },
       { name: 'Statistik Kinerja', path: '/reports/performance' },
@@ -211,14 +224,14 @@ const navItems: NavItem[] = [
     icon: <Server size={20} />,
     subItems: [
       { name: 'User', path: '/utilities/users' },
-      { name: 'Role', path: '/utilities/roles' },
-      { name: 'Permission', path: '/utilities/permissions' },
-      { name: 'Role & Permission', path: '/utilities/role-permission' },
-      { name: 'Group Permission', path: '/utilities/group-permissions' },
-      { name: 'Login Logs', path: '/utilities/logs' },
-      { name: 'User Agreements', path: '/user-agreements' },
+      { name: 'Role', path: '/utilities/roles', superAdminOnly: true },
+      { name: 'Permission', path: '/utilities/permissions', superAdminOnly: true },
+      { name: 'Role & Permission', path: '/utilities/role-permission', superAdminOnly: true },
+      { name: 'Group Permission', path: '/utilities/group-permissions', superAdminOnly: true },
+      { name: 'Login Logs', path: '/utilities/logs', superAdminOnly: true },
+      { name: 'User Agreements', path: '/user-agreements', superAdminOnly: true },
       { name: 'Laporan Keamanan', path: '/utilities/security-reports' },
-      { name: 'Multi Device Login', path: '/utilities/multi-device' },
+      { name: 'Multi Device Login', path: '/utilities/multi-device', superAdminOnly: true },
       { name: 'Management Obrolan', path: '/utilities/chat-management' },
     ]
   },
@@ -234,7 +247,22 @@ const AppSidebar: React.FC = () => {
   const { isSuperAdmin, isKaryawan, hasAnyPermission, hasAllPermissions } = usePermissions();
   const pathname = usePathname();
 
+  const [vendorFeatures, setVendorFeatures] = useState<any>({});
+
   const [izinCount, setIzinCount] = useState<number>(0);
+
+  useEffect(() => {
+    // Attempt to load my vendor profile to get features if not super admin
+    if (!isSuperAdmin) {
+      apiClient.get('/auth/me').then((me: any) => {
+        if (me && me.vendor_id) {
+          apiClient.get(`/vendors/${me.vendor_id}/profile`).then((res: any) => {
+            setVendorFeatures(res.features || {});
+          }).catch(() => { });
+        }
+      }).catch(() => { });
+    }
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -320,6 +348,11 @@ const AppSidebar: React.FC = () => {
           subItems: nav.subItems.filter(sub => {
             if (sub.superAdminOnly && !isSuperAdmin) return false;
             if (isSuperAdmin) return true;
+
+            if (sub.featureKey && vendorFeatures[sub.featureKey] !== true) {
+              return false;
+            }
+
             if (sub.path) {
               const routePerm = getRequiredPermissions(sub.path);
               if (routePerm && routePerm.permissions.length > 0) {
@@ -370,6 +403,12 @@ const AppSidebar: React.FC = () => {
       // Top level items without specific permissions and without subItems
       if (isKaryawan && !isSuperAdmin && !nav.path && !nav.subItems) {
         return false;
+      }
+
+      if (nav.featureKey && !isSuperAdmin) {
+        if (vendorFeatures[nav.featureKey] !== true) {
+          return false;
+        }
       }
 
       return true;
@@ -457,7 +496,27 @@ const AppSidebar: React.FC = () => {
                   }}
                 >
                   <ul className="mt-2 space-y-1 ml-9">
-                    {nav.subItems.map((subItem) => (
+                    {nav.subItems.filter(subItem => {
+                      if (subItem.superAdminOnly && !isSuperAdmin) return false;
+                      if (isSuperAdmin) return true;
+
+                      const routePerm = getRequiredPermissions(subItem.path || '');
+                      if (routePerm && routePerm.permissions.length > 0) {
+                        return routePerm.requireAll ? hasAllPermissions(routePerm.permissions) : hasAnyPermission(routePerm.permissions);
+                      }
+
+                      // For Karyawan, hide sub item if no explicit permissions exist and it's not super admin
+                      if (isKaryawan && !isSuperAdmin) {
+                        // some defaults are safe, like users
+                        // but we just let it pass or block based on featureKey 
+                      }
+
+                      if (subItem.featureKey && vendorFeatures[subItem.featureKey] !== true) {
+                        return false;
+                      }
+
+                      return true;
+                    }).map((subItem) => (
                       <li key={subItem.name}>
                         <Link
                           href={subItem.path}

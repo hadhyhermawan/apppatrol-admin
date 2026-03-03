@@ -62,6 +62,13 @@ function LaporanDetailKaryawanPage() {
     const [loading, setLoading] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
+    const [isPrinting, setIsPrinting] = useState(false);
+
+    const handlePrintClick = () => {
+        setIsPrinting(true);
+        // Reset the button state after a generous delay since print blocks JS execution.
+        setTimeout(() => setIsPrinting(false), 3000);
+    };
 
     const getImageUrl = (filename: string | null) => {
         if (!filename) return null;
@@ -210,14 +217,27 @@ function LaporanDetailKaryawanPage() {
                         </button>
                     </div>
 
-                    <Link
-                        href={`/reports/presensi/${nik}/cetak?startDate=${startDate}&endDate=${endDate}`}
-                        target="_blank"
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition shadow-sm"
+                    <button
+                        onClick={handlePrintClick}
+                        disabled={isPrinting}
+                        className={clsx(
+                            "flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-xl transition shadow-sm",
+                            isPrinting ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                        )}
                     >
-                        <Printer className="h-4 w-4" />
-                        Cetak Laporan
-                    </Link>
+                        {isPrinting ? (
+                            <span className="flex items-center gap-1"><span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-1"></span> Menyiapkan...</span>
+                        ) : (
+                            <><Printer className="h-4 w-4" /> Cetak Laporan</>
+                        )}
+                    </button>
+                    {isPrinting && (
+                        <iframe
+                            src={`/reports/presensi/${nik}/cetak?startDate=${startDate}&endDate=${endDate}`}
+                            style={{ position: 'absolute', width: '0', height: '0', border: 'none' }}
+                            title="Print Frame"
+                        />
+                    )}
 
                     <button
                         onClick={() => router.back()}

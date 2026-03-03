@@ -272,6 +272,36 @@ function PayrollBpjsTenagakerjaPage() {
         }
     };
 
+    const handleDeleteAll = async () => {
+        const result = await Swal.fire({
+            title: 'Hapus SEMUA Data?',
+            text: "AWAS! Tindakan ini akan menghapus KESELURUHAN data BPJS Tenaga Kerja karyawan yang ada di sistem (All Vendor) dan tidak dapat dibatalkan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus Semua!',
+            cancelButtonText: 'Batal'
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            await apiClient.delete('/payroll/bpjs-tenagakerja-all');
+            Swal.fire({
+                title: 'Terhapus!',
+                text: 'Seluruh data BPJS Tenaga Kerja berhasil dihapus permanen.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            fetchData();
+        } catch (error: any) {
+            console.error(error);
+            Swal.fire('Gagal!', error.response?.data?.detail || "Gagal menghapus data.", 'error');
+        }
+    };
+
     return (
         <MainLayout>
             <PageBreadcrumb pageTitle="BPJS Tenaga Kerja" />
@@ -287,6 +317,12 @@ function PayrollBpjsTenagakerjaPage() {
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
+                        {isSuperAdmin && canDelete('bpjstenagakerja') && (
+                            <button onClick={handleDeleteAll} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-red-600 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
+                                <Trash2 className="h-4 w-4" />
+                                <span>Hapus Semua</span>
+                            </button>
+                        )}
                         {canCreate('bpjstenagakerja') && (
                             <button onClick={handleOpenCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
                                 <Plus className="h-4 w-4" />

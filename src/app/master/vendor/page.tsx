@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import clsx from 'clsx';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
+import { useRouter } from 'next/navigation';
 
 type VendorItem = {
     id: number;
@@ -21,6 +22,7 @@ type VendorItem = {
 
 function MasterVendorPage() {
     const { canCreate, canUpdate, canDelete } = usePermissions();
+    const router = useRouter();
     const [data, setData] = useState<VendorItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -91,17 +93,7 @@ function MasterVendorPage() {
     };
 
     const handleOpenEdit = (item: VendorItem) => {
-        setErrorMsg('');
-        setModalMode('edit');
-        setFormData({
-            nama_vendor: item.nama_vendor,
-            alamat: item.alamat || '',
-            kontak: item.kontak || '',
-            is_active: item.is_active === 1,
-            admin_name: '', admin_username: '', admin_email: '', admin_password: ''
-        } as any);
-        setEditingId(item.id);
-        setIsModalOpen(true);
+        router.push(`/master/vendor/${item.id}`);
     };
 
     const handleCloseModal = () => {
@@ -125,21 +117,12 @@ function MasterVendorPage() {
 
         setIsSubmitting(true);
         try {
-            if (modalMode === 'create') {
-                await apiClient.post('/vendors', formData);
-            } else {
-                // Ensure we pass back is_active correctly
-                const payload = {
-                    ...formData,
-                    is_active: formData.is_active ? 1 : 0
-                };
-                await apiClient.put(`/vendors/${editingId}`, payload);
-            }
+            await apiClient.post('/vendors', formData);
             setIsModalOpen(false);
             fetchData();
             Swal.fire({
                 title: 'Berhasil!',
-                text: modalMode === 'create' ? 'Data berhasil disimpan.' : 'Data berhasil diperbarui.',
+                text: 'Data berhasil disimpan.',
                 icon: 'success',
                 timer: 1500,
                 showConfirmButton: false
@@ -413,30 +396,7 @@ function MasterVendorPage() {
                                             </div>
                                         </div>
                                     </>
-                                )}
 
-                                {modalMode === 'edit' && (
-                                    <>
-                                        <hr className="my-4 border-stroke dark:border-strokedark" />
-                                        <div className="flex flex-col gap-3">
-                                            <label className="block text-sm font-semibold text-black dark:text-white">Status Lisensi Vendor</label>
-                                            <label className="relative inline-flex items-center cursor-pointer max-w-max">
-                                                <input
-                                                    type="checkbox"
-                                                    className="sr-only peer"
-                                                    checked={(formData as any).is_active}
-                                                    onChange={() => setFormData({ ...formData, is_active: !(formData as any).is_active })}
-                                                />
-                                                <div className="w-14 h-8 bg-red-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[24px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
-                                                <span className="ml-3 text-sm font-bold text-gray-900 dark:text-gray-300">
-                                                    {(formData as any).is_active ? "Aktif (Lisensi Bekerja)" : "Blokir (Dihentikan)"}
-                                                </span>
-                                            </label>
-                                        </div>
-                                        <p className="text-xs text-gray-500 mt-2">
-                                            Peringatan: Menonaktifkan lisensi vendor akan secara instan **memblokir** seluruh Satpam yang bernaung di bawah Vendor ini dari aplikasi Web maupun Android.
-                                        </p>
-                                    </>
                                 )}
                             </div>
 

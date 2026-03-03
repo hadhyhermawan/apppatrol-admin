@@ -4,11 +4,17 @@ import { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
-import { Plus, Search, Trash2, Edit, RefreshCw, Clock, ArrowLeft, ArrowRight, Eye, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Plus, Search, Trash, Edit, RefreshCw, Clock, ArrowLeft, ArrowRight, Eye, CheckCircle, XCircle, AlertCircle, X, Save, FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
 import SearchableSelect from '@/components/form/SearchableSelect';
+import dynamic from 'next/dynamic';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />,
+});
 
 type Lembur = {
     id: number;
@@ -52,8 +58,7 @@ function LemburPage() {
     const [searchDept, setSearchDept] = useState('');
     const [searchStatus, setSearchStatus] = useState('');
     const [filterVendor, setFilterVendor] = useState('');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
+    const [dateFilter, setDateFilter] = useState('');
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -82,7 +87,7 @@ function LemburPage() {
 
     useEffect(() => {
         fetchData();
-    }, [searchCabang, searchDept, searchStatus, dateFrom, dateTo, filterVendor]);
+    }, [searchCabang, searchDept, searchStatus, dateFilter, filterVendor]);
 
     useEffect(() => {
         fetchOptions();
@@ -95,9 +100,12 @@ function LemburPage() {
             if (searchCabang) params.append('kode_cabang', searchCabang);
             if (searchDept) params.append('kode_dept', searchDept);
             if (searchStatus) params.append('status', searchStatus);
-            if (dateFrom) params.append('dari', dateFrom);
-            if (dateTo) params.append('sampai', dateTo);
             if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
+            if (dateFilter) {
+                const dates = dateFilter.split(' to ');
+                if (dates[0]) params.append('dari', dates[0]);
+                if (dates[1]) params.append('sampai', dates[1]);
+            }
 
             const res: any = await apiClient.get(`/lembur?${params.toString()}`);
             setData(Array.isArray(res) ? res : []);
@@ -311,7 +319,7 @@ function LemburPage() {
                 </div>
 
                 <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6">
-                    <div className="relative lg:col-span-2">
+                    <div className="relative col-span-1 md:col-span-2">
                         <input
                             type="text"
                             placeholder="Cari karyawan atau keterangan..."
@@ -324,6 +332,7 @@ function LemburPage() {
                         />
                         <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
+
                     {isSuperAdmin && (
                         <div>
                             <SearchableSelect
@@ -334,61 +343,42 @@ function LemburPage() {
                             />
                         </div>
                     )}
+
                     <div>
-                        <select
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                            value={searchCabang}
-                            onChange={(e) => {
-                                setSearchCabang(e.target.value);
-                                fetchData();
-                            }}
-                        >
-                            <option value="">Semua Cabang</option>
-                            {cabangOptions.map(c => (
-                                <option key={c.kode_cabang} value={c.kode_cabang}>{c.nama_cabang}</option>
-                            ))}
-                        </select>
+                        <DatePicker
+                            id="date-filter"
+                            placeholder="Filter Tanggal"
+                            defaultDate={dateFilter}
+                            onChange={(dates: Date[], dateStr: string) => setDateFilter(dateStr)}
+                        />
                     </div>
                     <div>
-                        <select
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Departemen' }, ...deptOptions.map(o => ({ value: o.kode_dept, label: o.nama_dept }))]}
                             value={searchDept}
-                            onChange={(e) => {
-                                setSearchDept(e.target.value);
-                                fetchData();
-                            }}
-                        >
-                            <option value="">Semua Dept</option>
-                            {deptOptions.map(d => (
-                                <option key={d.kode_dept} value={d.kode_dept}>{d.nama_dept}</option>
-                            ))}
-                        </select>
+                            onChange={val => setSearchDept(val)}
+                            placeholder="Semua Departemen"
+                        />
                     </div>
                     <div>
-                        <select
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Cabang' }, ...cabangOptions.map(o => ({ value: o.kode_cabang, label: o.nama_cabang }))]}
+                            value={searchCabang}
+                            onChange={val => setSearchCabang(val)}
+                            placeholder="Semua Cabang"
+                        />
+                    </div>
+                    <div>
+                        <SearchableSelect
+                            options={[
+                                { value: '', label: 'Semua Status' },
+                                { value: '0', label: 'Pending' },
+                                { value: '1', label: 'Approved' },
+                                { value: '2', label: 'Rejected' }
+                            ]}
                             value={searchStatus}
-                            onChange={(e) => {
-                                setSearchStatus(e.target.value);
-                                fetchData();
-                            }}
-                        >
-                            <option value="">Semua Status</option>
-                            <option value="0">Pending</option>
-                            <option value="1">Approved</option>
-                            <option value="2">Rejected</option>
-                        </select>
-                    </div>
-                    <div>
-                        <input
-                            type="date"
-                            value={dateFrom}
-                            onChange={(e) => {
-                                setDateFrom(e.target.value);
-                                fetchData();
-                            }}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                            placeholder="Dari"
+                            onChange={val => setSearchStatus(val)}
+                            placeholder="Semua Status"
                         />
                     </div>
                 </div>
@@ -435,8 +425,8 @@ function LemburPage() {
                                             {getStatusBadge(item.status)}
                                         </td>
                                         <td className="px-4 py-4 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => handleViewDetail(item.id)} className="hover:text-blue-500 text-gray-500 dark:text-gray-400" title="Detail">
+                                            <div className="flex items-center justify-center gap-2 flex-wrap">
+                                                <button onClick={() => handleViewDetail(item.id)} className="hover:text-blue-500 text-gray-500 dark:text-gray-400 transition" title="Detail">
                                                     <Eye className="h-4 w-4" />
                                                 </button>
                                                 {item.status === '0' && (
@@ -453,13 +443,13 @@ function LemburPage() {
                                                     </>
                                                 )}
                                                 {item.status !== '0' && (
-                                                    <button onClick={() => handleCancelApprove(item.id)} className="hover:text-orange-500 text-gray-500 dark:text-gray-400" title="Cancel Approval">
+                                                    <button onClick={() => handleCancelApprove(item.id)} className="hover:text-orange-500 text-gray-500 dark:text-gray-400 transition" title="Cancel Approval">
                                                         <AlertCircle className="h-4 w-4" />
                                                     </button>
                                                 )}
                                                 {canDelete('lembur') && (
-                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400" title="Hapus">
-                                                        <Trash2 className="h-4 w-4" />
+                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400 transition" title="Hapus">
+                                                        <Trash className="h-4 w-4" />
                                                     </button>
                                                 )}
                                             </div>
@@ -499,66 +489,112 @@ function LemburPage() {
 
             {/* Create/Edit Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-999999 flex items-center justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4">
-                    <div className="relative w-full max-w-2xl rounded-2xl bg-white p-8 shadow-2xl dark:bg-boxdark">
-                        <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white text-2xl font-bold">✕</button>
-                        <h3 className="mb-6 text-2xl font-bold text-black dark:text-white flex items-center gap-2">
-                            <Clock className="w-6 h-6 text-brand-500" />
-                            {isEditing ? 'Edit Lembur' : 'Tambah Lembur'}
-                        </h3>
+                <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-boxdark rounded-lg shadow-xl w-full max-w-lg overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center bg-gray-50 dark:bg-meta-4 shrink-0">
+                            <h3 className="text-lg font-bold text-black dark:text-white flex items-center gap-2">
+                                <Clock className="w-5 h-5 text-brand-500" />
+                                {isEditing ? 'Edit Lembur' : 'Tambah Lembur'}
+                            </h3>
+                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
 
-                        <form onSubmit={handleSubmit}>
-                            <div className="flex flex-col gap-6 mb-6">
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+                            <div className="p-6 space-y-5">
                                 <div>
-                                    <label className="mb-2.5 block text-black dark:text-white font-medium">Karyawan</label>
-                                    <select
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
-                                        value={formData.nik}
-                                        onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
-                                        required
-                                    >
-                                        <option value="">Pilih Karyawan</option>
-                                        {karyawanOptions.map(k => <option key={k.nik} value={k.nik}>{k.nama_karyawan}</option>)}
-                                    </select>
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">Karyawan</label>
+                                    {!isEditing ? (
+                                        <div className="relative z-[100] bg-white dark:bg-form-input">
+                                            <SearchableSelect
+                                                options={karyawanOptions.map(k => ({ value: k.nik, label: `${k.nama_karyawan} (${k.nik})` }))}
+                                                value={formData.nik}
+                                                onChange={(val) => setFormData({ ...formData, nik: val })}
+                                                placeholder="Pilih Karyawan"
+                                                usePortal={true}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="p-3 bg-gray-50 dark:bg-meta-4 rounded-lg border border-stroke dark:border-strokedark flex items-center justify-between">
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold text-black dark:text-white">
+                                                    {karyawanOptions.find(k => k.nik === formData.nik)?.nama_karyawan || formData.nik}
+                                                </span>
+                                                <span className="text-xs text-gray-500">{formData.nik}</span>
+                                            </div>
+                                            <span className="text-xs font-medium bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
+                                                Tidak dapat diubah
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                     <div>
-                                        <label className="mb-2.5 block text-black dark:text-white font-medium">Dari (Mulai)</label>
-                                        <input
-                                            type="datetime-local"
-                                            value={formData.dari}
-                                            onChange={(e) => setFormData({ ...formData, dari: e.target.value })}
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
-                                            required
+                                        <label className="block text-sm font-semibold text-black dark:text-white mb-2">Dari (Mulai)</label>
+                                        <DatePicker
+                                            id="form-dari"
+                                            placeholder="Pilih Waktu Mulai"
+                                            defaultDate={formData.dari}
+                                            enableTime={true}
+                                            dateFormat="Y-m-d H:i"
+                                            staticDisplay={false}
+                                            onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, dari: dateStr })}
                                         />
                                     </div>
                                     <div>
-                                        <label className="mb-2.5 block text-black dark:text-white font-medium">Sampai (Selesai)</label>
-                                        <input
-                                            type="datetime-local"
-                                            value={formData.sampai}
-                                            onChange={(e) => setFormData({ ...formData, sampai: e.target.value })}
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
-                                            required
+                                        <label className="block text-sm font-semibold text-black dark:text-white mb-2">Sampai (Selesai)</label>
+                                        <DatePicker
+                                            id="form-sampai"
+                                            placeholder="Pilih Waktu Selesai"
+                                            defaultDate={formData.sampai}
+                                            enableTime={true}
+                                            dateFormat="Y-m-d H:i"
+                                            staticDisplay={false}
+                                            onChange={(dates: Date[], dateStr: string) => setFormData({ ...formData, sampai: dateStr })}
                                         />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="mb-2.5 block text-black dark:text-white font-medium">Keterangan</label>
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">Keterangan</label>
                                     <textarea
                                         value={formData.keterangan}
                                         onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
                                         rows={4}
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-brand-500"
+                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black outline-none transition focus:border-brand-500 active:border-brand-500 dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-brand-500 resize-none"
                                         placeholder="Alasan lembur..."
                                         required
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-3 border-t border-stroke pt-4 dark:border-strokedark">
-                                <button type="button" onClick={() => setShowModal(false)} className="rounded-lg bg-gray-200 px-6 py-2.5 font-medium text-black hover:bg-gray-300 transition">Batal</button>
-                                <button type="submit" className="rounded-lg bg-brand-500 px-6 py-2.5 font-medium text-white hover:bg-opacity-90 transition shadow-sm">Simpan</button>
+                            <div className="px-6 py-4 border-t border-stroke dark:border-strokedark flex justify-end gap-3 bg-gray-50 dark:bg-meta-4 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowModal(false)}
+                                    disabled={loading}
+                                    className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 dark:bg-boxdark dark:text-gray-300 dark:border-strokedark dark:hover:bg-meta-4 transition-colors"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="px-5 py-2.5 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50 flex items-center gap-2 transition-colors"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            <span>Menyimpan...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-4 h-4" />
+                                            <span>Simpan</span>
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -567,71 +603,77 @@ function LemburPage() {
 
             {/* Detail Modal */}
             {showDetailModal && selectedDetail && (
-                <div className="fixed inset-0 z-999999 flex items-center justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4">
-                    <div className="relative w-full max-w-3xl rounded-2xl bg-white p-8 shadow-2xl dark:bg-boxdark">
-                        <button onClick={() => setShowDetailModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white text-2xl font-bold">✕</button>
-                        <h3 className="mb-6 text-2xl font-bold text-black dark:text-white flex items-center gap-2">
-                            <Eye className="w-6 h-6 text-brand-500" />
-                            Detail Lembur
-                        </h3>
+                <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <FileText size={18} className="text-blue-500" /> Detail Lembur
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    {selectedDetail.nama_karyawan} &bull; NIK: {selectedDetail.nik}
+                                </p>
+                            </div>
+                            <button onClick={() => setShowDetailModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-500 dark:text-gray-400">
+                                <X size={18} />
+                            </button>
+                        </div>
 
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                        <div className="p-5 space-y-4 overflow-y-auto min-h-0">
+                            <div className="grid grid-cols-2 gap-y-4 gap-x-6">
                                 <div>
-                                    <label className="text-sm text-gray-500 dark:text-gray-400">Karyawan</label>
-                                    <p className="font-semibold text-black dark:text-white">{selectedDetail.nama_karyawan}</p>
+                                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jabatan</label>
+                                    <p className="mt-1 font-medium text-gray-900 dark:text-white">{selectedDetail.nama_jabatan}</p>
                                 </div>
                                 <div>
-                                    <label className="text-sm text-gray-500 dark:text-gray-400">NIK</label>
-                                    <p className="font-semibold text-black dark:text-white">{selectedDetail.nik}</p>
+                                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Departemen</label>
+                                    <p className="mt-1 font-medium text-gray-900 dark:text-white">{selectedDetail.nama_dept}</p>
                                 </div>
                                 <div>
-                                    <label className="text-sm text-gray-500 dark:text-gray-400">Jabatan</label>
-                                    <p className="font-semibold text-black dark:text-white">{selectedDetail.nama_jabatan}</p>
+                                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cabang</label>
+                                    <p className="mt-1 font-medium text-gray-900 dark:text-white">{selectedDetail.nama_cabang}</p>
                                 </div>
                                 <div>
-                                    <label className="text-sm text-gray-500 dark:text-gray-400">Departemen</label>
-                                    <p className="font-semibold text-black dark:text-white">{selectedDetail.nama_dept}</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm text-gray-500 dark:text-gray-400">Cabang</label>
-                                    <p className="font-semibold text-black dark:text-white">{selectedDetail.nama_cabang}</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm text-gray-500 dark:text-gray-400">Status</label>
+                                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</label>
                                     <div className="mt-1">{getStatusBadge(selectedDetail.status)}</div>
                                 </div>
                             </div>
 
-                            <div className="border-t border-stroke pt-4 dark:border-strokedark">
-                                <div className="grid grid-cols-2 gap-4">
+                            <div className="border-t border-gray-100 dark:border-gray-700 pt-4 mt-2">
+                                <div className="grid grid-cols-2 gap-y-4 gap-x-6">
                                     <div>
-                                        <label className="text-sm text-gray-500 dark:text-gray-400">Waktu Mulai</label>
-                                        <p className="font-semibold text-black dark:text-white">{formatDateTime(selectedDetail.lembur_mulai)}</p>
+                                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1.5 uppercase tracking-wider">
+                                            <Clock size={12} className="text-green-500" /> Waktu Mulai
+                                        </label>
+                                        <p className="mt-1 font-medium text-gray-900 dark:text-white">{formatDateTime(selectedDetail.lembur_mulai)}</p>
                                     </div>
                                     <div>
-                                        <label className="text-sm text-gray-500 dark:text-gray-400">Waktu Selesai</label>
-                                        <p className="font-semibold text-black dark:text-white">{formatDateTime(selectedDetail.lembur_selesai)}</p>
+                                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1.5 uppercase tracking-wider">
+                                            <Clock size={12} className="text-blue-500" /> Waktu Selesai
+                                        </label>
+                                        <p className="mt-1 font-medium text-gray-900 dark:text-white">{formatDateTime(selectedDetail.lembur_selesai)}</p>
                                     </div>
                                     <div>
-                                        <label className="text-sm text-gray-500 dark:text-gray-400">Absen Masuk</label>
-                                        <p className="font-semibold text-black dark:text-white">{formatDateTime(selectedDetail.lembur_in)}</p>
+                                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Absen Masuk</label>
+                                        <p className="mt-1 font-medium text-gray-900 dark:text-white">{formatDateTime(selectedDetail.lembur_in)}</p>
                                     </div>
                                     <div>
-                                        <label className="text-sm text-gray-500 dark:text-gray-400">Absen Pulang</label>
-                                        <p className="font-semibold text-black dark:text-white">{formatDateTime(selectedDetail.lembur_out)}</p>
+                                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Absen Pulang</label>
+                                        <p className="mt-1 font-medium text-gray-900 dark:text-white">{formatDateTime(selectedDetail.lembur_out)}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="border-t border-stroke pt-4 dark:border-strokedark">
-                                <label className="text-sm text-gray-500 dark:text-gray-400">Keterangan</label>
-                                <p className="font-semibold text-black dark:text-white">{selectedDetail.keterangan}</p>
+                            <div className="border-t border-gray-100 dark:border-gray-700 pt-4 mt-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Keterangan</label>
+                                <p className="mt-1 text-sm text-gray-900 dark:text-white whitespace-pre-line">{selectedDetail.keterangan || '-'}</p>
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 border-t border-stroke pt-4 mt-6 dark:border-strokedark">
-                            <button onClick={() => setShowDetailModal(false)} className="rounded-lg bg-gray-200 px-6 py-2.5 font-medium text-black hover:bg-gray-300 transition">Tutup</button>
+                        {/* Footer */}
+                        <div className="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 bg-gray-50 dark:bg-gray-800 shrink-0">
+                            <button onClick={() => setShowDetailModal(false)} className="rounded-xl px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition">Tutup</button>
                         </div>
                     </div>
                 </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
 import { Plus, RefreshCw, Search, X, Save, Edit, Trash, ArrowLeft, ArrowRight, UserCheck, Clock } from 'lucide-react';
@@ -30,7 +30,9 @@ type TamuItem = {
     jenis_kendaraan: string | null;
     no_pol: string | null;
     foto: string | null;
+    foto_thumb?: string | null;
     foto_keluar: string | null;
+    foto_keluar_thumb?: string | null;
     barcode_kartu: string | null;
     jam_masuk: string | null;
     jam_keluar: string | null;
@@ -57,6 +59,7 @@ function SecurityTamuPage() {
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [filterVendor, setFilterVendor] = useState('');
     const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
+    const isFirstRender = useRef(true);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -181,6 +184,10 @@ function SecurityTamuPage() {
     }, [filterVendor, isSuperAdmin]);
 
     useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
         const timer = setTimeout(() => {
             fetchData();
         }, 800);
@@ -502,7 +509,7 @@ function SecurityTamuPage() {
                                                 {item.foto ? (
                                                     <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Masuk">
                                                         <Image
-                                                            src={item.foto}
+                                                            src={item.foto_thumb || item.foto}
                                                             alt="Masuk"
                                                             width={40}
                                                             height={40}
@@ -516,7 +523,7 @@ function SecurityTamuPage() {
                                                 {item.foto_keluar ? (
                                                     <div className="relative h-10 w-10 rounded-full border-2 border-white dark:border-boxdark overflow-hidden bg-gray-200" title="Foto Keluar">
                                                         <Image
-                                                            src={item.foto_keluar}
+                                                            src={item.foto_keluar_thumb || item.foto_keluar}
                                                             alt="Keluar"
                                                             width={40}
                                                             height={40}

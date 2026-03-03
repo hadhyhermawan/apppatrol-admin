@@ -264,11 +264,11 @@ function WalkieChannelPage() {
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => handleEdit(item)} className="text-brand-500 hover:text-brand-600 transition" title="Edit">
+                                                <button onClick={() => handleEdit(item)} className="hover:text-yellow-500 text-gray-500 dark:text-gray-400 transition" title="Edit">
                                                     <Edit2 className="h-4 w-4" />
                                                 </button>
                                                 {canDelete('walkiechannel') && (
-                                                    <button onClick={() => handleDelete(item.id)} className="text-red-500 hover:text-red-600 transition" title="Hapus">
+                                                    <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400 transition" title="Hapus">
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 )}

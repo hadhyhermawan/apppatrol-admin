@@ -9,10 +9,12 @@ type SlipRecapItem = {
     nik: string;
     nama_karyawan: string;
     jabatan: string;
+    status_karyawan?: string;
     gaji_pokok: number;
     tunjangan: number;
     bpjs_kesehatan: number;
     bpjs_tenagakerja: number;
+    pph21_bulanan: number;
     penambah: number;
     pengurang: number;
     gaji_bersih: number;
@@ -34,6 +36,7 @@ export default function CetakSlipGajiPage() {
     const [header, setHeader] = useState<SlipHeader | null>(null);
     const [data, setData] = useState<SlipRecapItem | null>(null);
     const [loading, setLoading] = useState(true);
+    const [vendorConfig, setVendorConfig] = useState<any>({});
 
     const fetchData = async () => {
         setLoading(true);
@@ -43,7 +46,18 @@ export default function CetakSlipGajiPage() {
 
             const recapRes: any = await apiClient.get(`/payroll/slip-gaji/${kode}/recap?nik=${nik}`);
             if (Array.isArray(recapRes) && recapRes.length > 0) {
-                setData(recapRes[0]);
+                const row = recapRes[0];
+                setData(row);
+
+                if (row.vendor_nama !== undefined) {
+                    setVendorConfig({
+                        nama: row.vendor_nama,
+                        logo: row.vendor_logo,
+                        penandatangan_nama: row.vendor_penandatangan_nama,
+                        penandatangan_jabatan: row.vendor_penandatangan_jabatan,
+                        signatories: row.vendor_signatories || []
+                    });
+                }
             } else {
                 setData(null);
             }
@@ -73,7 +87,7 @@ export default function CetakSlipGajiPage() {
     }
 
     const totalPenerimaan = data.gaji_pokok + data.tunjangan + data.penambah;
-    const totalPotongan = data.bpjs_kesehatan + data.bpjs_tenagakerja + data.pengurang;
+    const totalPotongan = data.bpjs_kesehatan + data.bpjs_tenagakerja + data.pengurang + (data.pph21_bulanan || 0);
 
     return (
         <div className="bg-gray-100 min-h-screen p-8 print:p-0 print:bg-white text-black">
@@ -96,11 +110,20 @@ export default function CetakSlipGajiPage() {
                 </div>
 
                 {/* Slip Header */}
-                <div className="text-center border-b-2 border-gray-800 pb-4 mb-6">
-                    <h1 className="text-2xl font-bold uppercase tracking-wider">PT. K3GUARD</h1>
-                    <p className="text-sm">Jalan Contoh No. 123, Jakarta Selatan</p>
-                    <h2 className="text-xl font-bold mt-4 underline">SLIP GAJI KARYAWAN</h2>
-                    <p className="text-sm mt-1">Periode: {new Date(0, header.bulan - 1).toLocaleString('id-ID', { month: 'long' })} {header.tahun}</p>
+                <div className="flex mb-6 border-b-2 border-gray-800 pb-4 items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <img src={vendorConfig?.logo || "/images/logo/logo-kcd.png"} alt="Company Logo" className="h-16 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900 tracking-tight leading-tight uppercase">
+                                {vendorConfig?.nama || "PT. K3GUARD"}
+                            </h1>
+                            <p className="text-sm text-gray-600 tracking-wide font-medium">Dokumen Bukti Penerimaan Gaji</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <h2 className="text-xl font-bold mt-2 underline uppercase tracking-wider text-blue-800">SLIP GAJI KARYAWAN</h2>
+                        <p className="text-sm mt-1 text-gray-600 font-medium">Periode: {new Date(0, header.bulan - 1).toLocaleString('id-ID', { month: 'long' })} {header.tahun}</p>
+                    </div>
                 </div>
 
                 {/* Employee Info */}
@@ -128,7 +151,7 @@ export default function CetakSlipGajiPage() {
                                 </tr>
                                 <tr>
                                     <td className="pr-4 py-1">Status</td>
-                                    <td className="font-semibold">: Karyawan Tetap</td>
+                                    <td className="font-semibold">: {data.status_karyawan || '-'}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -177,6 +200,12 @@ export default function CetakSlipGajiPage() {
                                     <td className="py-1">BPJS Ketenagakerjaan</td>
                                     <td className="text-right">{formatCurrency(data.bpjs_tenagakerja)}</td>
                                 </tr>
+                                {(data.pph21_bulanan || 0) > 0 && (
+                                    <tr>
+                                        <td className="py-1">PPh 21</td>
+                                        <td className="text-right">{formatCurrency(data.pph21_bulanan || 0)}</td>
+                                    </tr>
+                                )}
                                 {data.pengurang > 0 && (
                                     <tr>
                                         <td className="py-1">Penyesuaian (-)</td>
@@ -196,22 +225,41 @@ export default function CetakSlipGajiPage() {
                 <div className="border bg-gray-50 border-gray-300 p-4 mb-8">
                     <div className="flex justify-between items-center">
                         <span className="text-lg font-bold">GAJI BERSIH (TAKE HOME PAY)</span>
-                        <span className="text-2xl font-bold">{formatCurrency(data.gaji_bersih)}</span>
+                        <span className="text-2xl font-bold text-green-700">{formatCurrency(data.gaji_bersih)}</span>
                     </div>
                     <p className="text-xs italic mt-2 text-gray-500">* Gaji bersih merupakan total penerimaan dikurangi total potongan.</p>
                 </div>
 
                 {/* Signatures */}
-                <div className="grid grid-cols-2 gap-8 mt-12 text-center text-sm break-inside-avoid">
-                    <div>
-                        <p className="mb-16">Penerima,</p>
-                        <p className="font-bold underline">{data.nama_karyawan}</p>
-                    </div>
-                    <div>
-                        <p className="mb-16">Jakarta, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br />Keuangan / HRD,</p>
-                        <p className="font-bold underline">Admin K3Guard</p>
-                    </div>
-                </div>
+                {(() => {
+                    const hasSignatories = vendorConfig?.signatories && vendorConfig.signatories.length > 0;
+                    const makerName = hasSignatories
+                        ? vendorConfig.signatories[vendorConfig.signatories.length - 1].nama
+                        : (vendorConfig?.penandatangan_nama || "Admin K3Guard");
+
+                    const makerRole = hasSignatories
+                        ? vendorConfig.signatories[vendorConfig.signatories.length - 1].jabatan
+                        : (vendorConfig?.penandatangan_jabatan || "Human Resource Management");
+
+                    return (
+                        <div className="grid grid-cols-2 gap-8 mt-12 text-center text-sm break-inside-avoid">
+                            <div className="flex flex-col items-center justify-between">
+                                <p className="font-medium text-gray-600 mb-20">Penerima,</p>
+                                <div className="flex flex-col items-center">
+                                    <span className="font-bold text-gray-900 border-b border-gray-800 pb-1 mb-1 px-4 whitespace-nowrap">{data.nama_karyawan}</span>
+                                    <span className="font-semibold text-gray-600">Karyawan</span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center justify-between">
+                                <p className="font-medium text-gray-600 mb-20">Dibuat Oleh,</p>
+                                <div className="flex flex-col items-center">
+                                    <span className="font-bold text-gray-900 border-b border-gray-800 pb-1 mb-1 px-4 whitespace-nowrap">{makerName}</span>
+                                    <span className="font-semibold text-gray-600">{makerRole}</span>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
             </div>
         </div>
     );
