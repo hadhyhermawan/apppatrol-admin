@@ -486,9 +486,18 @@ function SecurityPatrolPage() {
                                             {item.foto_absen ? (
                                                 <div className="flex justify-center">
                                                     <img
-                                                        src={item.foto_absen}
+                                                        src={item.foto_absen.replace(/\.(jpg|jpeg|png)$/i, '_thumb.$1')}
                                                         alt="Foto Absen"
+                                                        loading="lazy"
+                                                        decoding="async"
                                                         className="h-10 w-10 rounded-full border-2 border-white dark:border-boxdark object-cover cursor-pointer hover:opacity-80 transition shadow-sm bg-gray-200"
+                                                        onError={(e: any) => {
+                                                            if (e.target.src.includes('_thumb')) {
+                                                                e.target.src = item.foto_absen;
+                                                            } else {
+                                                                e.target.style.display = 'none';
+                                                            }
+                                                        }}
                                                         onClick={() => setPreviewImage(item.foto_absen || null)}
                                                     />
                                                 </div>
