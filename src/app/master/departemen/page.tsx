@@ -16,9 +16,33 @@ type DepartemenItem = {
     kode_dept: string;
     nama_dept: string;
     vendor_id?: number | null;
+    android_shortcuts?: string[];
+    android_menus?: string[];
     created_at?: string;
     updated_at?: string;
 };
+
+const AVAILABLE_SHORTCUTS = [
+    { value: "safetybrieifing", label: "Briefing" },
+    { value: "patroli", label: "Patroli Reader" },
+    { value: "walkie_Receiver", label: "Walkie Talkie" },
+    { value: "monitoring", label: "Monitoring Area" },
+    { value: "darurat", label: "Tombol Darurat" },
+    { value: "turlalin", label: "Turlalin" },
+    { value: "barang", label: "Logistik / Barang" },
+    { value: "surat", label: "Persuratan" },
+    { value: "tamu", label: "Tamu" },
+    { value: "barrier_gate", label: "Barrier Gate" },
+    { value: "department_task", label: "Tugas Dept (Sapu/Bersih)" },
+    { value: "lainnya", label: "Menu Lainnya" }
+];
+
+const AVAILABLE_MENUS = [
+    { value: "Jadwal Kerja", label: "Jadwal Kerja" },
+    { value: "Patroli", label: "Menu Patroli Bawah" },
+    { value: "KPI", label: "KPI" },
+    { value: "Izin", label: "Perizinan" }
+];
 
 function MasterDepartemenPage() {
     const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
@@ -36,7 +60,7 @@ function MasterDepartemenPage() {
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-    const [formData, setFormData] = useState<DepartemenItem>({ kode_dept: '', nama_dept: '', vendor_id: null });
+    const [formData, setFormData] = useState<DepartemenItem>({ kode_dept: '', nama_dept: '', vendor_id: null, android_shortcuts: [], android_menus: [] });
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
@@ -97,17 +121,43 @@ function MasterDepartemenPage() {
     const totalPages = Math.ceil(filteredData.length / perPage);
 
     // Handlers
+    const handleToggleShortcut = (val: string) => {
+        setFormData(prev => {
+            const list = prev.android_shortcuts || [];
+            if (list.includes(val)) {
+                return { ...prev, android_shortcuts: list.filter(i => i !== val) };
+            }
+            return { ...prev, android_shortcuts: [...list, val] };
+        });
+    };
+
+    const handleToggleMenu = (val: string) => {
+        setFormData(prev => {
+            const list = prev.android_menus || [];
+            if (list.includes(val)) {
+                return { ...prev, android_menus: list.filter(i => i !== val) };
+            }
+            return { ...prev, android_menus: [...list, val] };
+        });
+    };
+
     const handleOpenCreate = () => {
         setErrorMsg('');
         setModalMode('create');
-        setFormData({ kode_dept: '', nama_dept: '', vendor_id: null });
+        setFormData({ kode_dept: '', nama_dept: '', vendor_id: null, android_shortcuts: [], android_menus: [] });
         setIsModalOpen(true);
     };
 
     const handleOpenEdit = (item: DepartemenItem) => {
         setErrorMsg('');
         setModalMode('edit');
-        setFormData({ kode_dept: item.kode_dept, nama_dept: item.nama_dept, vendor_id: item.vendor_id || null });
+        setFormData({
+            kode_dept: item.kode_dept,
+            nama_dept: item.nama_dept,
+            vendor_id: item.vendor_id || null,
+            android_shortcuts: item.android_shortcuts || [],
+            android_menus: item.android_menus || []
+        });
         setEditingId(item.kode_dept);
         setIsModalOpen(true);
     };
@@ -403,6 +453,40 @@ function MasterDepartemenPage() {
                                         </select>
                                     </div>
                                 )}
+
+                                <div className="border-t border-stroke pt-4 mt-2 dark:border-strokedark">
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-3">Hak Akses Modul Android (Shortcut Grid)</label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                        {AVAILABLE_SHORTCUTS.map(sc => (
+                                            <label key={sc.value} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 dark:hover:bg-boxdark rounded">
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                                                    checked={(formData.android_shortcuts || []).includes(sc.value)}
+                                                    onChange={() => handleToggleShortcut(sc.value)}
+                                                />
+                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{sc.label}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="border-t border-stroke pt-4 mt-2 dark:border-strokedark">
+                                    <label className="block text-sm font-semibold text-black dark:text-white mb-3">Hak Akses Menu Utama (Pilar Bawah)</label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                        {AVAILABLE_MENUS.map(mn => (
+                                            <label key={mn.value} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 dark:hover:bg-boxdark rounded">
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                                                    checked={(formData.android_menus || []).includes(mn.value)}
+                                                    onChange={() => handleToggleMenu(mn.value)}
+                                                />
+                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{mn.label}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Modal Footer */}

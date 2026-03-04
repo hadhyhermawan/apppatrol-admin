@@ -1,18 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { Plus, RefreshCw, X, Save, Edit, Trash, FileText, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, RefreshCw, Edit, Trash, FileText, CheckCircle2, Circle } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import dynamic from 'next/dynamic';
-import 'react-quill/dist/quill.snow.css';
-
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+import { useRouter } from 'next/navigation';
 
 type PrivacyItem = {
     id: number;
@@ -28,14 +25,7 @@ export default function PrivacyPage() {
     const { canCreate, canUpdate, canDelete } = usePermissions(); // Optional
     const [data, setData] = useState<PrivacyItem[]>([]);
     const [loading, setLoading] = useState(true);
-
-    // Modal State
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-    const [formData, setFormData] = useState({ title: '', content: '', version: '', is_active: false });
-    const [editingId, setEditingId] = useState<number | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errorMsg, setErrorMsg] = useState('');
+    const router = useRouter();
 
     const fetchData = async () => {
         setLoading(true);
@@ -59,65 +49,15 @@ export default function PrivacyPage() {
         fetchData();
     }, []);
 
-    // Handlers
     const handleOpenCreate = () => {
-        setErrorMsg('');
-        setModalMode('create');
-        setFormData({ title: '', content: '', version: '', is_active: true });
-        setIsModalOpen(true);
+        router.push('/settings/privacy/create');
     };
 
     const handleOpenEdit = (item: PrivacyItem) => {
-        setErrorMsg('');
-        setModalMode('edit');
-        setFormData({
-            title: item.title,
-            content: item.content,
-            version: item.version,
-            is_active: item.is_active
-        });
-        setEditingId(item.id);
-        setIsModalOpen(true);
+        router.push(`/settings/privacy/edit/${item.id}`);
     };
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrorMsg('');
-        if (!formData.title.trim() || !formData.content.trim() || !formData.version.trim()) {
-            setErrorMsg('Harap isi judul, konten, dan versi.');
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            if (modalMode === 'create') {
-                await apiClient.post('/privacy', formData);
-            } else {
-                await apiClient.put(`/privacy/${editingId}`, formData);
-            }
-            setIsModalOpen(false);
-            fetchData();
-            Swal.fire({
-                title: 'Berhasil!',
-                text: modalMode === 'create' ? 'Data berhasil disimpan.' : 'Data berhasil diperbarui.',
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false
-            });
-        } catch (error: any) {
-            console.error(error);
-            const msg = error.response?.data?.detail || 'Terjadi kesalahan saat menyimpan.';
-            setErrorMsg(msg);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (itemId: number) => {
         const result = await Swal.fire({
             title: 'Apakah Anda Yakin?',
             text: `Data ini akan dihapus permanen!`,
@@ -132,7 +72,7 @@ export default function PrivacyPage() {
         if (!result.isConfirmed) return;
 
         try {
-            await apiClient.delete(`/privacy/${id}`);
+            await apiClient.delete(`/privacy/${itemId}`);
             Swal.fire({
                 title: 'Terhapus!',
                 text: 'Data berhasil dihapus.',
@@ -243,106 +183,6 @@ export default function PrivacyPage() {
                     </table>
                 </div>
             </div>
-
-            {/* MODAL EDITOR */}
-            {isModalOpen && (
-                <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-white dark:bg-boxdark rounded-xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-black dark:text-white">
-                                {modalMode === 'create' ? 'Tulis Kebijakan Privasi Baru' : 'Edit Kebijakan Privasi'}
-                            </h3>
-                            <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 transition-colors">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto w-full p-6">
-                            <form id="privacyForm" onSubmit={handleSubmit} className="space-y-5">
-                                {errorMsg && (
-                                    <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100">
-                                        {errorMsg}
-                                    </div>
-                                )}
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-black dark:text-white mb-2">Judul Dokumen</label>
-                                        <input
-                                            type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input dsabled:bg-gray-100"
-                                            placeholder="Contoh: Kebijakan Privasi Karyawan"
-                                            value={formData.title}
-                                            onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-black dark:text-white mb-2">Versi</label>
-                                        <input
-                                            type="text"
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
-                                            placeholder="Contoh: v1.0.1"
-                                            value={formData.version}
-                                            onChange={e => setFormData({ ...formData, version: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">
-                                        Konten Privasi (Bisa multi-paragraf)
-                                    </label>
-                                    <div className="bg-white dark:bg-form-input rounded-lg border-[1.5px] border-stroke dark:border-form-strokedark">
-                                        <ReactQuill
-                                            theme="snow"
-                                            value={formData.content}
-                                            onChange={(val) => setFormData({ ...formData, content: val })}
-                                            className="h-64 mb-12 text-black dark:text-white"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
-                                    <input
-                                        type="checkbox"
-                                        id="isActiveToggle"
-                                        checked={formData.is_active}
-                                        onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                                        className="w-5 h-5 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                                    />
-                                    <label htmlFor="isActiveToggle" className="text-sm font-medium text-black dark:text-white cursor-pointer select-none">
-                                        Setel sebagai <strong>Dokumen Aktif (Live)</strong>
-                                        <p className="font-normal text-xs text-blue-600 dark:text-blue-400 mt-0.5">Mencentang ini akan otomatis menonaktifkan versi lainnya.</p>
-                                    </label>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div className="px-6 py-4 bg-gray-50 dark:bg-meta-4/30 flex justify-end gap-3 border-t border-stroke dark:border-strokedark">
-                            <button
-                                type="button"
-                                onClick={handleCloseModal}
-                                className="px-5 py-2.5 text-sm font-medium text-black dark:text-white bg-white border border-stroke rounded-lg hover:bg-gray-50 transition"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                type="submit"
-                                form="privacyForm"
-                                disabled={isSubmitting}
-                                className="px-5 py-2.5 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-opacity-90 flex items-center shadow-sm disabled:opacity-70"
-                            >
-                                {isSubmitting ? (
-                                    <span className="animate-spin mr-2 border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
-                                ) : (
-                                    <Save className="w-4 h-4 mr-2" />
-                                )}
-                                Simpan Kebijakan Privasi
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </MainLayout>
     );
 }
