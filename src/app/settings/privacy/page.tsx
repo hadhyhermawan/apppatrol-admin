@@ -208,7 +208,7 @@ export default function PrivacyPage() {
                                                 <div>
                                                     <h5 className="font-semibold text-black dark:text-white line-clamp-1">{item.title}</h5>
                                                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Versi: {item.version}</p>
-                                                    <p className="text-xs text-gray-400 mt-1 line-clamp-1 max-w-[300px]">{item.content}</p>
+                                                    <p className="text-xs text-gray-400 mt-1 line-clamp-1 max-w-[300px]">{item.content.replace(/<[^>]+>/g, ' ')}</p>
                                                 </div>
                                             </div>
                                         </td>
