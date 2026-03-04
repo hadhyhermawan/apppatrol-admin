@@ -9,6 +9,10 @@ import Swal from 'sweetalert2';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import dynamic from 'next/dynamic';
+import 'react-quill/dist/quill.snow.css';
+
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 type TermsItem = {
     id: number;
@@ -290,13 +294,14 @@ export default function TermsPage() {
                                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">
                                         Konten Aturan (Bisa multi-paragraf)
                                     </label>
-                                    <textarea
-                                        rows={12}
-                                        className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
-                                        placeholder="Tulis seluruh poin-poin syarat dan ketentuan di sini..."
-                                        value={formData.content}
-                                        onChange={e => setFormData({ ...formData, content: e.target.value })}
-                                    ></textarea>
+                                    <div className="bg-white dark:bg-form-input rounded-lg border-[1.5px] border-stroke dark:border-form-strokedark">
+                                        <ReactQuill
+                                            theme="snow"
+                                            value={formData.content}
+                                            onChange={(val) => setFormData({ ...formData, content: val })}
+                                            className="h-64 mb-12 text-black dark:text-white"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">

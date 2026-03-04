@@ -33,6 +33,7 @@
     "react-dom": "19.2.3",
     "react-dropzone": "^15.0.0",
     "react-leaflet": "^5.0.0",
+    "react-quill": "^2.0.0",
     "react-select": "^5.10.2",
     "select2": "^4.1.0-rc.0",
     "sweetalert2": "^11.26.18",
