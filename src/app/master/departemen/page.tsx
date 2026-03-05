@@ -34,6 +34,10 @@ const AVAILABLE_SHORTCUTS = [
     { value: "tamu", label: "Tamu" },
     { value: "barrier_gate", label: "Barrier Gate" },
     { value: "department_task", label: "Tugas Dept (Sapu/Bersih)" },
+    { value: "jadwal_tugas", label: "Jadwal Tugas Khusus (Card)" },
+    { value: "jadwal_kerja", label: "Jadwal Kerja (Card)" },
+    { value: "kpi", label: "KPI (Card)" },
+    { value: "izin", label: "Perizinan (Card)" },
     { value: "lainnya", label: "Menu Lainnya" }
 ];
 
