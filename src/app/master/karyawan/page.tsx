@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import apiClient from '@/lib/api';
-import { Search, UserPlus, Filter, Database, ArrowLeft, ArrowRight, User, GraduationCap, Building2, MapPin, Smartphone, Key, AlertTriangle, Lock, Unlock, Fingerprint, Watch, FileText, Trash, Edit, Plus, RefreshCw, SmartphoneNfc, MoreHorizontal, Timer } from 'lucide-react';
+import { Search, UserPlus, Filter, Database, ArrowLeft, ArrowRight, User, GraduationCap, Building2, MapPin, Smartphone, Key, AlertTriangle, Lock, Unlock, Fingerprint, Watch, FileText, Trash, Edit, Plus, RefreshCw, SmartphoneNfc, MoreHorizontal, Timer, Download, Upload } from 'lucide-react';
 import clsx from 'clsx';
 import Link from 'next/link';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
@@ -67,6 +67,7 @@ function MasterKaryawanPage() {
     const [data, setData] = useState<KaryawanItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Filters
     const [options, setOptions] = useState<MasterOptions>({ vendor: [], departemen: [], jabatan: [], cabang: [], status_kawin: [] });
@@ -205,6 +206,70 @@ function MasterKaryawanPage() {
             setFilterMasa('');
             setFilterLock('');
             setCurrentPage(1);
+        }
+    };
+
+    const handleExport = async () => {
+        try {
+            let url = `/master/karyawan/export`;
+            let params = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
+
+            const fullUrl = params.toString() ? `${url}?${params.toString()}` : url;
+
+            const response: any = await apiClient.get(fullUrl, { responseType: 'blob' });
+            const blob = new Blob([response.data ? response.data : response as unknown as BlobPart], { type: 'text/csv' });
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.setAttribute('download', 'data_karyawan.csv');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Gagal!', 'Gagal mengekspor data', 'error');
+        }
+    };
+
+    const handleImportClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            Swal.fire({
+                title: 'Mengimpor Data...',
+                text: 'Mohon tunggu',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            await apiClient.post('/master/karyawan/import', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            Swal.fire('Berhasil!', 'Data karyawan berhasil diimpor.', 'success');
+            fetchData();
+        } catch (error: any) {
+            console.error(error);
+            Swal.fire('Gagal!', error.response?.data?.detail || "Gagal mengimpor data.", 'error');
+        } finally {
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
         }
     };
 
@@ -356,6 +421,19 @@ function MasterKaryawanPage() {
                         <button onClick={handleRefresh} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
+                        </button>
+                        {canCreate('karyawan') && (
+                            <>
+                                <button onClick={handleImportClick} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
+                                    <Upload className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Import</span>
+                                </button>
+                                <input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleImportFileChange} />
+                            </>
+                        )}
+                        <button onClick={handleExport} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
+                            <Download className="h-4 w-4" />
+                            <span className="hidden sm:inline">Export</span>
                         </button>
                         {canCreate('karyawan') && (
                             <Link
