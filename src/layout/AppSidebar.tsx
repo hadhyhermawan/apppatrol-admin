@@ -66,7 +66,7 @@ const navItems: NavItem[] = [
       { name: 'Cabang', path: '/master/cabang' },
       { name: 'Walkie Channel', path: '/master/walkiechannel', featureKey: 'ptt' },
       { name: 'Patrol Point', path: '/master/patrolpoint' },
-      { name: 'Titik Tugas Dept', path: '/master/dept-task-point' },
+      { name: 'Point Tugas (CS)', path: '/master/dept-task-point' },
       { name: 'Cuti', path: '/master/cuti' },
       { name: 'Jam Kerja', path: '/master/jamkerja' },
       { name: 'Jadwal Tugas', path: '/master/jadwal' },

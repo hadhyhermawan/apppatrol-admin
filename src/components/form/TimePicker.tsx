@@ -19,6 +19,11 @@ export default function TimePicker({
     className = ""
 }: TimePickerProps) {
     const inputRef = useRef<HTMLInputElement>(null);
+    const onChangeRef = useRef(onChange);
+
+    useEffect(() => {
+        onChangeRef.current = onChange;
+    }, [onChange]);
 
     useEffect(() => {
         if (!inputRef.current) return;
@@ -31,7 +36,7 @@ export default function TimePicker({
             defaultDate: value,
             static: true, // Position absolute to wrapper
             onChange: (selectedDates, dateStr) => {
-                onChange(dateStr);
+                onChangeRef.current(dateStr);
             },
         });
 
@@ -60,7 +65,8 @@ export default function TimePicker({
                     type="text"
                     placeholder={placeholder}
                     className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-3 outline-none transition focus:border-brand-500 dark:border-form-strokedark dark:bg-form-input"
-                    defaultValue={value}
+                    value={value || ""}
+                    onChange={(e) => onChange(e.target.value)}
                 />
                 <span className="absolute right-4 top-3 text-gray-500 pointer-events-none">
                     <Clock className="w-5 h-5" />

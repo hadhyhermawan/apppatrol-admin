@@ -71,7 +71,8 @@ function MasterDeptTaskPointPage() {
             const resOpts: any = await apiClient.get(url);
             if (resOpts) {
                 setCabangOptions(resOpts.cabang || []);
-                setDeptOptions(resOpts.departemen || []);
+                const allDept = resOpts.departemen || [];
+                setDeptOptions(allDept.filter((d: any) => d.code === 'UCS'));
             }
             setFilterCabang('');
         } catch (error) {

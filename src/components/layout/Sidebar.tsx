@@ -26,7 +26,7 @@ const menuItems: MenuItem[] = [
     {
         name: 'Data Master',
         icon: Database,
-        permissions: ['karyawan.index', 'departemen.index', 'jabatan.index', 'cabang.index', 'teams.index'], // Any of these
+        permissions: ['karyawan.index', 'departemen.index', 'jabatan.index', 'cabang.index', 'patrolpoint.index', 'cuti.index', 'jamkerja.index', 'jadwal.index', 'depttaskpoint.index', 'walkiechannel.index', 'teams.index'],
         submenu: [
             { name: 'Karyawan', href: '/master/karyawan', permissions: ['karyawan.index'] },
             { name: 'Departemen', href: '/master/departemen', permissions: ['departemen.index'] },
@@ -36,7 +36,7 @@ const menuItems: MenuItem[] = [
             { name: 'Cuti', href: '/master/cuti', permissions: ['cuti.index'] },
             { name: 'Jam Kerja', href: '/master/jamkerja', permissions: ['jamkerja.index'] },
             { name: 'Jadwal Tugas', href: '/master/jadwal', permissions: ['jadwal.index'] },
-            { name: 'Dept Task Point', href: '/master/dept-task-point', permissions: ['depttaskpoint.index'] },
+            { name: 'Point Tugas (CS)', href: '/master/dept-task-point', permissions: ['depttaskpoint.index'] },
             { name: 'Walkie Channel', href: '/master/walkiechannel', permissions: ['walkiechannel.index'] },
             { name: 'Manajemen Regu', href: '/master/regu', permissions: ['teams.index'] },
         ]
