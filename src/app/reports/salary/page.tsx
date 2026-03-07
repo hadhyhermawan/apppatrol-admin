@@ -81,9 +81,15 @@ function LaporanGajiPage() {
     useEffect(() => {
         const fetchOptions = async () => {
             try {
+                const params = new URLSearchParams();
+                if (isSuperAdmin && filterVendor) {
+                    params.append('vendor_id', filterVendor);
+                }
+                const queryString = params.toString();
+
                 const [deptRes, cabangRes] = await Promise.all([
-                    apiClient.get('/master/departemen/options'),
-                    apiClient.get('/master/cabang/options')
+                    apiClient.get(`/master/departemen/options${queryString ? `?${queryString}` : ''}`),
+                    apiClient.get(`/master/cabang/options${queryString ? `?${queryString}` : ''}`)
                 ]);
 
                 if (Array.isArray(deptRes)) {
@@ -94,7 +100,7 @@ function LaporanGajiPage() {
                     setCabangOptions(cabangRes.map((c: any) => ({ value: c.kode_cabang, label: c.nama_cabang })));
                 }
 
-                if (isSuperAdmin) {
+                if (isSuperAdmin && vendorOptions.length === 0) {
                     try {
                         const vRes: any = await apiClient.get('/vendors');
                         const vData = Array.isArray(vRes) ? vRes : (vRes?.data || []);
@@ -106,7 +112,7 @@ function LaporanGajiPage() {
             }
         };
         fetchOptions();
-    }, []);
+    }, [isSuperAdmin, filterVendor, vendorOptions.length]);
 
     const fetchData = async () => {
         setLoading(true);

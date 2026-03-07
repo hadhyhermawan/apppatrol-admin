@@ -533,7 +533,7 @@ function LaporanPresensiPage() {
                                                 let content = "-";
 
                                                 if (cell && cell.status !== '-') {
-                                                    const s = cell.status.toLowerCase();
+                                                    const s = cell.status.trim().toLowerCase();
                                                     if (s === 'h') {
                                                         content = "H";
                                                         bgClass = "bg-green-100 dark:bg-green-900/30";

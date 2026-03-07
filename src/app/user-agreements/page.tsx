@@ -148,8 +148,8 @@ function UserAgreementsPage() {
                     </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
-                    <div className="relative col-span-2">
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="relative">
                         <input
                             type="text"
                             placeholder="Cari nama, email, NIK..."
@@ -158,11 +158,11 @@ function UserAgreementsPage() {
                                 setSearchTerm(e.target.value);
                                 setCurrentPage(1);
                             }}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 pl-11 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
                         />
-                        <Search className="absolute left-4 top-3 h-5 w-5 text-gray-400" />
+                        <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                     </div>
-                    <div>
+                    <div className="relative z-10">
                         <SearchableSelect
                             options={[{ value: '', label: 'Semua Cabang' }, ...cabangOptions.map(c => ({ value: c.code, label: c.name }))]}
                             value={selectedBranch}
@@ -171,24 +171,20 @@ function UserAgreementsPage() {
                                 setCurrentPage(1);
                             }}
                             placeholder="Pilih Cabang"
+                            usePortal={true}
                         />
                     </div>
-                    <div className="col-span-2 md:col-span-2">
-                        <select
-                            value={selectedDepartment}
-                            onChange={(e) => {
-                                setSelectedDepartment(e.target.value);
+                    <div className="relative z-10">
+                        <SearchableSelect
+                            options={[{ value: '', label: 'Semua Departemen' }, ...departments.map(d => ({ value: String(d.id), label: d.nama_dept }))]}
+                            value={String(selectedDepartment)}
+                            onChange={(val) => {
+                                setSelectedDepartment(val);
                                 setCurrentPage(1);
                             }}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                        >
-                            <option value="">Semua Departemen</option>
-                            {departments.map((d) => (
-                                <option key={d.id} value={d.id}>
-                                    {d.nama_dept}
-                                </option>
-                            ))}
-                        </select>
+                            placeholder="Pilih Departemen"
+                            usePortal={true}
+                        />
                     </div>
                 </div>
 

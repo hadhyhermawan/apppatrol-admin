@@ -301,7 +301,7 @@ function SecuritySuratPage() {
                             />
                         </div>
                     )}
-                    <div className="relative col-span-2">
+                    <div className="relative md:col-span-2">
                         <input
                             type="text"
                             placeholder="Cari Nomor Surat, Perihal..."

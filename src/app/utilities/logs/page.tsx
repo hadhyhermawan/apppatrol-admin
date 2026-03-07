@@ -6,11 +6,15 @@ import apiClient from '@/lib/api';
 import { RefreshCw, Search, Trash2, ArrowLeft, ArrowRight, Monitor, User, Calendar, Smartphone, Shield } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
-import flatpickr from "flatpickr";
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
 import SearchableSelect from '@/components/form/SearchableSelect';
-import "flatpickr/dist/flatpickr.min.css";
+import dynamic from 'next/dynamic';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none" disabled />
+});
 
 type LogItem = {
     id: number;
@@ -47,16 +51,6 @@ function UtilitiesLogsPage() {
     const [perPage, setPerPage] = useState(15);
 
     useEffect(() => {
-        flatpickr(".flatpickr-date", {
-            dateFormat: "Y-m-d",
-            allowInput: true,
-            onChange: (selectedDates, dateStr, instance) => {
-                const inputElement = instance.element as HTMLInputElement;
-                if (inputElement.name === "from") { setFromDate(dateStr); setCurrentPage(1); }
-                if (inputElement.name === "to") { setToDate(dateStr); setCurrentPage(1); }
-            }
-        });
-
         const fetchOptions = async () => {
             try {
                 const resOpts: any = await apiClient.get('/master/options');
@@ -206,6 +200,7 @@ function UtilitiesLogsPage() {
                                     setCurrentPage(1);
                                 }}
                                 placeholder="Pilih Cabang"
+                                usePortal={true}
                             />
                         </div>
                         <div>
@@ -217,25 +212,32 @@ function UtilitiesLogsPage() {
                                     setCurrentPage(1);
                                 }}
                                 placeholder="Pilih Departemen"
+                                usePortal={true}
                             />
                         </div>
-                        <div className="relative">
-                            <input
-                                name="from"
-                                type="text"
+                        <div>
+                            <DatePicker
+                                id="log-date-from"
                                 placeholder="Tanggal Dari"
-                                className="flatpickr-date w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                                defaultDate={fromDate}
+                                dateFormat="Y-m-d"
+                                onChange={(dates: Date[], dateStr: string) => {
+                                    setFromDate(dateStr);
+                                    setCurrentPage(1);
+                                }}
                             />
-                            <Calendar className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                         </div>
-                        <div className="relative">
-                            <input
-                                name="to"
-                                type="text"
+                        <div>
+                            <DatePicker
+                                id="log-date-to"
                                 placeholder="Tanggal Sampai"
-                                className="flatpickr-date w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
+                                defaultDate={toDate}
+                                dateFormat="Y-m-d"
+                                onChange={(dates: Date[], dateStr: string) => {
+                                    setToDate(dateStr);
+                                    setCurrentPage(1);
+                                }}
                             />
-                            <Calendar className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                         </div>
                     </div>
                 </div>
@@ -336,5 +338,5 @@ function UtilitiesLogsPage() {
 
 // Protect page with permission
 export default withPermission(UtilitiesLogsPage, {
-    permissions: ['logs.index']
+    permissions: ['super_admin_only']
 });

@@ -112,7 +112,7 @@ function LaporanSuratPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            let url = tipeSurat === 'masuk' ? '/security/surat-masuk?' : '/security/surat-keluar?';
+            let url = tipeSurat === 'masuk' ? '/security/surat-masuk?limit=5000&' : '/security/surat-keluar?limit=5000&';
             if (searchTerm) url += `search=${searchTerm}&`;
             if (dateStart) url += `date_start=${dateStart} 00:00:00&`;
             // Add 23:59:59 to inclusion end date
@@ -145,7 +145,7 @@ function LaporanSuratPage() {
         setIsPrinting(true);
         // The iframe onload could trigger print or the iframe itself handles the print
         // but since we are just toggling the iframe, we can reset it after a delay
-        setTimeout(() => setIsPrinting(false), 5000);
+        setTimeout(() => setIsPrinting(false), 15000);
     };
 
     return (
@@ -209,17 +209,18 @@ function LaporanSuratPage() {
 
                 <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
                     <div>
-                        <select
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
+                        <SearchableSelect
+                            options={[
+                                { value: 'masuk', label: 'Tipe: Surat Masuk' },
+                                { value: 'keluar', label: 'Tipe: Surat Keluar' }
+                            ]}
                             value={tipeSurat}
-                            onChange={(e) => {
-                                setTipeSurat(e.target.value);
+                            onChange={(val) => {
+                                setTipeSurat(val);
                                 setCurrentPage(1);
                             }}
-                        >
-                            <option value="masuk">Tipe: Surat Masuk</option>
-                            <option value="keluar">Tipe: Surat Keluar</option>
-                        </select>
+                            placeholder="Pilih Tipe Surat"
+                        />
                     </div>
                     {isSuperAdmin && (
                         <div>
@@ -231,6 +232,7 @@ function LaporanSuratPage() {
                                     setCurrentPage(1);
                                 }}
                                 placeholder="Semua Vendor"
+                                usePortal={true}
                             />
                         </div>
                     )}
@@ -256,6 +258,7 @@ function LaporanSuratPage() {
                                 setCurrentPage(1);
                             }}
                             placeholder="Semua Cabang"
+                            usePortal={true}
                         />
                     </div>
                     <div>

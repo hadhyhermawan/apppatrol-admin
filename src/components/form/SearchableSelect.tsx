@@ -115,7 +115,6 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                                     placeholder="Cari..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    autoFocus
                                 />
                             </div>
                         </div>

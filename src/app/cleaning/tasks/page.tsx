@@ -285,7 +285,7 @@ function CleaningTasksPage() {
                 </div>
 
                 <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-                    <div className="relative col-span-2">
+                    <div className="relative md:col-span-2">
                         <input
                             type="text"
                             placeholder="Cari NIK atau Nama Petugas..."

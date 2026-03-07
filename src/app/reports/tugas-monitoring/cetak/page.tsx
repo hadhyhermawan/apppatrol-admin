@@ -64,7 +64,7 @@ function CetakLaporanMonitoringContent() {
 
             if (unit === 'UK3') {
                 if (viewMode === 'regu') {
-                    let url = `/monitoring-regu?tanggal=${startDate || new Date().toISOString().slice(0, 10)}`;
+                    let url = `/monitoring-regu?tanggal=${startDate || new Date().toISOString().slice(0, 10)}&kode_dept=${unit}`;
                     if (cabang) url += `&kode_cabang=${cabang}`;
                     if (vendorId) url += `&vendor_id=${vendorId}`;
 
@@ -84,10 +84,11 @@ function CetakLaporanMonitoringContent() {
                         }
                     }
                 } else {
-                    let url = '/security/patrol?';
+                    let url = '/security/patrol?limit=5000&';
                     if (search) url += `search=${search}&`;
                     if (startDate) url += `date_start=${startDate}&`;
                     if (endDate) url += `date_end=${endDate}&`;
+                    if (cabang) url += `kode_cabang=${cabang}&`;
                     if (vendorId) url += `vendor_id=${vendorId}&`;
 
                     const response: any = await apiClient.get(url);
@@ -96,10 +97,11 @@ function CetakLaporanMonitoringContent() {
                     }
                 }
             } else {
-                let url = `/security/tasks?kode_dept=${unit}&`;
+                let url = `/security/tasks?kode_dept=${unit}&limit=5000&`;
                 if (search) url += `search=${search}&`;
                 if (startDate) url += `date_start=${startDate}&`;
                 if (endDate) url += `date_end=${endDate}&`;
+                if (cabang) url += `kode_cabang=${cabang}&`;
                 if (vendorId) url += `vendor_id=${vendorId}&`;
 
                 const response: any = await apiClient.get(url);
@@ -122,10 +124,10 @@ function CetakLaporanMonitoringContent() {
         if (!loading && (data.length > 0 || groups.length > 0)) {
             let timer: NodeJS.Timeout;
 
-            // Allow up to 0.8 seconds for regular loads
+            // Allow up to 4 seconds for heavy loads full of images
             timer = setTimeout(() => {
                 window.print();
-            }, 800);
+            }, 8000);
 
             return () => clearTimeout(timer);
         }
@@ -316,8 +318,8 @@ function CetakLaporanMonitoringContent() {
                                                 <img
                                                     src={getImageUrl(item.foto_absen) || undefined}
                                                     alt="Bukti Task"
-                                                    loading="lazy"
-                                                    decoding="async"
+                                                    loading="eager"
+                                                    decoding="sync"
                                                     className="h-10 w-10 object-cover rounded border border-gray-300"
                                                     onError={(e) => {
                                                         const target = e.currentTarget;
@@ -342,8 +344,8 @@ function CetakLaporanMonitoringContent() {
                                                         <div key={idx_pt} className="flex flex-col items-center justify-center p-0.5 border border-gray-200 rounded">
                                                             <img
                                                                 src={getImageUrl(pt.foto) || undefined}
-                                                                loading="lazy"
-                                                                decoding="async"
+                                                                loading="eager"
+                                                                decoding="sync"
                                                                 className="h-8 w-8 rounded object-cover"
                                                                 onError={(e) => {
                                                                     const target = e.currentTarget;

@@ -8,6 +8,12 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
 import SearchableSelect from '@/components/ui/SearchableSelect';
+import dynamic from 'next/dynamic';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5" disabled />
+});
 
 // --- TYPES ---
 type ReguSlot = {
@@ -93,16 +99,17 @@ function LegacyMonitoringView() {
     const [selectedShift, setSelectedShift] = useState('');
 
     useEffect(() => {
-        // Fetch Options
         const fetchOptions = async () => {
             try {
                 const cabParams = new URLSearchParams();
-                if (isSuperAdmin && selectedVendor) cabParams.append('vendor_id', selectedVendor);
+                if (isSuperAdmin && selectedVendor) {
+                    cabParams.append('vendor_id', selectedVendor);
+                }
 
-                const calls: any[] = [
-                    apiClient.get(`/master/cabang?${cabParams.toString()}`),
-                    apiClient.get('/master/departemen'),
-                    apiClient.get('/master/jam-kerja-options')
+                const calls = [
+                    apiClient.get(`/master/cabang/options?${cabParams.toString()}`),
+                    apiClient.get('/master/departemen/options'),
+                    apiClient.get('/monitoring/jam-kerja-options')
                 ];
 
                 if (isSuperAdmin) {
@@ -110,39 +117,27 @@ function LegacyMonitoringView() {
                 }
 
                 const responses = await Promise.all(calls);
-                const resCabang = responses[0];
-                const resDept = responses[1];
-                const resShift = responses[2];
-                const resVendors = isSuperAdmin ? responses[3] : [];
+                setCabangOptions(responses[0] as any);
+                setDeptOptions(responses[1] as any);
 
-                if (Array.isArray(resCabang)) {
-                    setCabangOptions(resCabang as any);
-                } else if (resCabang && Array.isArray((resCabang as any).data)) {
-                    setCabangOptions((resCabang as any).data);
+                const shiftRes = responses[2] as any;
+                if (shiftRes && Array.isArray(shiftRes.data)) {
+                    setShiftOptions(shiftRes.data.map((s: any) => ({ kode_jam_kerja: s.kode, nama_jam_kerja: s.nama })));
+                } else if (Array.isArray(shiftRes)) {
+                    setShiftOptions(shiftRes.map((s: any) => ({ kode_jam_kerja: s.kode_jam_kerja || s.kode, nama_jam_kerja: s.nama_jam_kerja || s.nama })));
                 }
 
-                if (Array.isArray(resDept)) {
-                    setDeptOptions(resDept as any);
-                } else if (resDept && Array.isArray((resDept as any).data)) {
-                    setDeptOptions((resDept as any).data);
-                }
-
-                if (resShift && Array.isArray((resShift as any).data)) {
-                    setShiftOptions((resShift as any).data.map((s: any) => ({ kode_jam_kerja: s.kode, nama_jam_kerja: s.nama })));
-                } else if (Array.isArray(resShift)) {
-                    setShiftOptions((resShift as any).map((s: any) => ({ kode_jam_kerja: s.kode_jam_kerja || s.kode, nama_jam_kerja: s.nama_jam_kerja || s.nama })));
-                }
-
-                if (isSuperAdmin) {
-                    const vData = Array.isArray(resVendors) ? resVendors : (resVendors?.data || []);
-                    setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+                if (isSuperAdmin && Array.isArray(responses[3])) {
+                    setVendorOptions(responses[3].map((v: any) => ({ value: v.id.toString(), label: v.nama_vendor })));
+                } else if (isSuperAdmin && responses[3] && Array.isArray((responses[3] as any).data)) {
+                    setVendorOptions((responses[3] as any).data.map((v: any) => ({ value: v.id.toString(), label: v.nama_vendor })));
                 }
             } catch (error) {
-                console.error("Failed to fetch filter options", error);
+                console.error("Failed options", error);
             }
         };
         fetchOptions();
-    }, [selectedVendor, isSuperAdmin]);
+    }, [isSuperAdmin, selectedVendor]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -180,84 +175,73 @@ function LegacyMonitoringView() {
         <div>
             {/* Toolbar */}
             <div className="mb-6 bg-white dark:bg-boxdark p-4 rounded-lg shadow-sm border border-stroke dark:border-strokedark flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium text-black dark:text-white whitespace-nowrap">Tanggal:</label>
-                        <input
-                            type="date"
-                            value={monitorDate}
-                            onChange={(e) => setMonitorDate(e.target.value)}
-                            className="border border-stroke dark:border-strokedark bg-transparent rounded px-3 py-1.5 focus:border-brand-500 outline-none dark:bg-meta-4 text-sm text-black dark:text-white"
+                <div className={`grid grid-cols-1 gap-4 w-full xl:w-auto ${isSuperAdmin ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+                    <div>
+                        <DatePicker
+                            id="date-monitor"
+                            placeholder="Pilih Tanggal"
+                            defaultDate={monitorDate}
+                            enableTime={false}
+                            dateFormat="Y-m-d"
+                            onChange={(dates: Date[], dateStr: string) => setMonitorDate(dateStr)}
                         />
                     </div>
 
                     {isSuperAdmin && (
-                        <div className="flex items-center gap-2 min-w-[200px] flex-1 xl:flex-none">
-                            <label className="text-sm font-medium text-black dark:text-white hidden sm:block">Vendor:</label>
-                            <div className="w-full">
-                                <SearchableSelect
-                                    value={selectedVendor}
-                                    onChange={setSelectedVendor}
-                                    options={[
-                                        { value: '', label: 'Semua Vendor' },
-                                        ...vendorOptions
-                                    ]}
-                                    placeholder="Semua Vendor"
-                                />
-                            </div>
+                        <div>
+                            <SearchableSelect
+                                value={selectedVendor}
+                                onChange={setSelectedVendor}
+                                options={[
+                                    { value: '', label: 'Semua Vendor' },
+                                    ...vendorOptions
+                                ]}
+                                placeholder="Semua Vendor"
+                            />
                         </div>
                     )}
 
-                    <div className="flex items-center gap-2 min-w-[200px] flex-1 xl:flex-none">
-                        <label className="text-sm font-medium text-black dark:text-white hidden sm:block">Cabang:</label>
-                        <div className="w-full">
-                            <SearchableSelect
-                                value={selectedCabang}
-                                onChange={setSelectedCabang}
-                                options={[
-                                    { value: '', label: 'Semua Cabang' },
-                                    ...cabangOptions.map(opt => ({ value: opt.kode_cabang, label: opt.nama_cabang }))
-                                ]}
-                                placeholder="Pilih Cabang..."
-                            />
-                        </div>
+                    <div>
+                        <SearchableSelect
+                            value={selectedCabang}
+                            onChange={setSelectedCabang}
+                            options={[
+                                { value: '', label: 'Semua Cabang' },
+                                ...cabangOptions.map(opt => ({ value: opt.kode_cabang, label: opt.nama_cabang }))
+                            ]}
+                            placeholder="Semua Cabang"
+                        />
                     </div>
 
-                    <div className="flex items-center gap-2 min-w-[200px] flex-1 xl:flex-none">
-                        <label className="text-sm font-medium text-black dark:text-white hidden sm:block">Dept:</label>
-                        <div className="w-full">
-                            <SearchableSelect
-                                value={selectedDept}
-                                onChange={setSelectedDept}
-                                options={[
-                                    { value: '', label: 'Semua Dept' },
-                                    ...deptOptions.map(opt => ({ value: opt.kode_dept, label: opt.nama_dept }))
-                                ]}
-                                placeholder="Pilih Dept..."
-                            />
-                        </div>
+                    <div>
+                        <SearchableSelect
+                            value={selectedDept}
+                            onChange={setSelectedDept}
+                            options={[
+                                { value: '', label: 'Semua Dept' },
+                                ...deptOptions.map(opt => ({ value: opt.kode_dept, label: opt.nama_dept }))
+                            ]}
+                            placeholder="Semua Dept"
+                        />
                     </div>
 
-                    <div className="flex items-center gap-2 min-w-[200px] flex-1 xl:flex-none">
-                        <label className="text-sm font-medium text-black dark:text-white hidden sm:block">Shift:</label>
-                        <div className="w-full">
-                            <SearchableSelect
-                                value={selectedShift}
-                                onChange={setSelectedShift}
-                                options={[
-                                    { value: '', label: 'Semua Shift' },
-                                    ...shiftOptions.map(opt => ({ value: opt.kode_jam_kerja, label: opt.nama_jam_kerja }))
-                                ]}
-                                placeholder="Pilih Shift..."
-                            />
-                        </div>
+                    <div>
+                        <SearchableSelect
+                            value={selectedShift}
+                            onChange={setSelectedShift}
+                            options={[
+                                { value: '', label: 'Semua Shift' },
+                                ...shiftOptions.map(opt => ({ value: opt.kode_jam_kerja, label: opt.nama_jam_kerja }))
+                            ]}
+                            placeholder="Semua Shift"
+                        />
                     </div>
                 </div>
 
                 {/* Summary Stats */}
-                <div className="flex items-center gap-3 ml-auto mt-4 xl:mt-0">
+                <div className="flex items-center justify-between xl:justify-end gap-3 mt-4 xl:mt-0 w-full xl:w-auto min-w-0 overflow-hidden">
                     {summary && (
-                        <div className="flex gap-2 text-xs xl:text-sm overflow-x-auto pb-1 xl:pb-0 scrollbar-hide">
+                        <div className="flex gap-2 text-xs xl:text-sm overflow-x-auto pb-1 xl:pb-0 scrollbar-hide flex-1 xl:flex-none">
                             <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-meta-4 px-3 py-1.5 rounded whitespace-nowrap shrink-0">
                                 <User size={14} className="text-brand-500" />
                                 <span className="font-bold">{summary.total_anggota}</span> Anggota

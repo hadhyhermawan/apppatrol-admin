@@ -409,7 +409,7 @@ function SecurityTamuPage() {
                             />
                         </div>
                     )}
-                    <div className="relative col-span-2">
+                    <div className="relative md:col-span-2">
                         <input
                             type="text"
                             placeholder="Cari nama, perusahaan, keperluan..."
@@ -699,7 +699,7 @@ function SecurityTamuPage() {
                                             <option value="RODA 4">Roda 4 (Mobil)</option>
                                         </select>
                                     </div>
-                                    <div className="col-span-2">
+                                    <div className="md:col-span-2">
                                         <label className="block text-sm font-semibold text-black dark:text-white mb-2">Nomor Polisi</label>
                                         <input
                                             type="text"

@@ -26,6 +26,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'k3guard.cloud'
+      },
+      {
+        protocol: 'https',
         hostname: 'ui-avatars.com'
       },
       // Only allow localhost in development

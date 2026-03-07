@@ -47,14 +47,15 @@ export const routePermissions: RoutePermission[] = [
 
     // Utilities
     { path: '/utilities/users', permissions: ['users.index'] },
-    { path: '/utilities/roles', permissions: ['roles.index'] },
-    { path: '/utilities/permissions', permissions: ['permissions.index'] },
-    { path: '/utilities/group-permissions', permissions: ['permissiongroups.index'] },
-    { path: '/utilities/role-permission', permissions: ['roles.index', 'permissions.index'] },
-    { path: '/utilities/logs', permissions: ['logs.index'] },
-    { path: '/utilities/security-reports', permissions: ['securityreports.index'] },
+    { path: '/utilities/roles', permissions: ['super_admin_only'] },
+    { path: '/utilities/permissions', permissions: ['super_admin_only'] },
+    { path: '/utilities/group-permissions', permissions: ['super_admin_only'] },
+    { path: '/utilities/role-permission', permissions: ['super_admin_only'] },
+    { path: '/utilities/logs', permissions: ['super_admin_only'] },
+    { path: '/utilities/security-reports', permissions: ['laporan.index'] },
     { path: '/utilities/multi-device', permissions: ['multidevice.index'] },
     { path: '/utilities/chat-management', permissions: ['chat.index'] },
+    { path: '/user-agreements', permissions: ['users.index'] },
 
     // Laporan
     { path: '/reports/presensi', permissions: ['laporan.index'] },

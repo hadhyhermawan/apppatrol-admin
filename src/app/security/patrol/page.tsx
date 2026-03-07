@@ -172,11 +172,17 @@ function SecurityPatrolPage() {
     };
 
     useEffect(() => {
-        fetchKaryawan();
         fetchCabang();
         fetchJamKerjaOptions();
         fetchVendors();
     }, [filterVendor, isSuperAdmin]);
+
+    // Lazy load karyawan list only when modal opens
+    useEffect(() => {
+        if (isModalOpen && karyawanList.length === 0) {
+            fetchKaryawan();
+        }
+    }, [isModalOpen, karyawanList.length, filterVendor, isSuperAdmin]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -361,7 +367,7 @@ function SecurityPatrolPage() {
                             />
                         </div>
                     )}
-                    <div className="relative col-span-2">
+                    <div className="relative md:col-span-2">
                         <input
                             type="text"
                             placeholder="Cari NIK atau Nama Petugas..."

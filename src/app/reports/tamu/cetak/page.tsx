@@ -42,7 +42,7 @@ function CetakLaporanTamuContent() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            let url = '/security/tamu?';
+            let url = '/security/tamu?limit=2000&';
             if (searchTerm) url += `search=${searchTerm}&`;
             if (startDate) url += `date_start=${startDate} 00:00:00&`;
             if (endDate) url += `date_end=${endDate} 23:59:59&`;
@@ -88,7 +88,7 @@ function CetakLaporanTamuContent() {
         if (!loading && data.length > 0) {
             const timer = setTimeout(() => {
                 window.print();
-            }, 800); // Give images time to load
+            }, 2500); // Berikan jeda 2.5 detik untuk memuat gambar logo / foto sebelum memblokir browser
             return () => clearTimeout(timer);
         }
     }, [loading, data]);

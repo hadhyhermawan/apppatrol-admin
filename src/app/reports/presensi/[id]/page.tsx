@@ -67,7 +67,7 @@ function LaporanDetailKaryawanPage() {
     const handlePrintClick = () => {
         setIsPrinting(true);
         // Reset the button state after a generous delay since print blocks JS execution.
-        setTimeout(() => setIsPrinting(false), 3000);
+        setTimeout(() => setIsPrinting(false), 15000);
     };
 
     const getImageUrl = (filename: string | null) => {
@@ -82,7 +82,7 @@ function LaporanDetailKaryawanPage() {
     };
 
     const getStatusColors = (status: string) => {
-        const s = status ? status.toLowerCase() : '';
+        const s = status ? status.trim().toLowerCase() : '';
         if (s === 'h' || s === 'hadir') return '#10B981';
         if (s === 'i' || s === 'izin') return '#3B82F6';
         if (s === 's' || s === 'sakit') return '#EAB308';
@@ -94,7 +94,7 @@ function LaporanDetailKaryawanPage() {
     };
 
     const getStatusBadge = (status: string) => {
-        const s = status ? status.toLowerCase() : '';
+        const s = status ? status.trim().toLowerCase() : '';
         let badgeClass = "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400";
         let label = status;
 
@@ -167,7 +167,7 @@ function LaporanDetailKaryawanPage() {
     }, [nik, startDate, endDate]);
 
     const getStatusLabel = (status: string) => {
-        const s = status ? status.toLowerCase() : '';
+        const s = status ? status.trim().toLowerCase() : '';
         if (s === 'h' || s === 'hadir') return 'Hadir';
         if (s === 'i' || s === 'izin') return 'Izin';
         if (s === 's' || s === 'sakit') return 'Sakit';
@@ -290,7 +290,7 @@ function LaporanDetailKaryawanPage() {
                     <div className="bg-white dark:bg-boxdark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-strokedark flex flex-col justify-center items-center text-center">
                         <span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Total Hadir</span>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-green-600 dark:text-green-500">{data.filter(d => ['h', 'hadir'].includes(d.status?.toLowerCase())).length}</span>
+                            <span className="text-2xl font-black text-green-600 dark:text-green-500">{data.filter(d => ['h', 'hadir'].includes(d.status?.trim().toLowerCase())).length}</span>
                             <span className="text-xs font-medium text-gray-400">hari</span>
                         </div>
                     </div>
@@ -304,14 +304,14 @@ function LaporanDetailKaryawanPage() {
                     <div className="bg-white dark:bg-boxdark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-strokedark flex flex-col justify-center items-center text-center">
                         <span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Alpha</span>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-red-500">{data.filter(d => ['a', 'alpha'].includes(d.status?.toLowerCase())).length}</span>
+                            <span className="text-2xl font-black text-red-500">{data.filter(d => ['a', 'alpha'].includes(d.status?.trim().toLowerCase())).length}</span>
                             <span className="text-xs font-medium text-gray-400">hari</span>
                         </div>
                     </div>
                     <div className="bg-white dark:bg-boxdark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-strokedark flex flex-col justify-center items-center text-center">
                         <span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Izin/Cuti/Sakit</span>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-blue-600">{data.filter(d => ['i', 'c', 's', 'izin', 'cuti', 'sakit'].includes(d.status?.toLowerCase())).length}</span>
+                            <span className="text-2xl font-black text-blue-600">{data.filter(d => ['i', 'c', 's', 'izin', 'cuti', 'sakit'].includes(d.status?.trim().toLowerCase())).length}</span>
                             <span className="text-xs font-medium text-gray-400">hari</span>
                         </div>
                     </div>
@@ -321,7 +321,7 @@ function LaporanDetailKaryawanPage() {
                             <span className="text-[9px] font-medium capitalize tracking-normal text-gray-400 mt-0.5 leading-tight">(Tidak Absen Pulang)</span>
                         </span>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-gray-800 dark:text-gray-300">{data.filter(d => ['ta', 'tidak absen'].includes(d.status?.toLowerCase())).length}</span>
+                            <span className="text-2xl font-black text-gray-800 dark:text-gray-300">{data.filter(d => ['ta', 'tidak absen'].includes(d.status?.trim().toLowerCase())).length}</span>
                             <span className="text-xs font-medium text-gray-400">hari</span>
                         </div>
                     </div>

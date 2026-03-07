@@ -59,7 +59,7 @@ export default function CetakLaporanPresensiKaryawan() {
     };
 
     const getStatusBadge = (status: string) => {
-        const s = status ? status.toLowerCase() : '';
+        const s = status ? status.trim().toLowerCase() : '';
         let badgeClass = "text-gray-700";
         let label = status;
 
@@ -143,7 +143,7 @@ export default function CetakLaporanPresensiKaryawan() {
         if (!loading && data.length > 0) {
             const timer = setTimeout(() => {
                 window.print();
-            }, 500); // Beri sedikit waktu agar gambar termuat penuh sebelum print dialog muncul
+            }, 2500); // Beri cukup waktu (2.5 detik) agar seluruh gambar termuat penuh sebelum mesin print browser memblokir halaman
             return () => clearTimeout(timer);
         }
     }, [loading, data]);
@@ -212,7 +212,7 @@ export default function CetakLaporanPresensiKaryawan() {
                     <div className="grid grid-cols-5 gap-3 mb-8 text-center text-[10px] uppercase font-bold tracking-wider">
                         <div className="border border-gray-300 p-2 rounded-lg">
                             <div className="text-gray-500 mb-1">Total Hadir</div>
-                            <div className="text-lg font-black text-green-700">{data.filter(d => ['h', 'hadir'].includes(d.status?.toLowerCase())).length} hari</div>
+                            <div className="text-lg font-black text-green-700">{data.filter(d => ['h', 'hadir'].includes(d.status?.trim().toLowerCase())).length} hari</div>
                         </div>
                         <div className="border border-gray-300 p-2 rounded-lg">
                             <div className="text-gray-500 mb-1">Terlambat</div>
@@ -220,15 +220,15 @@ export default function CetakLaporanPresensiKaryawan() {
                         </div>
                         <div className="border border-gray-300 p-2 rounded-lg">
                             <div className="text-gray-500 mb-1">Alpha</div>
-                            <div className="text-lg font-black text-red-600">{data.filter(d => ['a', 'alpha'].includes(d.status?.toLowerCase())).length} hari</div>
+                            <div className="text-lg font-black text-red-600">{data.filter(d => ['a', 'alpha'].includes(d.status?.trim().toLowerCase())).length} hari</div>
                         </div>
                         <div className="border border-gray-300 p-2 rounded-lg">
                             <div className="text-gray-500 mb-1">Izin/Cuti/Sakit</div>
-                            <div className="text-lg font-black text-blue-700">{data.filter(d => ['i', 'c', 's', 'izin', 'cuti', 'sakit'].includes(d.status?.toLowerCase())).length} hari</div>
+                            <div className="text-lg font-black text-blue-700">{data.filter(d => ['i', 'c', 's', 'izin', 'cuti', 'sakit'].includes(d.status?.trim().toLowerCase())).length} hari</div>
                         </div>
                         <div className="border border-gray-300 p-2 rounded-lg">
                             <div className="text-gray-500 mb-1">TA</div>
-                            <div className="text-lg font-black text-gray-800">{data.filter(d => ['ta', 'tidak absen'].includes(d.status?.toLowerCase())).length} hari</div>
+                            <div className="text-lg font-black text-gray-800">{data.filter(d => ['ta', 'tidak absen'].includes(d.status?.trim().toLowerCase())).length} hari</div>
                         </div>
                     </div>
 

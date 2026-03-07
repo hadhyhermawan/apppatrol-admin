@@ -9,7 +9,7 @@ import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
 import Swal from 'sweetalert2';
 import Link from 'next/link';
-
+import SearchableSelect from '@/components/form/SearchableSelect';
 function VendorProfilePage() {
     const { isSuperAdmin, vendorId } = usePermissions();
 
@@ -165,18 +165,16 @@ function VendorProfilePage() {
             </div>
 
             {isSuperAdmin && (
-                <div className="mb-6 p-4 md:p-6 bg-white dark:bg-boxdark rounded-2xl shadow-sm border border-gray-100 dark:border-strokedark flex flex-col sm:flex-row items-center gap-4">
+                <div className="mb-6 p-4 md:p-6 bg-white dark:bg-boxdark rounded-2xl shadow-sm border border-gray-100 dark:border-strokedark flex flex-col sm:flex-row sm:items-center gap-4">
                     <label className="font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Pilih Vendor untuk diedit: </label>
-                    <select
-                        className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-meta-4 dark:border-strokedark dark:text-white transition-all outline-none"
-                        value={activeVendorId || ""}
-                        onChange={(e) => setActiveVendorId(e.target.value ? Number(e.target.value) : null)}
-                    >
-                        <option value="">-- Pilih Vendor --</option>
-                        {vendorsAvailable.map(v => (
-                            <option key={v.id} value={v.id}>{v.nama_vendor}</option>
-                        ))}
-                    </select>
+                    <div className="w-full sm:flex-1 relative z-10 max-w-md">
+                        <SearchableSelect
+                            options={vendorsAvailable.map(v => ({ value: String(v.id), label: v.nama_vendor }))}
+                            value={activeVendorId ? String(activeVendorId) : ""}
+                            onChange={(val: any) => setActiveVendorId(val ? Number(val) : null)}
+                            placeholder="-- Pilih Vendor --"
+                        />
+                    </div>
                 </div>
             )}
 

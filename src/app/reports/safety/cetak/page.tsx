@@ -85,7 +85,7 @@ function CetakLaporanSafetyContent() {
         if (!loading && data.length > 0) {
             const timer = setTimeout(() => {
                 window.print();
-            }, 800); // Give images time to load
+            }, 2500); // Berikan jeda 2.5 detik untuk memuat gambar logo / foto sebelum memblokir browser
             return () => clearTimeout(timer);
         }
     }, [loading, data]);

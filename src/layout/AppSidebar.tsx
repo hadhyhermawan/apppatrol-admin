@@ -229,9 +229,9 @@ const navItems: NavItem[] = [
       { name: 'Role & Permission', path: '/utilities/role-permission', superAdminOnly: true },
       { name: 'Group Permission', path: '/utilities/group-permissions', superAdminOnly: true },
       { name: 'Login Logs', path: '/utilities/logs', superAdminOnly: true },
-      { name: 'User Agreements', path: '/user-agreements', superAdminOnly: true },
+      { name: 'User Agreements', path: '/user-agreements' },
       { name: 'Laporan Keamanan', path: '/utilities/security-reports' },
-      { name: 'Multi Device Login', path: '/utilities/multi-device', superAdminOnly: true },
+      { name: 'Multi Device Login', path: '/utilities/multi-device' },
       { name: 'Management Obrolan', path: '/utilities/chat-management' },
     ]
   },

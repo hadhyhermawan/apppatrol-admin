@@ -104,6 +104,7 @@ export default function TrackingView() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterOnline, setFilterOnline] = useState<string>('all'); // all, online, offline
+    const [showFilters, setShowFilters] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState<EmployeeData | null>(null);
     const [historyPath, setHistoryPath] = useState<[number, number][]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
@@ -277,10 +278,10 @@ export default function TrackingView() {
     const zoomLevel = 5;
 
     return (
-        <div className="flex h-[calc(100vh-120px)] w-full overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm relative">
+        <div className="flex flex-col md:flex-row h-[calc(100vh-120px)] w-full overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm relative">
 
             {/* Sidebar List */}
-            <div className="w-96 flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 z-10 shadow-xl overflow-hidden">
+            <div className="w-full md:w-96 h-3/5 md:h-full flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 z-10 shadow-xl overflow-hidden">
                 {/* Header */}
                 <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
                     <div className="flex items-center justify-between mb-4">
@@ -288,13 +289,22 @@ export default function TrackingView() {
                             <Users className="w-5 h-5 text-brand-500" />
                             Employee Tracking
                         </h2>
-                        <button
-                            onClick={fetchEmployees}
-                            className={`p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${loading ? 'animate-spin' : ''}`}
-                            title="Refresh Data"
-                        >
-                            <RefreshCw className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={`md:hidden p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${showFilters ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-500' : 'text-gray-600 dark:text-gray-400'}`}
+                                title="Toggle Filters"
+                            >
+                                <Filter className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={fetchEmployees}
+                                className={`p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${loading ? 'animate-spin' : ''}`}
+                                title="Refresh Data"
+                            >
+                                <RefreshCw className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="space-y-3">
@@ -310,7 +320,7 @@ export default function TrackingView() {
                         </div>
 
                         {/* Filters */}
-                        <div className="space-y-2 relative z-50">
+                        <div className={`space-y-2 relative z-50 ${showFilters ? 'block' : 'hidden md:block'}`}>
                             {isSuperAdmin && (
                                 <SearchableSelect
                                     options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
@@ -326,39 +336,31 @@ export default function TrackingView() {
                                 placeholder="Pilih Cabang"
                             />
 
-                            <select
+                            <SearchableSelect
+                                options={deptOptions.map((opt: any) => ({ value: opt.kode_dept, label: opt.nama_dept }))}
                                 value={selectedDept}
-                                onChange={(e) => setSelectedDept(e.target.value)}
-                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
-                            >
-                                <option value="">Semua Departemen</option>
-                                {deptOptions.map((opt: any) => (
-                                    <option key={opt.kode_dept} value={opt.kode_dept}>{opt.nama_dept}</option>
-                                ))}
-                            </select>
+                                onChange={setSelectedDept}
+                                placeholder="Semua Departemen"
+                            />
 
-                            <select
+                            <SearchableSelect
+                                options={shiftOptions.map((opt: any) => ({ value: opt.kode_jam_kerja, label: opt.nama_jam_kerja }))}
                                 value={selectedShift}
-                                onChange={(e) => setSelectedShift(e.target.value)}
-                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
-                            >
-                                <option value="">Semua Jam Kerja</option>
-                                {shiftOptions.map((opt: any) => (
-                                    <option key={opt.kode_jam_kerja} value={opt.kode_jam_kerja}>{opt.nama_jam_kerja}</option>
-                                ))}
-                            </select>
-                        </div>
+                                onChange={setSelectedShift}
+                                placeholder="Semua Jam Kerja"
+                            />
 
-                        <div className="flex gap-2">
-                            <select
+                            <SearchableSelect
+                                options={[
+                                    { value: 'all', label: 'Semua Status' },
+                                    { value: 'online', label: 'Online' },
+                                    { value: 'offline', label: 'Offline' }
+                                ]}
                                 value={filterOnline}
-                                onChange={(e) => setFilterOnline(e.target.value)}
-                                className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
-                            >
-                                <option value="all">Semua Status</option>
-                                <option value="online">Online</option>
-                                <option value="offline">Offline</option>
-                            </select>
+                                onChange={(val) => setFilterOnline(val || 'all')}
+                                placeholder="Semua Status"
+                                usePortal={true}
+                            />
                         </div>
                     </div>
 

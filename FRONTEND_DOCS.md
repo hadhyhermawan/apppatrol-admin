@@ -188,4 +188,27 @@ pm2 save
 ```
 
 ---
+
+## 📱 4. UI/UX Mobile Styling & Component Standard
+
+Saat melakukan render ke _Mobile Interface_ (Tampilan HP), sering terjadi ancaman tata letak / Layout *tumpang-tindih* (Overlap) yang menutupi navigasi **AppSidebar** maupun komponen interaktif lainnya.
+
+Untuk mengatasi penyakit ini secara komprehensif, standar antarmuka (_Frontend Components Standard_) K3Guard menetapkan hal berikut:
+
+1.  **Penggunaan `SearchableSelect` Pengganti Native `<select>`:**
+    Segala bentuk Filter Kategori (Cabang, Departemen, Vendor, dsb) **WAJIB** menggunakan komponen buatan kita sendiri yaitu `@/components/form/SearchableSelect.tsx`. Komponen ini akan menyesuaikan warna Tema Gelap (_Dark Mode_) & Terang dengan sempurna.
+2.  **Gunakan Parameter `usePortal={true}` pada Dropdown:**
+    Agar kotak *dropdown* pilihan tidak tertabrak atau terpotong oleh kotak / pembungkus CSS (`div overflow-hidden` / `z-index` yang menumpuk) di layar sentuh, WAJIB mengirimkan param `usePortal={true}` saat memanggil `<SearchableSelect>`. Ini akan merender kotak daftarnya ke lapisan ruang dimensi yang berbeda.
+3.  **Tinggalkan Pemanggilan `flatpickr` Konvensional:**
+    Pemanggilan kalender `flatpickr(".flatpickr-date")` secara telanjang langsung di file React / Next.js sudah **DILARANG / USANG** (Deprecated). Pemanggilan primitif ini rawan pecah secara memori di Single Page Apps (SPA) seperti Next.js.
+    Solusinya, **WAJIB** import dan gunakan komponen pembungkus cerdas kita melalui metode *Dynamic Load* dari `@/components/form/date-picker`:
+    ```typescript
+    import dynamic from 'next/dynamic';
+    const DatePicker = dynamic(() => import('@/components/form/date-picker'), { ssr: false });
+    ```
+4.  **Tertib Atribut Hierarki Z-Index (Mobile):**
+    Menu Samping (`AppSidebar`) pada mode HP dirancang memiliki `z-index` sekitar `z-30` atau `z-40`. 
+    Maka dari itu, pada bagian badan halaman (**Main Content**), pembungkus/wrapper _Card_ atau kumpulan Filter DILARANG menggunakan _z-index_ gila yang kelewatan tinggi seperti `z-50` apalagi `z-[100]`. Cukup gunakan elevasi wajar `relative z-10` jika Anda hanya butuh mengangkat elemen di atas tumpukan standar. Jangan pernah beradu tinggi _Z-Index_ dengan Navigasi Utama Sistem!
+
+---
 *Dokumen ini bersifat eksklusif untuk panduan rekayasa antarmuka Admin AppPatrol. Simpan dan patuhi SOP Build agar sistem terus stabil di Tahap Produksi / Production Live.*

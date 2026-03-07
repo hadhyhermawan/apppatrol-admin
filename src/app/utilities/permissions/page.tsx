@@ -9,7 +9,7 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
-
+import SearchableSelect from '@/components/form/SearchableSelect';
 type PermissionGroup = {
     id: number;
     name: string;
@@ -96,36 +96,36 @@ function UtilitiesPermissionsPage() {
                         <Shield className="w-6 h-6 text-brand-500" />
                         Management Permissions
                     </h2>
-                    <div className="flex gap-3">
-                        <button onClick={() => fetchData()} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <button onClick={() => fetchData()} className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
                             <RefreshCw className="h-4 w-4" />
                             <span className="hidden sm:inline">Refresh</span>
                         </button>
                         {canCreate('permissions') && (
-                            <button onClick={handleCreate} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
-                            <Plus className="h-4 w-4" />
-                            <span>Tambah Permission</span>
-                        </button>
+                            <button onClick={handleCreate} className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-opacity-90 transition shadow-sm">
+                                <Plus className="h-4 w-4" />
+                                <span>Tambah Baru</span>
+                            </button>
                         )}
                     </div>
                 </div>
 
                 <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <div className="relative col-span-1 md:col-span-2">
+                    <div className="relative col-span-1 md:col-span-2 z-10">
                         <label className="block text-sm font-medium text-black dark:text-white mb-2">Filter Group Permission</label>
-                        <select
-                            value={selectedGroup}
-                            onChange={(e) => {
-                                setSelectedGroup(e.target.value);
+                        <SearchableSelect
+                            options={[
+                                { value: '', label: 'Semua Group' },
+                                ...groups.map((group) => ({ value: String(group.id), label: group.name }))
+                            ]}
+                            value={String(selectedGroup)}
+                            onChange={(val) => {
+                                setSelectedGroup(val);
                                 setCurrentPage(1);
                             }}
-                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5 py-2.5 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500"
-                        >
-                            <option value="">Semua Group</option>
-                            {groups.map((group) => (
-                                <option key={group.id} value={group.id}>{group.name}</option>
-                            ))}
-                        </select>
+                            placeholder="Pilih Group..."
+                            usePortal={true}
+                        />
                     </div>
                     <div>
                         {/* Placeholder for search if needed later */}
@@ -173,8 +173,8 @@ function UtilitiesPermissionsPage() {
                                                 </button>
                                                 {canDelete('permissions') && (
                                                     <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 text-gray-500 dark:text-gray-400" title="Delete Permission">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -224,5 +224,5 @@ function UtilitiesPermissionsPage() {
 
 // Protect page with permission
 export default withPermission(UtilitiesPermissionsPage, {
-    permissions: ['permissions.index']
+    permissions: ['super_admin_only']
 });

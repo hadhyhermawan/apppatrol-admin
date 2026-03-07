@@ -30,6 +30,7 @@ type TaskItem = {
     lokasi_absen: string | null;
     completed_at: string | null;
     nama_petugas: string | null;
+    patrol_points?: any[];
 };
 
 // TYPES for Regu View
@@ -112,7 +113,8 @@ function LaporanTugasPage() {
 
     const handlePrintClick = () => {
         setIsPrinting(true);
-        setTimeout(() => setIsPrinting(false), 3000);
+        // Tambahkan timeout menjadi 25 detik agar iframe memiliki banyak waktu untuk meload puluhan halaman full foto
+        setTimeout(() => setIsPrinting(false), 25000);
     };
 
     const getThumbUrl = (url: string | null) => {
@@ -172,7 +174,7 @@ function LaporanTugasPage() {
             if (selectedUnit === 'UK3') {
                 if (viewMode === 'regu') {
                     // Fetch Monitoring Regu
-                    let url = `/monitoring-regu?tanggal=${dateStart || new Date().toISOString().slice(0, 10)}`;
+                    let url = `/monitoring-regu?tanggal=${dateStart || new Date().toISOString().slice(0, 10)}&kode_dept=${selectedUnit}`;
                     if (selectedCabang) url += `&kode_cabang=${selectedCabang}`;
                     if (isSuperAdmin && filterVendor) url += `&vendor_id=${filterVendor}`;
 
@@ -186,7 +188,7 @@ function LaporanTugasPage() {
                     }
                 } else {
                     // Fetch Personal Patrol Data
-                    let url = '/security/patrol?';
+                    let url = '/security/patrol?limit=5000&';
                     if (searchTerm) url += `search=${searchTerm}&`;
                     if (dateStart) url += `date_start=${dateStart}&`;
                     if (dateEnd) url += `date_end=${dateEnd}&`;
@@ -202,7 +204,7 @@ function LaporanTugasPage() {
                 }
             } else {
                 // UCS / UDV - Fetch Tasks
-                let url = `/security/tasks?kode_dept=${selectedUnit}&`;
+                let url = `/security/tasks?kode_dept=${selectedUnit}&limit=5000&`;
                 if (searchTerm) url += `search=${searchTerm}&`;
                 if (dateStart) url += `date_start=${dateStart}&`;
                 if (dateEnd) url += `date_end=${dateEnd}&`;
@@ -357,7 +359,7 @@ function LaporanTugasPage() {
                 {isPrinting && (
                     <iframe
                         src={`/reports/tugas-monitoring/cetak?unit=${selectedUnit}&viewMode=${viewMode}&startDate=${dateStart}&endDate=${dateEnd}&search=${searchTerm}&cabang=${selectedCabang}&vendorId=${filterVendor}`}
-                        style={{ position: 'absolute', width: '0', height: '0', border: 'none' }}
+                        style={{ position: 'fixed', right: '0', bottom: '0', width: '1px', height: '1px', border: 'none', opacity: 0, pointerEvents: 'none' }}
                         title="Print Frame"
                     />
                 )}
@@ -390,7 +392,7 @@ function LaporanTugasPage() {
                                 />
                                 <Search className="absolute right-4 top-3 h-5 w-5 text-gray-400" />
                             </div>
-                            <div className="relative z-[100] bg-white dark:bg-form-input rounded-lg">
+                            <div className="relative z-10 bg-white dark:bg-form-input rounded-lg">
                                 <SearchableSelect
                                     value={selectedCabang}
                                     onChange={setSelectedCabang}

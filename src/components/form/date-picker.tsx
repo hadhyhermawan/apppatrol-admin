@@ -31,7 +31,7 @@ export default function DatePicker({
   enableTime = false,
   dateFormat = "Y-m-d",
   allowInput = true,
-  staticDisplay = true,
+  staticDisplay = false,
 }: PropsType) {
   const onChangeRef = useRef(onChange);
 
@@ -48,6 +48,7 @@ export default function DatePicker({
       enableTime,
       defaultDate,
       allowInput,
+      disableMobile: true,
       time_24hr: true,
       minuteIncrement: 1,
       onChange: (selectedDates, dateStr, instance) => {

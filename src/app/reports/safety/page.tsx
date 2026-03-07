@@ -137,7 +137,7 @@ function LaporanSafetyPage() {
         setIsPrinting(true);
         // The iframe onload could trigger print or the iframe itself handles the print
         // but since we are just toggling the iframe, we can reset it after a delay
-        setTimeout(() => setIsPrinting(false), 5000);
+        setTimeout(() => setIsPrinting(false), 15000);
     };
 
     return (

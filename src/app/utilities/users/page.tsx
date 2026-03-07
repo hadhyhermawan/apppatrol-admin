@@ -199,8 +199,8 @@ function UtilitiesUsersPage() {
                         <Users className="w-6 h-6 text-brand-500" />
                         Management Users
                     </h2>
-                    <div className="flex gap-3">
-                        <div className="relative">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <div className="relative w-full sm:w-auto">
                             <input
                                 type="text"
                                 placeholder="Cari User..."
@@ -211,24 +211,28 @@ function UtilitiesUsersPage() {
                             <Search className="absolute right-4 top-3 h-4 w-4 text-gray-400" />
                         </div>
                         {isSuperAdmin && (
-                            <SearchableSelect
-                                options={vendors.map(v => ({ value: String(v.id), label: v.nama_vendor }))}
-                                value={filterVendor}
-                                onChange={(val) => setFilterVendor(val)}
-                                placeholder="Semua Vendor"
-                                className="w-[200px]"
-                            />
+                            <div className="w-full sm:w-[200px] relative z-10">
+                                <SearchableSelect
+                                    options={vendors.map(v => ({ value: String(v.id), label: v.nama_vendor }))}
+                                    value={filterVendor}
+                                    onChange={(val) => setFilterVendor(val)}
+                                    placeholder="Semua Vendor"
+                                    usePortal={true}
+                                />
+                            </div>
                         )}
-                        <button onClick={() => fetchData()} className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
-                            <RefreshCw className="h-4 w-4" />
-                            <span className="hidden sm:inline">Refresh</span>
-                        </button>
-                        {canCreate('users') && (
-                            <button onClick={openCreateModal} className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-brand-600 transition shadow-sm">
-                                <Plus className="h-4 w-4" />
-                                <span className="hidden sm:inline">User Baru</span>
+                        <div className="flex gap-2">
+                            <button onClick={() => fetchData()} className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2.5 rounded-lg border border-stroke bg-white px-4 py-2 text-center font-medium text-black hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:bg-opacity-90 transition shadow-sm">
+                                <RefreshCw className="h-4 w-4" />
+                                <span className="hidden sm:inline">Refresh</span>
                             </button>
-                        )}
+                            {canCreate('users') && (
+                                <button onClick={openCreateModal} className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white hover:bg-brand-600 transition shadow-sm">
+                                    <Plus className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Baru</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 

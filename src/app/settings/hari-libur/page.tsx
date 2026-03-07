@@ -30,13 +30,14 @@ type BranchOption = {
 };
 
 function HariLiburPage() {
-    const { canCreate, canUpdate, canDelete } = usePermissions();
+    const { canCreate, canUpdate, canDelete, isSuperAdmin } = usePermissions();
     const [data, setData] = useState<HariLibur[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [searchCabang, setSearchCabang] = useState('');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -56,14 +57,15 @@ function HariLiburPage() {
 
     // Options
     const [cabangOptions, setCabangOptions] = useState<BranchOption[]>([]);
+    const [vendorOptions, setVendorOptions] = useState<{ value: string, label: string }[]>([]);
 
     useEffect(() => {
         fetchData();
-    }, [searchCabang, dateFrom, dateTo]);
+    }, [searchCabang, dateFrom, dateTo, filterVendor]);
 
     useEffect(() => {
-        fetchCabang();
-    }, []);
+        fetchOptions();
+    }, [filterVendor, isSuperAdmin]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -72,6 +74,7 @@ function HariLiburPage() {
             if (searchCabang) params.append('kode_cabang', searchCabang);
             if (dateFrom) params.append('dari', dateFrom);
             if (dateTo) params.append('sampai', dateTo);
+            if (isSuperAdmin && filterVendor) params.append('vendor_id', filterVendor);
 
             const res: any = await apiClient.get(`/settings/hari-libur?${params.toString()}`);
             setData(Array.isArray(res) ? res : []);
@@ -83,12 +86,37 @@ function HariLiburPage() {
         }
     };
 
-    const fetchCabang = async () => {
+    const fetchOptions = async () => {
         try {
-            const res = await apiClient.get('/master/cabang/options');
-            setCabangOptions(res as any);
+            const cabParams = new URLSearchParams();
+            if (isSuperAdmin && filterVendor) {
+                cabParams.append('vendor_id', filterVendor);
+            }
+
+            const calls: any[] = [
+                apiClient.get(`/master/cabang?${cabParams.toString()}`)
+            ];
+
+            if (isSuperAdmin) {
+                calls.push(apiClient.get('/vendors'));
+            }
+
+            const responses = await Promise.all(calls);
+            const cabangRes = responses[0];
+            const vendorRes = isSuperAdmin ? responses[1] : [];
+
+            if (Array.isArray(cabangRes)) {
+                setCabangOptions(cabangRes.map((c: any) => ({ kode_cabang: c.kode_cabang, nama_cabang: c.nama_cabang })));
+            } else if (cabangRes && Array.isArray((cabangRes as any).data)) {
+                setCabangOptions((cabangRes as any).data.map((c: any) => ({ kode_cabang: c.kode_cabang, nama_cabang: c.nama_cabang })));
+            }
+
+            if (isSuperAdmin) {
+                const vData = Array.isArray(vendorRes) ? vendorRes : (vendorRes?.data || []);
+                setVendorOptions(vData.map((v: any) => ({ value: String(v.id), label: v.nama_vendor })));
+            }
         } catch (error) {
-            console.error("Failed cabang", error);
+            console.error("Failed to fetch options", error);
         }
     };
 
@@ -208,8 +236,22 @@ function HariLiburPage() {
                     </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <div className="relative">
+                <div className={`mb-6 grid grid-cols-1 gap-4 ${isSuperAdmin ? 'md:grid-cols-6' : 'md:grid-cols-5'}`}>
+                    {isSuperAdmin && (
+                        <div>
+                            <SearchableSelect
+                                options={[{ value: '', label: 'Semua Vendor' }, ...vendorOptions]}
+                                value={filterVendor}
+                                onChange={(val) => {
+                                    setFilterVendor(val);
+                                    setSearchCabang('');
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Semua Vendor"
+                            />
+                        </div>
+                    )}
+                    <div className="relative md:col-span-2">
                         <input
                             type="text"
                             placeholder="Cari keterangan atau cabang..."
@@ -224,29 +266,27 @@ function HariLiburPage() {
                     </div>
                     <div>
                         <SearchableSelect
-                            options={cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))}
+                            options={[{ value: '', label: 'Semua Cabang (Nasional)' }, ...cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))]}
                             value={searchCabang}
                             onChange={(val) => setSearchCabang(val)}
                             placeholder="Semua Cabang"
                         />
                     </div>
                     <div>
-                        <div>
-                            <DatePicker
-                                id="date-from"
-                                placeholder="Dari Tanggal"
-                                defaultDate={dateFrom}
-                                onChange={(dates: Date[], dateStr: string) => setDateFrom(dateStr)}
-                            />
-                        </div>
-                        <div>
-                            <DatePicker
-                                id="date-to"
-                                placeholder="Sampai Tanggal"
-                                defaultDate={dateTo}
-                                onChange={(dates: Date[], dateStr: string) => setDateTo(dateStr)}
-                            />
-                        </div>
+                        <DatePicker
+                            id="date-from"
+                            placeholder="Dari Tanggal"
+                            defaultDate={dateFrom}
+                            onChange={(dates: Date[], dateStr: string) => setDateFrom(dateStr)}
+                        />
+                    </div>
+                    <div>
+                        <DatePicker
+                            id="date-to"
+                            placeholder="Sampai Tanggal"
+                            defaultDate={dateTo}
+                            onChange={(dates: Date[], dateStr: string) => setDateTo(dateStr)}
+                        />
                     </div>
                 </div>
 
@@ -359,10 +399,10 @@ function HariLiburPage() {
                                 <div>
                                     <label className="mb-2.5 block text-black dark:text-white font-medium">Cabang</label>
                                     <SearchableSelect
-                                        options={cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))}
-                                        value={formData.kode_cabang}
+                                        options={[{ value: '', label: 'Semua Cabang (Nasional)' }, ...cabangOptions.map(c => ({ value: c.kode_cabang, label: c.nama_cabang }))]}
+                                        value={formData.kode_cabang || ''}
                                         onChange={(val) => setFormData({ ...formData, kode_cabang: val })}
-                                        placeholder="Pilih Cabang"
+                                        placeholder="Semua Cabang (Nasional)"
                                     />
                                 </div>
                                 <div>

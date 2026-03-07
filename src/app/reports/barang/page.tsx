@@ -107,7 +107,7 @@ function LaporanBarangPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            let url = '/security/barang?';
+            let url = '/security/barang?limit=5000&';
             if (searchTerm) url += `search=${searchTerm}&`;
             if (dateStart) url += `date_start=${dateStart} 00:00:00&`;
             // Add 23:59:59 to inclusion end date
@@ -140,7 +140,7 @@ function LaporanBarangPage() {
         setIsPrinting(true);
         // The iframe onload could trigger print or the iframe itself handles the print
         // but since we are just toggling the iframe, we can reset it after a delay
-        setTimeout(() => setIsPrinting(false), 5000);
+        setTimeout(() => setIsPrinting(false), 15000);
     };
 
     return (

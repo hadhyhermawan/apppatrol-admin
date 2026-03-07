@@ -6,10 +6,14 @@ import apiClient from '@/lib/api';
 import { RefreshCw, Smartphone, Search, AlertTriangle, Monitor, Calendar } from 'lucide-react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Swal from 'sweetalert2';
-import flatpickr from "flatpickr";
 import { withPermission } from '@/hoc/withPermission';
 import { usePermissions } from '@/contexts/PermissionContext';
-import "flatpickr/dist/flatpickr.min.css";
+import dynamic from 'next/dynamic';
+
+const DatePicker = dynamic(() => import('@/components/form/date-picker'), {
+    ssr: false,
+    loading: () => <input type="text" className="w-full sm:w-40 rounded-lg border-[1.5px] border-stroke bg-transparent px-3 py-2 outline-none" disabled />
+});
 
 type MultiDeviceItem = {
     user_id: number;
@@ -30,17 +34,6 @@ function UtilitiesMultiDevicePage() {
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
 
-    useEffect(() => {
-        flatpickr(".flatpickr-date", {
-            dateFormat: "Y-m-d",
-            allowInput: true,
-            onChange: (selectedDates, dateStr, instance) => {
-                const element = instance.element as HTMLInputElement;
-                if (element.name === "from") setFromDate(dateStr);
-                if (element.name === "to") setToDate(dateStr);
-            }
-        });
-    }, []);
 
     const fetchData = async () => {
         setLoading(true);
@@ -113,29 +106,25 @@ function UtilitiesMultiDevicePage() {
 
                 {/* Filter Section */}
                 <div className="mb-6 flex flex-wrap gap-4 items-end">
-                    <div className="w-full sm:w-auto relative">
+                    <div className="w-full sm:w-auto">
                         <label className="text-xs text-gray-500 mb-1 block">Dari Tanggal</label>
-                        <div className="relative">
-                            <input
-                                name="from"
-                                type="text"
-                                placeholder="YYYY-MM-DD"
-                                className="flatpickr-date w-full sm:w-40 rounded-lg border-[1.5px] border-stroke bg-transparent px-3 py-2 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
-                            />
-                            <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-                        </div>
+                        <DatePicker
+                            id="md-date-from"
+                            placeholder="YYYY-MM-DD"
+                            defaultDate={fromDate}
+                            dateFormat="Y-m-d"
+                            onChange={(dates: Date[], dateStr: string) => setFromDate(dateStr)}
+                        />
                     </div>
-                    <div className="w-full sm:w-auto relative">
+                    <div className="w-full sm:w-auto">
                         <label className="text-xs text-gray-500 mb-1 block">Sampai Tanggal</label>
-                        <div className="relative">
-                            <input
-                                name="to"
-                                type="text"
-                                placeholder="YYYY-MM-DD"
-                                className="flatpickr-date w-full sm:w-40 rounded-lg border-[1.5px] border-stroke bg-transparent px-3 py-2 outline-none focus:border-brand-500 dark:border-strokedark dark:bg-meta-4 dark:focus:border-brand-500 text-sm"
-                            />
-                            <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-                        </div>
+                        <DatePicker
+                            id="md-date-to"
+                            placeholder="YYYY-MM-DD"
+                            defaultDate={toDate}
+                            dateFormat="Y-m-d"
+                            onChange={(dates: Date[], dateStr: string) => setToDate(dateStr)}
+                        />
                     </div>
                     <button onClick={() => fetchData()} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-center text-sm font-medium text-white hover:bg-opacity-90 transition shadow-sm h-[38px]">
                         <Search className="h-4 w-4" /> Cari
